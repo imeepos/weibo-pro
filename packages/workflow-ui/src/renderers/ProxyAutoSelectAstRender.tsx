@@ -9,7 +9,7 @@ const ProxyAutoSelectRender: React.FC<{ ast: ProxyAutoSelectAst }> = ({ ast }) =
     }
 
     const formatExpireTime = (timestamp: number) => {
-        const date = new Date(timestamp);
+        const _date = new Date(timestamp);
         const now = Date.now();
         const diff = timestamp - now;
 

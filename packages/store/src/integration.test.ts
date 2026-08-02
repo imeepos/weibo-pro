@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import {
-  createAction,
   createActionGroup,
   createReducer,
   createSelector,
@@ -116,7 +115,7 @@ describe('@sker/store 集成测试', () => {
   const cartFeature = createFeature({
     name: 'cart',
     reducer: cartReducer,
-    extraSelectors: ({ selectCartState, selectItems }) => ({
+    extraSelectors: ({ selectCartState: _selectCartState, selectItems }) => ({
       // 总价
       selectTotalPrice: createSelector(selectItems, (items) =>
         items.reduce(
@@ -143,7 +142,7 @@ describe('@sker/store 集成测试', () => {
     it('添加商品到购物车', () => {
       const product: Product = { id: '1', name: 'iPhone', price: 999 }
 
-      let state = cartReducer(undefined, cartActions.addItem({ product, quantity: 1 }))
+      const state = cartReducer(undefined, cartActions.addItem({ product, quantity: 1 }))
 
       expect(state.items).toHaveLength(1)
       expect(state.items[0].product.name).toBe('iPhone')

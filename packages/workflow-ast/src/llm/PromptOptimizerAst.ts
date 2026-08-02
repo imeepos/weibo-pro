@@ -132,5 +132,5 @@ export class PromptOptimizerAst extends Ast {
   @Output({ title: '是否成功', defaultValue: false })
   success: boolean = false;
 
-  type: 'PromptOptimizerAst' = 'PromptOptimizerAst';
+  type = 'PromptOptimizerAst';
 }

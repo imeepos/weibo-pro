@@ -27,10 +27,10 @@ const createBleMeshUnavailableError = (method: 'GET' | 'POST', url: string) =>
 
 // apiClient 已被移除，临时提供占位实现
 const apiClient = {
-  get: async (url: string, config?: any): Promise<any> => {
+  get: async (url: string, _config?: any): Promise<any> => {
     throw createBleMeshUnavailableError('GET', url)
   },
-  post: async (url: string, data?: any): Promise<any> => {
+  post: async (url: string, _data?: any): Promise<any> => {
     throw createBleMeshUnavailableError('POST', url)
   }
 };

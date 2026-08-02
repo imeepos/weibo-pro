@@ -8,7 +8,7 @@
  */
 
 import { EventEmitter } from 'node:events';
-import type { ClaudeCommand, TaskState, TaskStatus } from './types/claude-types.js';
+import type { ClaudeCommand, TaskState, } from './types/claude-types.js';
 
 export interface TaskManagerOptions {
   /** 最大并发任务数 */

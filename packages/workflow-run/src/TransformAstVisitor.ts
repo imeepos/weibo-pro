@@ -2,7 +2,7 @@ import { Injectable } from '@sker/core'
 import { Handler, NodeEvent, setAstError } from '@sker/workflow'
 import { TransformAst } from '@sker/workflow-ast'
 import { Observable, from } from 'rxjs'
-import { concatMap, map, mergeMap } from 'rxjs/operators'
+import { concatMap, mergeMap } from 'rxjs/operators'
 import { ErrorHandlerOperators } from './utils/error-handler.util'
 
 /**

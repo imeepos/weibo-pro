@@ -21,7 +21,7 @@ const SentimentOverview: React.FC<SentimentOverviewProps> = ({
   className = ''
 }) => {
   // 悬浮状态
-  const [hoveredSegment, setHoveredSegment] = useState<string | null>(null);
+  const [_hoveredSegment, setHoveredSegment] = useState<string | null>(null);
 
   // 获取主题色值
   const getThemeColor = (varName: string) => {

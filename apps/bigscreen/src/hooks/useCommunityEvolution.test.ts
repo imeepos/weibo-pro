@@ -86,7 +86,7 @@ const mockEvolutionData: CommunityEvolutionAnalysis = {
 
 // Mock controller
 class MockCommunityEvolutionController {
-  async getAnalysis(eventId: string): Promise<CommunityEvolutionAnalysis> {
+  async getAnalysis(_eventId: string): Promise<CommunityEvolutionAnalysis> {
     return mockEvolutionData;
   }
 }

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
+import React from 'react';
+import { createContext, useContext, useSyncExternalStore } from 'react';
 import { taskStore, TaskStore } from './task-store';
 import type { Task, Tool } from './task-types';
 

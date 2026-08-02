@@ -1,10 +1,9 @@
 /// <reference types="@testing-library/jest-dom" />
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { CommentThreadTree } from './CommentThreadTree';
 import type { CommentDepthAnalysis } from '@sker/sdk';
-import * as echarts from 'echarts';
 
 // Mock useEChartTheme hook - 必须在echarts mock之前
 const mockColors = {

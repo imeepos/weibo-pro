@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Observable, Subscription } from 'rxjs';
 import { NodeEvent } from '@sker/workflow';
 import { useExecutionStore } from '../store/execution.store';

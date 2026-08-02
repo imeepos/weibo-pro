@@ -22,7 +22,7 @@
  * 4. 其他 LLM 可以读取 chatHistory 来生成回复
  */
 
-import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output } from "@sker/workflow";
+import { Ast, Input, Node, Output } from "@sker/workflow";
 
 export interface ChatMessage {
     role: string;        // 发言者角色

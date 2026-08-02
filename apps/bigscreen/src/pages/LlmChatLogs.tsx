@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@sker/ui/components/ui/card';
-import { Spinner } from '@sker/ui/components/ui/spinner';
 import { Skeleton } from '@sker/ui/components/ui/skeleton';
 import { Button } from '@sker/ui/components/ui/button';
 import { Badge } from '@sker/ui/components/ui/badge';

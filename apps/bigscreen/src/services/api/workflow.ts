@@ -293,7 +293,7 @@ export class WorkflowAPI {
    * 爬取单个帖子的详情（包括评论和转发）
    * 注意：此方法在 SDK 中不存在，保留原有实现
    */
-  static async crawlPost(request: CrawlPostRequest): Promise<WorkflowApiResponse<CrawlPostData>> {
+  static async crawlPost(_request: CrawlPostRequest): Promise<WorkflowApiResponse<CrawlPostData>> {
     logger.warn('crawlPost not supported by WorkflowController, API may not exist')
     throw new Error('crawlPost is not implemented in SDK')
   }
@@ -302,7 +302,7 @@ export class WorkflowAPI {
    * 触发单个帖子的 NLP 分析
    * 注意：此方法在 SDK 中不存在，保留原有实现
    */
-  static async triggerNLP(request: TriggerNLPRequest): Promise<WorkflowApiResponse> {
+  static async triggerNLP(_request: TriggerNLPRequest): Promise<WorkflowApiResponse> {
     logger.warn('triggerNLP not supported by WorkflowController, API may not exist')
     throw new Error('triggerNLP is not implemented in SDK')
   }
@@ -311,7 +311,7 @@ export class WorkflowAPI {
    * 批量触发 NLP 分析
    * 注意：此方法在 SDK 中不存在，保留原有实现
    */
-  static async batchNLP(request: BatchNLPRequest): Promise<WorkflowApiResponse> {
+  static async batchNLP(_request: BatchNLPRequest): Promise<WorkflowApiResponse> {
     logger.warn('batchNLP not supported by WorkflowController, API may not exist')
     throw new Error('batchNLP is not implemented in SDK')
   }
@@ -320,7 +320,7 @@ export class WorkflowAPI {
    * 执行微博关键词搜索
    * 注意：此方法在 SDK 中不存在，保留原有实现
    */
-  static async searchWeibo(request: WeiboSearchRequest): Promise<WorkflowApiResponse> {
+  static async searchWeibo(_request: WeiboSearchRequest): Promise<WorkflowApiResponse> {
     logger.warn('searchWeibo not supported by WorkflowController, API may not exist')
     throw new Error('searchWeibo is not implemented in SDK')
   }

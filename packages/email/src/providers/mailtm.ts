@@ -79,7 +79,7 @@ export class MailTmProvider extends BaseProvider {
     };
   }
 
-  async getMessages(address: EmailAddress): Promise<Message[]> {
+  async getMessages(_address: EmailAddress): Promise<Message[]> {
     if (!this.token) {
       throw new Error('未找到认证token，请先创建邮箱地址');
     }

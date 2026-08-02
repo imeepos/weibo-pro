@@ -15,7 +15,6 @@ import {
   createFeature,
   createReducer,
   createSelector,
-  on,
   capitalize,
   uncapitalize,
   assertDefined,

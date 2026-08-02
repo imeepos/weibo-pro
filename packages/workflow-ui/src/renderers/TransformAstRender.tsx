@@ -39,7 +39,7 @@ const TransformComponent: React.FC<{ ast: TransformAst }> = ({ ast }) => {
 @Injectable()
 export class TransformAstRender {
     @Render(TransformAst)
-    render(ast: TransformAst, ctx: any) {
+    render(ast: TransformAst, _ctx: any) {
         return <TransformComponent ast={ast} />
     }
 }

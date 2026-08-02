@@ -32,7 +32,7 @@ export class PerformanceTester {
     const startTime = performance.now();
 
     // 模拟数据处理（排序、映射）
-    const sorted = [...network.nodes].sort((a, b) => b.influence - a.influence);
+    const _sorted = [...network.nodes].sort((a, b) => b.influence - a.influence);
     const connectionMap = new Map<string, number>();
 
     for (const edge of network.edges) {

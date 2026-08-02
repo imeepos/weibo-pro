@@ -1,8 +1,8 @@
-import { Injectable, root, Inject, Optional } from '@sker/core';
+import { Injectable, root, } from '@sker/core';
 import { Visitor, WorkflowGraphAst, setAstError } from '../ast';
 import { findNodeType, HANDLER_METHOD } from '../decorator';
 import { Observable, of, from } from 'rxjs';
-import { catchError, switchMap, concatMap, tap } from 'rxjs/operators';
+import { catchError, switchMap, tap } from 'rxjs/operators';
 import { INode } from '../types';
 import { IDefaultVisitor, DEFAULT_VISITOR, DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';

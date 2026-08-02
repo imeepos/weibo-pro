@@ -34,7 +34,7 @@ const ReportAgentComponent: React.FC<{ ast: ReportAgentAst }> = ({ ast }) => {
 @Injectable()
 export class ReportAgentAstRender {
     @Render(ReportAgentAst)
-    render(ast: ReportAgentAst, ctx: any) {
+    render(ast: ReportAgentAst, _ctx: any) {
         return <ReportAgentComponent ast={ast} />
     }
 }

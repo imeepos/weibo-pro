@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Injectable, root } from '@sker/core';
 import { Render, Setting } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
-import { PromptRolesController, type PromptRoleWithSkills } from '@sker/sdk';
+import { PromptRolesController, } from '@sker/sdk';
 import type { PromptSkillType } from '@sker/entities';
 import { useAsyncData } from '../hooks';
 

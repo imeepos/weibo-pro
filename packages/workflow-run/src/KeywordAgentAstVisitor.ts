@@ -11,7 +11,7 @@ import { ErrorHandlerOperators } from "./utils/error-handler.util";
 export class KeywordAgentAstVisitor {
 
     @Handler(KeywordAgentAst)
-    visit(ast: KeywordAgentAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: KeywordAgentAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -74,7 +74,7 @@ export class KeywordAgentAstVisitor {
                 next: (event: NodeEvent) => {
                     obs.next(event);
                 },
-                error: (error) => {
+                error: (_error) => {
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 },
                 complete: () => {

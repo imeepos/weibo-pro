@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useState } from 'react';
 import { NodeSizeWeights, DEFAULT_WEIGHTS } from './NodeSizeCalculator';
 import { LinkDistanceConfig, DEFAULT_LINK_CONFIG } from './LinkDistanceCalculator';
 

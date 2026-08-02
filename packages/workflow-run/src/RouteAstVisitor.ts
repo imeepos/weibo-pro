@@ -159,12 +159,12 @@ export class RouteAstVisitor {
     private compare(left: unknown, operator: string, right: unknown): boolean {
         switch (operator) {
             case '==':
-                // eslint-disable-next-line eqeqeq
+                 
                 return left == right
             case '===':
                 return left === right
             case '!=':
-                // eslint-disable-next-line eqeqeq
+                 
                 return left != right
             case '!==':
                 return left !== right

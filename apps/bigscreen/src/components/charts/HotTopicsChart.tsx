@@ -22,7 +22,7 @@ const HotTopicsChart: React.FC<HotTopicsChartProps> = React.memo(({
   title = "热点话题排行",
   subtitle,
   footnote,
-  height = 0,
+  height: _height = 0,
   className,
   maxTopics = 10,
   orientation = "horizontal",

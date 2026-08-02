@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@sker/core';
+import { Controller, } from '@sker/core';
 import { root } from '@sker/core';
 import { KeywordsService } from '../services/data/keywords.service';
 import * as sdk from '@sker/sdk';

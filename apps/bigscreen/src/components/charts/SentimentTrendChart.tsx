@@ -12,7 +12,7 @@ interface SentimentTrendChartProps {
 }
 
 const SentimentTrendChart: React.FC<SentimentTrendChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = '',
   hours = 24
 }) => {

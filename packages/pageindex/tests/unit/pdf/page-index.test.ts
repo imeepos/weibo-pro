@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { page_index_main } from '../../../src/pdf/page-index.js';
 import type { PDFConfig } from '../../../src/types/config.types.js';
-import type { PageIndexResult } from '../../../src/types/result.types.new.js';
 
 // Mock所有依赖模块
 vi.mock('../../../src/pdf/page-loader.js', () => ({

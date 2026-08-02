@@ -4,7 +4,7 @@
 
 import { root } from '@sker/core';
 import { SentimentController, type TimeRange } from '@sker/sdk';
-import type { HotTopic, TimeSeriesData, SentimentTimeSeriesItem, SearchResult } from '../../types';
+import type { HotTopic, SentimentTimeSeriesItem, SearchResult } from '../../types';
 
 // 实时数据类型
 export interface SentimentRealTimeData {

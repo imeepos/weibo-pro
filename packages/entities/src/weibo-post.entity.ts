@@ -52,7 +52,7 @@ interface IconData {
   vvip: number;
 }
 
-interface IconListItem {
+interface _IconListItem {
   type: string;
   data: IconData;
 }

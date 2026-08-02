@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@sker/core';
 import { WorkflowGraphAst, NodeEvent, generateId } from '@sker/workflow';
 import { ChapterData, StoryWeaverAst } from '@sker/workflow-ast';
-import { Observable, of, from, throwError, Subject, merge, timer, race } from 'rxjs';
-import { concatMap, expand, scan, last, map, catchError, tap, takeUntil, finalize, filter, timeout, throttleTime, share } from 'rxjs/operators';
-import { asyncScheduler } from 'rxjs';
+import { Observable, of, from, throwError, Subject, merge, timer, } from 'rxjs';
+import { concatMap, map, catchError, tap, takeUntil, finalize, filter, timeout, } from 'rxjs/operators';
 import { z } from 'zod';
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
 import { StructuredToolInterface } from '@langchain/core/tools';
@@ -350,7 +349,7 @@ export class ChapterGenerationService {
     );
   }
 
-  private handleLlmError(error: Error, useTools: boolean, chapters: ChapterData[]): Observable<never> {
+  private handleLlmError(error: Error, _useTools: boolean, _chapters: ChapterData[]): Observable<never> {
     return throwError(() => error);
   }
 
@@ -589,7 +588,7 @@ export class ChapterGenerationService {
     }
 
     return from(this.qualityService.check(chapter, chapters, wordCount, signal)).pipe(
-      catchError((error) => {
+      catchError((_error) => {
         if (retryCount < 2) {
           const backoffDelay = 1000 * Math.pow(2, retryCount);
           return from(new Promise<void>(resolve => setTimeout(resolve, backoffDelay))).pipe(
@@ -706,7 +705,7 @@ export class ChapterGenerationService {
 
     // 修复 clues：如果是字符串数组，转换为对象数组
     if (Array.isArray(sanitized.clues)) {
-      sanitized.clues = sanitized.clues.map((clue: any, index: number) => {
+      sanitized.clues = sanitized.clues.map((clue: any, _index: number) => {
         if (typeof clue === 'string') {
           // 字符串转对象：生成唯一ID
           return {

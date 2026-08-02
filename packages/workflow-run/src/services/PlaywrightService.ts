@@ -51,7 +51,7 @@ export class PlaywrightService {
                         timeout: 20000
                     });
                     break;
-                } catch (error) {
+                } catch (_error) {
                     if (retry === selectorMaxRetries - 1) {
                         console.warn(`[PlaywrightService] 等待关键元素超时，但继续处理`);
                     } else {

@@ -49,7 +49,7 @@ export class TextAreaAst extends Ast {
 @Injectable()
 export class TextAreaAstVisitor {
     @Handler(TextAreaAst)
-    handler(ast: TextAreaAst, input$: Observable<TextAreaAst>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    handler(ast: TextAreaAst, input$: Observable<TextAreaAst>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         if (!input$) throw new Error(`[TextAreaAstVisitor.handler] input$ is empty`)
         if (!isObservable(input$)) throw new Error(`[TextAreaAstVisitor.handler] input$ must be an Observable`)
         return new Observable<NodeEvent>(obs => {

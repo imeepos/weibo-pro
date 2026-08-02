@@ -109,7 +109,7 @@ export class RecalculateStatisticsVisitor {
     startDate: Date,
     endDate: Date,
     obs: any,
-    ctx: { abortSignal?: AbortSignal }
+    _ctx: { abortSignal?: AbortSignal }
   ): Promise<void> {
     const steps = [
       '清空现有数据',

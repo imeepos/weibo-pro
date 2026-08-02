@@ -9,5 +9,5 @@ export class AudioAst extends Ast {
     @Output({ title: '音频', defaultValue: '' })
     audio = ``;
 
-    type: 'AudioAst' = 'AudioAst';
+    type = 'AudioAst';
 }

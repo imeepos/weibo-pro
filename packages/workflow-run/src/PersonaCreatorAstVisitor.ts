@@ -39,7 +39,7 @@ const PersonaSchema = z.object({
 export class PersonaCreatorAstVisitor {
 
   @Handler(PersonaCreatorAst)
-  handler(ast: PersonaCreatorAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: PersonaCreatorAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

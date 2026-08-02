@@ -10,16 +10,13 @@ import {
 import { CacheService, CACHE_TTL } from '../../cache.service';
 import type {
   TimeRange,
-  EventStatistics,
   EventPropagationPath,
-  EventWithCategory,
   TrendDataSeries,
   TimeSeriesData,
   TrendAnalysis,
 } from './types';
 import {
   TIME_RANGE_GRANULARITY,
-  SENTIMENT_WEIGHT,
   HOTNESS_CALCULATION_WEIGHTS,
 } from './constants';
 
@@ -157,7 +154,7 @@ export class EventAnalyticsService {
       cacheKey,
       async () => {
         return await useEntityManager(async (entityManager) => {
-          const granularity = TIME_RANGE_GRANULARITY[timeRange];
+          const _granularity = TIME_RANGE_GRANULARITY[timeRange];
 
           const stats = await entityManager
             .createQueryBuilder(EventHourlyStatisticsEntity, 'stats')
@@ -297,7 +294,7 @@ export class EventAnalyticsService {
             return [];
           }
 
-          const totalUsers = userStats.reduce(
+          const _totalUsers = userStats.reduce(
             (sum, s) => sum + parseInt(s.usercount || '0', 10),
             0
           );

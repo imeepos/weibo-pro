@@ -10,7 +10,7 @@ import { ErrorHandlerOperators } from "./utils/error-handler.util";
 export class QueryAgentAstVisitor {
 
     @Handler(QueryAgentAst)
-    visit(ast: QueryAgentAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: QueryAgentAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 

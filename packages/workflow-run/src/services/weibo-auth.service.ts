@@ -10,7 +10,7 @@ import {
   WeiboLoginSessionSnapshot
 } from "./weibo-login.types";
 import { Subscriber } from 'rxjs'
-import { generateId, INode, NodeEvent } from "@sker/workflow";
+import { generateId, NodeEvent } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 
 /**
@@ -132,7 +132,7 @@ export class WeiboAuthService implements OnDestroy {
 
         try {
           await page.waitForSelector('img[src*="qrcode"]', { timeout: 10000 });
-        } catch (e) {
+        } catch (_e) {
           // 未找到二维码元素，继续流程
         }
       } catch (error) {
@@ -194,11 +194,11 @@ export class WeiboAuthService implements OnDestroy {
               obs.next({ type: 'node_runing', id: ast.id })
               page.reload({ waitUntil: 'networkidle' }).catch(() => {});
             }
-          } catch (e) {
+          } catch (_e) {
             // 响应为空或无法解析，可能是登录成功后的空响应
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // 忽略响应处理错误
       }
     });
@@ -235,7 +235,7 @@ export class WeiboAuthService implements OnDestroy {
           obs.next({ type: 'node_success', id: ast.id })
           obs.complete()
           await this.cleanupSession(ast.id);
-        } catch (error) {
+        } catch (_error) {
           ast.state = 'fail';
           ast.message = `保存账号信息失败`
           obs.next({ type: 'node_emit', id: ast.id, data: { message: ast.message } })
@@ -315,7 +315,9 @@ export class WeiboAuthService implements OnDestroy {
             };
           }
         }
-      } catch (e) { }
+      } catch (_e) {
+        // 忽略解析失败
+      }
 
       // 方式4: 从页面元素提取
       const avatarImg = document.querySelector('[class*="AvatarImg"]') as HTMLImageElement;
@@ -425,21 +427,21 @@ export class WeiboAuthService implements OnDestroy {
           }
         }, 100);
       }
-    } catch (error) {
+    } catch (_error) {
       // 忽略关闭错误
     }
 
     // 关闭浏览器上下文
     try {
       await session.context.close();
-    } catch (error) {
+    } catch (_error) {
       // 忽略关闭错误
     }
 
     // 更新 Redis 中的会话状态
     try {
       await this.updateSessionStatusInRedis(sessionId, 'completed');
-    } catch (error) {
+    } catch (_error) {
       // 忽略更新错误
     }
   }
@@ -449,7 +451,7 @@ export class WeiboAuthService implements OnDestroy {
    */
   async onDestroy() {
     // 关闭所有活动会话
-    for (const [sessionId, session] of this.loginSessions.entries()) {
+    for (const [sessionId, _session] of this.loginSessions.entries()) {
       await this.cleanupSession(sessionId);
     }
 

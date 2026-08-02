@@ -369,7 +369,7 @@ export class SentimentTransitionService {
     return matrix;
   }
 
-  private detectTurningPoints(timeline: SentimentTimePoint[], rawData: any[]): TurningPoint[] {
+  private detectTurningPoints(timeline: SentimentTimePoint[], _rawData: any[]): TurningPoint[] {
     // 已被 detectTurningPointsEnhanced 替代，保留用于向后兼容
     console.warn('detectTurningPoints is deprecated, use detectTurningPointsEnhanced instead');
     const turningPoints: TurningPoint[] = [];

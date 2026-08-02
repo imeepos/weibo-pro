@@ -1,4 +1,4 @@
-export interface Observable<T = any> {
+export interface Observable<_T = any> {
     subscribe(observer: any): any;
 }
 export function isObservable<T = any>(obs: any): obs is Observable<T> {

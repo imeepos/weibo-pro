@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
-import { BehaviorSubject } from 'rxjs';
 
 
 @Node({
@@ -45,5 +44,5 @@ export class WeiboAjaxFeedHotTimelineAst extends Ast {
     @Output({ title: '结束', defaultValue: false })
     is_end = false;
 
-    type: 'WeiboAjaxFeedHotTimelineAst' = 'WeiboAjaxFeedHotTimelineAst';
+    type = 'WeiboAjaxFeedHotTimelineAst';
 }

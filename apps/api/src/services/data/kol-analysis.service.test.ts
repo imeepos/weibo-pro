@@ -2,8 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { KOLAnalysisService } from './kol-analysis.service';
 import { CacheService } from '../cache.service';
 import { mockEntityManager, mockRedis } from '../../test-setup';
-import { WeiboUserEntity } from '@sker/entities';
-import { UserRelationStatistics } from '@sker/entities';
 
 // Mock dependencies
 vi.mock('@sker/entities', async () => {
@@ -42,7 +40,7 @@ describe('KOLAnalysisService', () => {
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
-    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
       return fn();
     });
 

@@ -27,5 +27,5 @@ export class MarkdownUploadAst extends Ast {
   @Output({ title: '标题列表', defaultValue: [] })
   headings: MarkdownHeading[] = [];
 
-  type: 'MarkdownUploadAst' = 'MarkdownUploadAst';
+  type = 'MarkdownUploadAst';
 }

@@ -74,7 +74,7 @@ const SentimentDistributionHistogram: React.FC<SentimentDistributionHistogramPro
   const option = useMemo(() => {
     if (chartData.length === 0) return {};
 
-    const maxValue = Math.max(...chartData.map((d) => d.value));
+    const _maxValue = Math.max(...chartData.map((d) => d.value));
 
     return {
       grid: {

@@ -21,7 +21,7 @@ const MiniTrendChart: React.FC<MiniTrendChartProps> = ({
   data,
   color = '#3b82f6',
   type = 'line',
-  height = 0,
+  height: _height = 0,
 }) => {
   const { isDark } = useTheme();
   

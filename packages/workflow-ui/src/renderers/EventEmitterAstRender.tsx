@@ -7,7 +7,7 @@ import { Label } from '@sker/ui/components/ui/label';
 import { Radio, Database } from 'lucide-react';
 import { Progress } from '@sker/ui/components/ui/progress';
 
-const EventEmitterPreview = ({ ast }: { ast: EventEmitterAst }) => (
+const EventEmitterPreview = ({ ast: _ast }: { ast: EventEmitterAst }) => (
   <div className="flex flex-col items-center justify-center h-16 bg-slate-700/50">
     <Radio className="size-5 text-purple-400" />
     <div className="text-xs text-slate-300 mt-1">

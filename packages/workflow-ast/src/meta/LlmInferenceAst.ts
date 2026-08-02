@@ -24,5 +24,5 @@ export class LlmInferenceAst extends Ast {
   @Output({ title: '输出', defaultValue: '' })
   text = '';
 
-  type: 'LlmInferenceAst' = 'LlmInferenceAst';
+  type = 'LlmInferenceAst';
 }

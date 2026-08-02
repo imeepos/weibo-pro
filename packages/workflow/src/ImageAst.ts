@@ -8,5 +8,5 @@ export class ImageAst extends Ast {
     @Output({ title: '输出', defaultValue: '' })
     image = ``;
 
-    type: 'ImageAst' = 'ImageAst';
+    type = 'ImageAst';
 }

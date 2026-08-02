@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { EventLifecycleTimeline } from './EventLifecycleTimeline';
-import type { EventLifecycle, LifecyclePhase } from '../../hooks/useEventLifecycle';
+import type { EventLifecycle, } from '../../hooks/useEventLifecycle';
 
 describe('EventLifecycleTimeline', () => {
   const mockLifecycle: EventLifecycle = {

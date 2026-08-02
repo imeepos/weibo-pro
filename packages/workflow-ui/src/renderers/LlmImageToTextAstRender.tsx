@@ -35,7 +35,7 @@ const LlmImageToTextComponent: React.FC<{ ast: LlmImageToTextAst }> = ({ ast }) 
 @Injectable()
 export class LlmImageToTextAstRender {
     @Render(LlmImageToTextAst)
-    render(ast: LlmImageToTextAst, ctx: any) {
+    render(ast: LlmImageToTextAst, _ctx: any) {
         return <LlmImageToTextComponent ast={ast} />
     }
 }

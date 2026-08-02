@@ -5,13 +5,7 @@ import {
   BarChart3,
   Activity,
   Users,
-  Layout,
-  Grid3X3,
-  Network,
-  Share2,
-  Bot,
-  Sparkles,
-} from 'lucide-react';
+  } from 'lucide-react';
 import { cn } from '@/utils';
 
 interface NavigationItem {

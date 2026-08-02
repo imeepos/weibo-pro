@@ -11,7 +11,7 @@ export class StoreGetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   @Handler(StoreGetAst)
-  visit(ast: StoreGetAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+  visit(ast: StoreGetAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -76,7 +76,7 @@ export class StoreSetAstVisitor {
   constructor(@Inject(RedisClient) private readonly redis: RedisClient) { }
 
   @Handler(StoreSetAst)
-  visit(ast: StoreSetAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+  visit(ast: StoreSetAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 

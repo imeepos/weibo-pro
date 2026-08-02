@@ -286,12 +286,13 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
     switch (schedule.scheduleType) {
       case 'cron':
         return schedule.cronExpression || ''
-      case 'interval':
+      case 'interval': {
         const seconds = schedule.intervalSeconds || 0
         if (seconds >= 86400) return `每 ${seconds / 86400} 天`
         if (seconds >= 3600) return `每 ${seconds / 3600} 小时`
         if (seconds >= 60) return `每 ${seconds / 60} 分钟`
         return `每 ${seconds} 秒`
+      }
       case 'once':
         return '一次性执行'
       case 'continuous':
@@ -343,11 +344,12 @@ export function ScheduleList({ workflowName, className = '', onClose, apiBaseUrl
         case 'createdAt':
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           break
-        case 'nextRunAt':
+        case 'nextRunAt': {
           const aTime = a.nextRunAt ? new Date(a.nextRunAt).getTime() : 0
           const bTime = b.nextRunAt ? new Date(b.nextRunAt).getTime() : 0
           comparison = aTime - bTime
           break
+        }
         case 'status':
           comparison = a.status.localeCompare(b.status)
           break

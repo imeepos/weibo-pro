@@ -8,7 +8,7 @@
  * 4. last_crawl_at 值为当前时间
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, } from 'vitest';
 import { EventEntity } from '@sker/entities';
 
 describe('WeiboKeywordSearchAstVisitor - last_crawl_at 更新（TDD）', () => {

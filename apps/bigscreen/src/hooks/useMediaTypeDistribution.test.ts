@@ -85,7 +85,7 @@ const mockMediaTypeData: MediaTypeAnalysis = {
 
 // Mock controller
 class MockMediaTypeController {
-  async getDistribution(eventId: string): Promise<MediaTypeAnalysis> {
+  async getDistribution(_eventId: string): Promise<MediaTypeAnalysis> {
     return mockMediaTypeData;
   }
 }

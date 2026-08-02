@@ -41,7 +41,7 @@ describe('MediaTypeService', () => {
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
-    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
       return fn();
     });
 

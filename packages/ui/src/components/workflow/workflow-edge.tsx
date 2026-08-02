@@ -33,8 +33,8 @@ function getLabel(mode?: EdgeMode) {
 }
 export function WorkflowEdge({
   id,
-  source,
-  target,
+  source: _source,
+  target: _target,
   data,
   selected = false,
   className,

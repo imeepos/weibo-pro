@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import type { Node, Edge, Viewport } from '@xyflow/react'
-import type { WorkflowCanvasState, WorkflowAction } from '../types/workflow-canvas'
+import type { WorkflowCanvasState, } from '../types/workflow-canvas'
 
 interface WorkflowCanvasStore extends WorkflowCanvasState {
   // 操作方法
@@ -37,7 +37,7 @@ const initialState: WorkflowCanvasState = {
 
 export const useWorkflowCanvas = create<WorkflowCanvasStore>()(
   devtools(
-    (set, get) => ({
+    (set, _get) => ({
       ...initialState,
 
       addNode: (node: Node) => {

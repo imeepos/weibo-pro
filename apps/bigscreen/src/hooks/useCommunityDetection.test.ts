@@ -47,7 +47,7 @@ const mockCommunityData: CommunityAnalysis = {
 
 // Mock controller
 class MockCommunityDetectionController {
-  async getAnalysis(eventId: string): Promise<CommunityAnalysis> {
+  async getAnalysis(_eventId: string): Promise<CommunityAnalysis> {
     return mockCommunityData;
   }
 }

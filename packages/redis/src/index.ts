@@ -137,7 +137,7 @@ export class RedisClient {
             } else {
                 return await this.client.zrangebyscore(key, min, max);
             }
-        } catch (error) {
+        } catch (_error) {
             return [];
         }
     }
@@ -153,7 +153,7 @@ export class RedisClient {
             } else {
                 return await this.client.zrange(key, String(start), String(stop));
             }
-        } catch (error) {
+        } catch (_error) {
             return [];
         }
     }
@@ -165,7 +165,7 @@ export class RedisClient {
             } else {
                 return await this.client.zrevrange(key, start, stop);
             }
-        } catch (error) {
+        } catch (_error) {
             return [];
         }
     }

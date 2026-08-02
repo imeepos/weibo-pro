@@ -8,7 +8,7 @@
  * 4. 爬取时间早的排在后面
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, } from 'vitest';
 import { EventEntity } from '@sker/entities';
 
 describe('EventEntity - last_crawl_at 字段', () => {

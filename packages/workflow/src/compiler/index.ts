@@ -120,7 +120,7 @@ export class Compiler {
      *
      * 增强：检测 BehaviorSubject 类型的属性并标记 isSubject
      */
-    private extractOutputMetadata(ctor: Function, instance?: any): INodeOutputMetadata[] {
+    private extractOutputMetadata(ctor: Function, _instance?: any): INodeOutputMetadata[] {
         // 优先查找派生元数据
         const allDerivedOutputs = root.get(DERIVED_OUTPUT, []) as DerivedOutputMetadata[];
         const derivedMetadata = allDerivedOutputs.find(m => m.target === ctor);

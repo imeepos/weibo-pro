@@ -147,9 +147,9 @@ export class InfluencePredictionService {
     const initialEngagement = repostsCount + commentsCount + attitudesCount;
 
     // 归一化特征值（0-1）
-    const normalizedFollowers = Math.min(followersCount / 100000, 1); // 10万粉丝为满分
-    const normalizedLength = Math.min(textLength / 200, 1); // 200字为满分
-    const normalizedInitialEngagement = Math.min(initialEngagement / 100, 1); // 100互动为满分
+    const _normalizedFollowers = Math.min(followersCount / 100000, 1); // 10万粉丝为满分
+    const _normalizedLength = Math.min(textLength / 200, 1); // 200字为满分
+    const _normalizedInitialEngagement = Math.min(initialEngagement / 100, 1); // 100互动为满分
 
     return [
       {

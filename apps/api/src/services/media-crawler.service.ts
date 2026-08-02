@@ -75,7 +75,7 @@ export class MediaCrawlerService {
     return { logs }
   }
 
-  async getDataFiles(platform?: string, fileType?: string): Promise<DataFileListResponse> {
+  async getDataFiles(_platform?: string, _fileType?: string): Promise<DataFileListResponse> {
     // TODO: 实现文件列表查询
     return {
       files: [],
@@ -83,9 +83,9 @@ export class MediaCrawlerService {
   }
 
   async getDataFileContent(
-    filePath: string,
-    preview?: boolean,
-    limit?: number
+    _filePath: string,
+    _preview?: boolean,
+    _limit?: number
   ): Promise<DataFileContentResponse> {
     // TODO: 实现文件内容读取
     return {
@@ -159,7 +159,7 @@ export class MediaCrawlerService {
     }
   }
 
-  async getLoginStatus(platform: MediaPlatform): Promise<LoginStatusResponse> {
+  async getLoginStatus(_platform: MediaPlatform): Promise<LoginStatusResponse> {
     // TODO: 实现登录状态检查
     return {
       status: 'pending',

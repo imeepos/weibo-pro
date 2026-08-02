@@ -30,7 +30,7 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
     negativeData: [],
     neutralData: []
   });
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [_isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;

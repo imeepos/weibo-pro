@@ -15,7 +15,7 @@ const ResearchPlanSchema = z.object({
 export class ResearchPlannerAstVisitor {
 
   @Handler(ResearchPlannerAst)
-  handler(ast: ResearchPlannerAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: ResearchPlannerAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

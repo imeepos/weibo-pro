@@ -16,7 +16,7 @@ export function isType<T>(val: any): val is Type<T> {
  * abstract 类
  */
 // @ts-ignore - T is intentionally unused as a type parameter marker
-export interface AbstractType<T = any> extends Function { }
+export interface AbstractType<_T = any> extends Function { }
 export type StringToken<T> = string & { __type?: T };
 export type SymbolToken<T> = symbol & { __type?: T };
 /**

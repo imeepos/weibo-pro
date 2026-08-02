@@ -3,12 +3,10 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  TrendingUp,
   MessageSquare,
   Users,
   Heart,
   AlertTriangle,
-  BarChart3,
   Clock,
   Activity,
   Zap,
@@ -49,8 +47,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from '@sker/ui/components/ui/dialog';
+  } from '@sker/ui/components/ui/dialog';
 import { useDebounce } from '@sker/ui/hooks/use-debounce';
 import { DatePicker } from '@sker/ui/components/ui/date-picker';
 import { Label } from '@sker/ui/components/ui/label';
@@ -59,7 +56,7 @@ const logger = createLogger('EventAnalysis');
 
 const EventAnalysis: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
+  const { selectedTimeRange, setSelectedTimeRange: _setSelectedTimeRange } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 1000);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -200,11 +197,11 @@ const EventAnalysis: React.FC = () => {
     }
   };
 
-  const removeKeyword = (keyword: string) => {
+  const _removeKeyword = (keyword: string) => {
     setEditingKeywords(editingKeywords.filter(k => k !== keyword));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const _handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       addKeyword();
@@ -624,7 +621,7 @@ const EventAnalysis: React.FC = () => {
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
-                  onClick={(e) => { e.preventDefault(); currentPage > 1 && setCurrentPage(currentPage - 1); }}
+                  onClick={(e) => { e.preventDefault(); if (currentPage > 1) { setCurrentPage(currentPage - 1); } }}
                   className={cn(
                     "transition-colors",
                     currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer hover:bg-muted"
@@ -673,7 +670,7 @@ const EventAnalysis: React.FC = () => {
               <PaginationItem>
                 <PaginationNext
                   href="#"
-                  onClick={(e) => { e.preventDefault(); currentPage < totalPages && setCurrentPage(currentPage + 1); }}
+                  onClick={(e) => { e.preventDefault(); if (currentPage < totalPages) { setCurrentPage(currentPage + 1); } }}
                   className={cn(
                     "transition-colors",
                     currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer hover:bg-muted"

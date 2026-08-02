@@ -15,7 +15,7 @@ export class ConfigService {
     return platforms.platforms.find(p => p.value === platform)
   }
 
-  async updatePlatformConfig(platform: sdk.MediaPlatform, config: any) {
+  async updatePlatformConfig(_platform: sdk.MediaPlatform, _config: any) {
     return { status: 'success', message: 'Config updated' }
   }
 }

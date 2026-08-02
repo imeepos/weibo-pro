@@ -3,7 +3,7 @@ import { Render } from '@sker/workflow'
 import { BooleanAst } from '@sker/workflow'
 import React from 'react'
 
-const BooleanComponent: React.FC<{ ast: BooleanAst }> = ({ ast }) => {
+const BooleanComponent: React.FC<{ ast: BooleanAst }> = ({ ast: _ast }) => {
   return null;
 }
 

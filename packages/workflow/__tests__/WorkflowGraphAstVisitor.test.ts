@@ -5,13 +5,9 @@ import { TextAreaAst, TextAreaAstVisitor } from '../src/TextAreaAst';
 import { WorkflowGraphAstVisitor } from '../src/WorkflowGraphAstVisitor';
 import { Compiler } from '../src/compiler';
 import { root } from '@sker/core';
-import { firstValueFrom, of, Observable, EMPTY } from 'rxjs';
+import { firstValueFrom, } from 'rxjs';
 import { toArray } from 'rxjs/operators';
 import { ArrayEmitterAst, ArrayEmitterAstVisitor } from './ArrayEmitterAst';
-import { Node, Handler, Input, Output } from '../src/decorator';
-import { Injectable } from '@sker/core';
-import { Ast } from '../src/ast';
-import { NodeEvent } from '../src/execution/events';
 import { EdgeMode } from '../src/types';
 
 let compiler: Compiler;
@@ -57,7 +53,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, undefined).pipe(toArray())
             );
 
@@ -73,7 +69,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: []
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -90,7 +86,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: []
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -110,7 +106,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, { test: 'data' }).pipe(toArray())
             );
 
@@ -132,7 +128,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -159,7 +155,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1', 'n2']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -212,7 +208,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1', 'n2']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -234,7 +230,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: []
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -263,7 +259,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1', 'n2']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -285,7 +281,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -309,7 +305,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -355,7 +351,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -426,7 +422,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -453,7 +449,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1', 'n2']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -484,7 +480,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1', 'n2']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 
@@ -510,7 +506,7 @@ describe('WorkflowGraphAstVisitor - 边界条件测试', () => {
                 entryNodeIds: ['n1']
             });
 
-            const events = await firstValueFrom(
+            const _events = await firstValueFrom(
                 executeWorkflow(workflow, {}).pipe(toArray())
             );
 

@@ -20,7 +20,6 @@ import type {
   // camelCase 类型 (向后兼容)
   PDFConfig,
   MarkdownConfig,
-  Config,
   Node,
   DocumentResult,
   PageToken,

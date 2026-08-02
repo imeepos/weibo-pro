@@ -3,7 +3,6 @@ import {
   CreateDateColumn,
   Index,
   PrimaryColumn,
-  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Entity } from './decorator';

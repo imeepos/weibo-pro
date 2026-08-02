@@ -42,7 +42,7 @@ const AggregateComponent: React.FC<{ ast: AggregateAst }> = ({ ast }) => {
 @Injectable()
 export class AggregateAstRender {
     @Render(AggregateAst)
-    render(ast: AggregateAst, ctx: any) {
+    render(ast: AggregateAst, _ctx: any) {
         return <AggregateComponent ast={ast} />
     }
 }

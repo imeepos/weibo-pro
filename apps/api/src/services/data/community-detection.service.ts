@@ -101,7 +101,7 @@ export class CommunityDetectionService {
 
     // 构建社区对象
     const communities = Array.from(communityGroups.entries()).map(([communityId, members]) => {
-      const communityNodes = members.map((memberId) => graph.getNodeAttributes(memberId));
+      const _communityNodes = members.map((memberId) => graph.getNodeAttributes(memberId));
 
       // 计算社区内部边数
       let internalEdges = 0;

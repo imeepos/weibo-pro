@@ -486,7 +486,7 @@ export class SpreadBreadthService {
         const bFollowers = b.followers || 0;
         return bFollowers - aFollowers;
       });
-      const topUsers = sortedByInfluence.slice(0, maxTopUsersPerLevel);
+      const _topUsers = sortedByInfluence.slice(0, maxTopUsersPerLevel);
 
       // 为每种用户类型创建聚合节点
       for (const [userType, reposts] of Object.entries(typeGroups)) {

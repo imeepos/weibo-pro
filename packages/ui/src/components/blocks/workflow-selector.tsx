@@ -6,7 +6,6 @@ import type { WorkflowSummary } from '@sker/sdk'
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog'
 import { VisuallyHidden } from '../ui/visually-hidden'
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from '../ui/command'
-import { cn } from '@sker/ui/lib/utils'
 
 interface WorkflowSelectorProps {
   workflows: WorkflowSummary[]

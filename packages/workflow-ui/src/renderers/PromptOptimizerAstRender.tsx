@@ -47,7 +47,7 @@ const PromptOptimizerComponent: React.FC<{ ast: PromptOptimizerAst }> = ({ ast }
 @Injectable()
 export class PromptOptimizerAstRender {
     @Render(PromptOptimizerAst)
-    render(ast: PromptOptimizerAst, ctx: any) {
+    render(ast: PromptOptimizerAst, _ctx: any) {
         return <PromptOptimizerComponent ast={ast} />
     }
 }

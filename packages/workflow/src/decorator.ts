@@ -232,7 +232,7 @@ export function Input(options?: InputOptions): PropertyDecorator {
     return (target, propertyKey) => {
         const ctor = resolveConstructor(target);
 
-        let mode = options?.mode;
+        const mode = options?.mode;
 
         root.set([{
             provide: INPUT,

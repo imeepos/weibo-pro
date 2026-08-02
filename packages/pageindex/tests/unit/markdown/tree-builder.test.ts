@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, } from 'vitest';
 import { buildTreeFromNodes, updateNodeListWithTextTokenCount, treeThinningForIndex } from '../../../src/markdown/tree-builder.js';
 import type { Node } from '../../../src/types/node.types.js';
 

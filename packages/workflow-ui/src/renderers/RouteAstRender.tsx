@@ -35,7 +35,7 @@ const RouteComponent: React.FC<{ ast: RouteAst }> = ({ ast }) => {
 @Injectable()
 export class RouteAstRender {
     @Render(RouteAst)
-    render(ast: RouteAst, ctx: any) {
+    render(ast: RouteAst, _ctx: any) {
         return <RouteComponent ast={ast} />
     }
 }

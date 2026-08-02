@@ -60,7 +60,7 @@ export const getNodeSchemaTool = tool(
         return `未找到节点类型: ${nodeType}`;
       }
 
-      const instance = new NodeClass();
+      const _instance = new NodeClass();
       const metadata = Reflect.getMetadata('node:metadata', NodeClass) || {};
       const inputs = Reflect.getMetadata('node:inputs', NodeClass.prototype) || [];
       const outputs = Reflect.getMetadata('node:outputs', NodeClass.prototype) || [];

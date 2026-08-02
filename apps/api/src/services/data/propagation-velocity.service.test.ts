@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { PropagationVelocityService } from './propagation-velocity.service';
 import { CacheService } from '../cache.service';
 import { mockEntityManager, mockRedis } from '../../test-setup';
-import type { PropagationVelocityAnalysis, VelocityTimePoint } from '@sker/sdk';
+import type { PropagationVelocityAnalysis, } from '@sker/sdk';
 
 // Mock dependencies
 vi.mock('@sker/entities', async () => {
@@ -42,7 +42,7 @@ describe('PropagationVelocityService', () => {
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
-    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
       return fn();
     });
 

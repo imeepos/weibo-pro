@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { root } from '@sker/core'
+import { useState } from 'react';
 // import { WorkflowState, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
 // import { NodeExecutionManager } from '../services/node-execution-manager'
@@ -10,7 +9,7 @@ import type { WorkflowGraphAst, INode } from '@sker/workflow'
  * 用途：显示整体进度条
  */
 export function useExecutionProgress() {
-  const [progress, setProgress] = useState({ completed: 0, total: 0, percentage: 0 })
+  const [progress, _setProgress] = useState({ completed: 0, total: 0, percentage: 0 })
 
   // useEffect(() => {
   //   const workflowState = root.get(WorkflowState)
@@ -32,8 +31,8 @@ export function useExecutionProgress() {
  * @param nodeId 节点 ID
  * @returns 节点状态（undefined 表示节点不存在或未初始化）
  */
-export function useNodeExecution(nodeId: string): INode | undefined {
-  const [node, setNode] = useState<INode | undefined>()
+export function useNodeExecution(_nodeId: string): INode | undefined {
+  const [node, _setNode] = useState<INode | undefined>()
 
   // useEffect(() => {
   //   const workflowState = root.get(WorkflowState)
@@ -50,8 +49,8 @@ export function useNodeExecution(nodeId: string): INode | undefined {
  * @param nodeId 节点 ID
  * @returns 是否正在执行
  */
-export function useIsNodeRunning(nodeId: string): boolean {
-  const [isRunning, setIsRunning] = useState(false)
+export function useIsNodeRunning(_nodeId: string): boolean {
+  const [isRunning, _setIsRunning] = useState(false)
 
   // useEffect(() => {
   //   const manager = root.get(NodeExecutionManager)
@@ -99,9 +98,9 @@ export function useIsNodeRunning(nodeId: string): boolean {
  * @param onNodeFail 节点失败回调
  */
 export function useWorkflowEvents(
-  onNodeStart?: (nodeId: string) => void,
-  onNodeSuccess?: (nodeId: string, result: any) => void,
-  onNodeFail?: (nodeId: string, error: any) => void
+  _onNodeStart?: (nodeId: string) => void,
+  _onNodeSuccess?: (nodeId: string, result: any) => void,
+  _onNodeFail?: (nodeId: string, error: any) => void
 ) {
   // useEffect(() => {
   //   const eventBus = root.get(WorkflowEventBus)
@@ -128,7 +127,7 @@ export function useWorkflowEvents(
  * @returns 工作流状态（pending | running | success | fail）
  */
 export function useWorkflowState(): WorkflowGraphAst['state'] | null {
-  const [state, setState] = useState<WorkflowGraphAst['state'] | null>(null)
+  const [state, _setState] = useState<WorkflowGraphAst['state'] | null>(null)
 
   // useEffect(() => {
   //   const workflowState = root.get(WorkflowState)
@@ -147,7 +146,7 @@ export function useWorkflowState(): WorkflowGraphAst['state'] | null {
  * @returns 失败的节点列表
  */
 export function useFailedNodes(): INode[] {
-  const [failedNodes, setFailedNodes] = useState<INode[]>([])
+  const [failedNodes, _setFailedNodes] = useState<INode[]>([])
 
   // useEffect(() => {
   //   const workflowState = root.get(WorkflowState)

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LlmProviderService } from './llm-provider.service';
-import { root } from '@sker/core';
 import { mockEntityManager } from '../test-setup';
 
 // Mock useEntityManager
@@ -18,7 +17,7 @@ describe('LlmProviderService', () => {
     beforeEach(() => {
         service = new LlmProviderService();
         // 清空 mock 数据
-        mockEntityManager.getRepository = vi.fn((entityName: string) => mockEntityManager) as any;
+        mockEntityManager.getRepository = vi.fn((_entityName: string) => mockEntityManager) as any;
     });
 
     describe('findAll', () => {

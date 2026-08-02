@@ -9,7 +9,7 @@
  * 利用已有的 existingIds 过滤出新评论，只对新评论触发统计更新。
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityManager } from 'typeorm';
 import { WeiboCommentEntity, WeiboPostEntity, WeiboUserEntity, UserRelationStatisticsHelper, UserRelationType, HourlyStatisticsHelper } from '@sker/entities';
 
@@ -85,7 +85,7 @@ class MockEntityManager extends EntityManager {
   /**
    * 模拟 upsert - 插入或更新
    */
-  async upsert(entity: any, data: any[], conflictPaths: string[]): Promise<any> {
+  async upsert(entity: any, data: any[], _conflictPaths: string[]): Promise<any> {
     if (entity === WeiboCommentEntity) {
       for (const item of data) {
         this.commentData.set(item.id, item);
@@ -105,16 +105,16 @@ class MockEntityManager extends EntityManager {
     return {
       insert() {
         return {
-          into(entity: any) {
+          into(_entity: any) {
             return {
               values(values: any) {
                 return {
-                  orUpdate(columns: string[], conflictColumns: string[]) {
+                  orUpdate(_columns: string[], _conflictColumns: string[]) {
                     return {
-                      updateEntity(bool: boolean) {
+                      updateEntity(_bool: boolean) {
                         return this;
                       },
-                      callListeners(bool: boolean) {
+                      callListeners(_bool: boolean) {
                         return this;
                       },
                       async execute() {

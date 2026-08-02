@@ -24,7 +24,7 @@ const hasBufferMode = (mode?: number): boolean => {
 }
 
 // 获取数组长度
-const getArrayLength = (value: any): number | null => {
+const _getArrayLength = (value: any): number | null => {
   if (Array.isArray(value)) {
     return value.length
   }
@@ -201,7 +201,7 @@ const WorkflowNodeComponent = ({
   return (
     <Collapsible
       open={!collapsed}
-      onOpenChange={(open) => onToggleCollapse?.()}
+      onOpenChange={(_open) => onToggleCollapse?.()}
       key={id}
       asChild
     >

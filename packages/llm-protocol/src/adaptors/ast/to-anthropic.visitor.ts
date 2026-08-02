@@ -30,19 +30,19 @@ import { isUnknownRequest, UnknownRequest } from '../types/unknown';
 
 @Injectable()
 export class ToAnthropicVisitor extends BaseVisitor {
-    visitCodexRequestAst(ast: CodexRequestAst, ctx: any): ClaudeRequest {
+    visitCodexRequestAst(ast: CodexRequestAst, _ctx: any): ClaudeRequest {
         return this.convertCodexToClaude(ast.request);
     }
 
-    visitCodexResponseAst(ast: CodexResponseAst, ctx: any): ClaudeResponse {
+    visitCodexResponseAst(ast: CodexResponseAst, _ctx: any): ClaudeResponse {
         return this.convertCodexResponseToClaude(ast.response);
     }
 
-    visitOpenAiRequestAst(ast: OpenAiRequestAst, ctx: any): ClaudeRequest {
+    visitOpenAiRequestAst(ast: OpenAiRequestAst, _ctx: any): ClaudeRequest {
         return this.convertOpenAIRequestToClaude(ast.request);
     }
 
-    visitOpenAIResponseAst(ast: OpenAIResponseAst, ctx: any): ClaudeResponse {
+    visitOpenAIResponseAst(ast: OpenAIResponseAst, _ctx: any): ClaudeResponse {
         return this.convertOpenAIResponseToClaude(ast.response);
     }
 
@@ -210,7 +210,7 @@ export class ToAnthropicVisitor extends BaseVisitor {
         }
     }
 
-    visitClaudeStreamEventAst(ast: ClaudeStreamEventAst, ctx: any): ClaudeStreamEvent {
+    visitClaudeStreamEventAst(ast: ClaudeStreamEventAst, _ctx: any): ClaudeStreamEvent {
         return ast.streamEvent;
     }
 
@@ -222,11 +222,11 @@ export class ToAnthropicVisitor extends BaseVisitor {
         return this.convertOpenAIStreamToClaude(ast.streamEvent, ctx);
     }
 
-    visitClaudeRequestAst(ast: ClaudeRequestAst, ctx: any): ClaudeRequest {
+    visitClaudeRequestAst(ast: ClaudeRequestAst, _ctx: any): ClaudeRequest {
         return ast.request;
     }
 
-    visitClaudeResponseAst(ast: ClaudeResponseAst, ctx: any): ClaudeResponse {
+    visitClaudeResponseAst(ast: ClaudeResponseAst, _ctx: any): ClaudeResponse {
         return ast.response;
     }
 

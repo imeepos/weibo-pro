@@ -32,7 +32,7 @@ export class PassThroughAst extends Ast {
   @Output({ title: '输出', defaultValue: '', isRouter: true })
   output: any = '';
 
-  type: 'PassThroughAst' = 'PassThroughAst';
+  type = 'PassThroughAst';
 }
 
 
@@ -151,7 +151,7 @@ export class PassThroughAstVisitor {
                 shouldPass = this.hasSequentialTrue(enableConditions, Math.floor(threshold));
                 break;
 
-              case 'weighted':
+              case 'weighted': {
                 // 加权模式：根据边权重计算加权分数（threshold 表示加权比例 0-1）
                 const weights = this.getEdgeWeights(ast, ctx, 'enable');
 
@@ -168,6 +168,7 @@ export class PassThroughAstVisitor {
                   shouldPass = weightedScore >= threshold;
                 }
                 break;
+              }
 
               default:
                 shouldPass = true;

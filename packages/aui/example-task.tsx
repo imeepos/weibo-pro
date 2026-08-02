@@ -4,7 +4,7 @@ import { TaskProvider, useTask, useTaskContext, useTaskActions } from '@sker/aui
 function TaskView() {
   const task = useTask();
   const context = useTaskContext();
-  const { updateTask, registerTool } = useTaskActions();
+  const { updateTask, registerTool: _registerTool } = useTaskActions();
   const [showContext, setShowContext] = useState(false);
 
   if (!task) return <div>无任务</div>;

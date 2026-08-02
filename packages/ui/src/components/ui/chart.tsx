@@ -267,7 +267,7 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
-  ...props
+  ..._props
 }: ChartLegendContentProps) {
   const { config } = useChart()
 

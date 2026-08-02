@@ -7,8 +7,7 @@ import {
 import {
   getTimeRangeBoundaries,
   getPreviousTimeRangeBoundaries,
-  calculateChangeRate,
-} from './time-range.utils';
+  } from './time-range.utils';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 import type { TimeRange } from './types';
 
@@ -356,7 +355,7 @@ export class SentimentService {
 
   // 获取地理位置分布
   async getLocations(timeRange: TimeRange = '12h') {
-    const cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_LOCATIONS, timeRange);
+    const _cacheKey = CacheService.buildKey(CACHE_KEYS.SENTIMENT_LOCATIONS, timeRange);
 
     return await this.fetchLocations(timeRange)
   }

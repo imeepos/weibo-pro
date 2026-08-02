@@ -1,5 +1,5 @@
-import { Controller, Get, Patch, Query, Body } from '@sker/core';
-import { root, Inject } from '@sker/core';
+import { Controller, Query, Body } from '@sker/core';
+import { root, } from '@sker/core';
 import { EventsService } from '../services/data/events.service';
 import * as sdk from '@sker/sdk';
 import { validateTimeRange } from '../utils/validators';

@@ -1,7 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import {
-  WeiboPostEntity,
   PostNLPResultEntity,
   useEntityManager,
 } from '@sker/entities';

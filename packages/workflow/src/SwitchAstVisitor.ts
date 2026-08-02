@@ -9,7 +9,7 @@ import { setAstError } from './ast-utils'
 @Injectable()
 export class SwitchAstVisitor {
     @Handler(SwitchAst)
-    handler(ast: SwitchAst, input$: Observable<any>, ctx: any) {
+    handler(ast: SwitchAst, input$: Observable<any>, _ctx: any) {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController()
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useState, Suspense, lazy, ComponentType } from 'react';
+import React from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout, FullscreenLayout } from '@/components';
@@ -8,7 +9,7 @@ import { initializeApp } from '@/services/appInitialization';
 import { Spinner } from '@sker/ui/components/ui/spinner';
 import { ToastProvider } from '@/components/ui/Toast';
 
-const logger = createLogger('App');
+const _logger = createLogger('App');
 
 // 懒加载页面组件 - 实现路由级代码分割
 const DataOverview = lazy(() => import('@/pages/DataOverview'));
@@ -79,7 +80,7 @@ const App: React.FC = () => {
           timeoutPromise
         ]);
         setIsAppInitialized(true);
-      } catch (error) {
+      } catch (_error) {
         setIsAppInitialized(true);
       }
     };

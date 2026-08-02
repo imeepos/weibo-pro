@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Button } from "./button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, } from "./dialog"
 import { Square, Circle, ArrowRight, Type, Trash2, Crop, Save } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
 
@@ -41,7 +41,7 @@ interface ImageEditorProps {
 }
 
 export const ImageEditor = React.forwardRef<HTMLCanvasElement, ImageEditorProps>(
-  ({ imageUrl, initialAnnotations = [], initialCrop = null, onSave, onClose, open = true }, ref) => {
+  ({ imageUrl, initialAnnotations = [], initialCrop = null, onSave, onClose, open = true }, _ref) => {
     const canvasRef = React.useRef<HTMLCanvasElement>(null)
     const [currentTool, setCurrentTool] = React.useState<ToolType>('rect')
     const [cropShape, setCropShape] = React.useState<CropShape>(initialCrop?.shape || 'rect')

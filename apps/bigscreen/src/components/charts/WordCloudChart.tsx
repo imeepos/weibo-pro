@@ -38,7 +38,7 @@ function hashData(data: KeywordData[] | null | undefined, maxWords: number): str
 }
 
 const WordCloudChart = React.forwardRef<WordCloudChartRef, WordCloudChartProps>(({
-  title = "关键词词云",
+  title: _title = "关键词词云",
   height = 0,
   className,
   maxWords = 100,

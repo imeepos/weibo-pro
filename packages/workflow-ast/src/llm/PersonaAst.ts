@@ -55,5 +55,5 @@ export class PersonaAst extends Ast {
   @Output({ title: '新记忆ID', defaultValue: '' })
   newMemoryId = ``
 
-  type: 'PersonaAst' = 'PersonaAst';
+  type = 'PersonaAst';
 }

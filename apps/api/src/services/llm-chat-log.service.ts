@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core';
 import { LlmChatLog, LlmProvider, useEntityManager } from '@sker/entities';
 import type { LlmChatLogStats, LlmChatLogListResult, LlmChatLogItem, PromptAnalysisResult } from '@sker/sdk';
-import { Between, Like } from 'typeorm';
+import { Between, } from 'typeorm';
 import { createHash } from 'crypto';
 
 @Injectable({ providedIn: 'root' })
@@ -317,7 +317,7 @@ export class LlmChatLogService {
 
                 // 提取 function.parameters.properties 中的描述
                 if (tool.function?.parameters?.properties && typeof tool.function.parameters.properties === 'object') {
-                  for (const [propName, prop] of Object.entries(tool.function.parameters.properties)) {
+                  for (const [_propName, prop] of Object.entries(tool.function.parameters.properties)) {
                     if (prop && typeof prop === 'object' && 'description' in prop && typeof prop.description === 'string') {
                       const content = prop.description.trim();
                       if (content.length > 0) {

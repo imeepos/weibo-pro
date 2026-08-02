@@ -6,7 +6,6 @@ import {
   MemoryEntity,
   MemoryRelationEntity,
   MemoryClosureEntity,
-  UserProfileDistillationTaskEntity,
   WeiboUserPersonaLinkEntity,
 } from '@sker/entities';
 import type {

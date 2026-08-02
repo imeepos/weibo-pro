@@ -11,5 +11,5 @@ export class JsonDisplayAst extends Ast {
   @Output({ title: '格式化结果', defaultValue: '' })
   formatted = '';
 
-  type: 'JsonDisplayAst' = 'JsonDisplayAst';
+  type = 'JsonDisplayAst';
 }

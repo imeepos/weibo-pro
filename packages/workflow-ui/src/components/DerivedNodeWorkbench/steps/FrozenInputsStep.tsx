@@ -12,7 +12,7 @@ export function FrozenInputsStep() {
     <div className="space-y-4">
       {baseNode.metadata.inputs.map((input) => {
         const isExposed = exposedInputs.some(i => i.property === input.property)
-        const isFrozen = input.property in frozenInputs
+        const _isFrozen = input.property in frozenInputs
 
         return (
           <div key={input.property} className="border rounded-lg p-3 space-y-2">

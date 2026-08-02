@@ -51,7 +51,7 @@ export class EmailD1Provider extends BaseProvider {
         content: email.content,
         receivedAt: new Date(email.received_at)
       }];
-    } catch (error) {
+    } catch (_error) {
       // JSON 解析失败说明暂无邮件，返回空数组
       return [];
     }

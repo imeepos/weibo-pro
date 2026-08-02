@@ -70,14 +70,14 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   onNodeHover,
   showDebugHud = false,
   nodeSizeWeights = DEFAULT_WEIGHTS,
-  linkDistanceConfig = DEFAULT_LINK_CONFIG,
+  linkDistanceConfig: _linkDistanceConfig = DEFAULT_LINK_CONFIG,
   enableNodeShapes = true,
   enableNodeOpacity = true,
   enableNodePulse = false,
   enableCommunities = false,
 }) => {
   const fgRef = useRef<ForceGraph3DHandle>(null);
-  const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
+  const [highlightNodes, _setHighlightNodes] = useState<Set<string>>(new Set());
 
   // 交互增强状态
   const [currentWeights, setCurrentWeights] = useState<NodeSizeWeights>(nodeSizeWeights);
@@ -123,8 +123,8 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
   const graphData = useMemo(() => {
     const startTime = performance.now();
 
-    let processedNodes = network.nodes;
-    let processedEdges = network.edges;
+    const processedNodes = network.nodes;
+    const processedEdges = network.edges;
 
     // 性能监控：记录原始数据量
     if (showDebugHud) {

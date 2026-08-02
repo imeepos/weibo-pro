@@ -527,7 +527,7 @@ export function getExposedInputs(nodes: INode[], edges: IEdge[]): Array<{
                     });
                 }
             }
-        } catch (error) {
+        } catch (_error) {
             continue;
         }
     }
@@ -581,7 +581,7 @@ export function getExposedOutputs(nodes: INode[], edges: IEdge[]): Array<{
                     });
                 }
             }
-        } catch (error) {
+        } catch (_error) {
             continue;
         }
     }
@@ -804,7 +804,9 @@ function cloneDefaultValue(value: any): any {
         if (typeof structuredClone !== 'undefined') {
             return structuredClone(value);
         }
-    } catch { }
+    } catch {
+      // structuredClone 不可用时回退
+    }
 
     // 回退到 JSON 深拷贝
     try {

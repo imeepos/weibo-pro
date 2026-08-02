@@ -11,7 +11,7 @@ import {
 import { NLPAnalyzer } from '@sker/nlp';
 import type { PostContext, CompleteAnalysisResult } from '@sker/nlp';
 import { Observable, from } from 'rxjs';
-import { concatMap, mergeMap, tap } from 'rxjs/operators';
+import { concatMap, mergeMap, } from 'rxjs/operators';
 
 const logger = createLogger('PostNLPAnalyzerVisitor');
 

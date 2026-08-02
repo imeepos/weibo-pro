@@ -1,7 +1,7 @@
 import { Observable, merge, zip, combineLatest } from 'rxjs';
-import { map, tap, withLatestFrom } from 'rxjs/operators';
+import { map, withLatestFrom } from 'rxjs/operators';
 import { EdgeMode, IEdge } from '../types';
-import { Injectable, InjectionToken, MapInjectionToken, Provider } from '@sker/core';
+import { Injectable, MapInjectionToken, Provider } from '@sker/core';
 
 /**
  * 边模式组合策略接口

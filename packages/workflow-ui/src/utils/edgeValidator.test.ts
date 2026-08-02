@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, } from 'vitest'
 import { validateEdge, validateEdges, validateEdgesDetailed, EDGE_VALIDATION_RULES } from './edgeValidator'
 import type { Edge } from '@xyflow/react'
 import type { INode } from '@sker/workflow'

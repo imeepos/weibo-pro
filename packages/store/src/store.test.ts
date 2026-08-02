@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { Store, select } from './store'
+import { describe, it, expect, } from 'vitest'
+import { select } from './store'
 import { createStore } from './create-store'
 import type { ActionReducer } from './models'
 

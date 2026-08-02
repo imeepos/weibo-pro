@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { DataSource, QueryBuilder, SelectQueryBuilder } from 'typeorm'
+import { DataSource, } from 'typeorm'
 import { PropagationVelocityService } from './propagation-velocity.service'
 import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
 
@@ -22,7 +22,7 @@ import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
 
 describe('PropagationVelocityService - 连接泄露测试', () => {
   let mockDataSource: DataSource
-  let mockQueryBuilder: any
+  let _mockQueryBuilder: any
   let mockGetManySpy: ReturnType<typeof vi.fn>
   let createQueryBuilderCalls: any[] = []
 
@@ -54,7 +54,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       return builder
     }
 
-    mockQueryBuilder = createMockQueryBuilder()
+    _mockQueryBuilder = createMockQueryBuilder()
 
     // 创建模拟的 DataSource
     mockDataSource = {

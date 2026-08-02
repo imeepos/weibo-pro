@@ -24,5 +24,4 @@ export class LoopAst extends Ast {
     @Output({ title: '完成信号' })
     done: boolean = false
 
-    type: 'LoopAst' = 'LoopAst'
-}
+    type = 'LoopAst';}

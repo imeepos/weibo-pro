@@ -1,14 +1,11 @@
 import { Inject, Injectable, root } from '@sker/core';
-import { Observable, EMPTY, merge, defer, ReplaySubject, concat, of, combineLatest, zip, from } from 'rxjs';
-import { concatMap, finalize, map, filter, switchMap } from 'rxjs/operators';
-import { INode, IEdge, EdgeMode, isNode } from './types';
+import { Observable, defer, of, } from 'rxjs';
+import { INode, isNode } from './types';
 import { WorkflowGraphAst, isWorkflowGraphAst } from './ast';
-import { NodeEmitEvent, NodeEvent } from './execution/events';
+import { NodeEvent } from './execution/events';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Compiler } from './compiler';
 import { clone } from './utils';
-import { resetNodeToDefaults } from './ast-utils';
-import { globalRuntime } from './runtime';
 
 /**
  * 节点执行器 - 统一的节点执行入口
@@ -58,7 +55,9 @@ export class NodeExecutor {
             if (typeof structuredClone !== 'undefined') {
                 return structuredClone(node);
             }
-        } catch { }
+        } catch {
+          // structuredClone 不可用时回退
+        }
 
         return clone(node) as INode;
     }
@@ -85,10 +84,10 @@ export function executeWorkflow(workflow: WorkflowGraphAst, input?: any): Observ
  */
 export function executeWorkflowImmediate(workflow: WorkflowGraphAst, input?: any): Promise<WorkflowGraphAst> {
     return new Promise((resolve, reject) => {
-        let finalWorkflow = workflow;
+        const finalWorkflow = workflow;
 
         executeWorkflow(workflow, input).subscribe({
-            next: (event) => {
+            next: (_event) => {
             },
             complete: () => resolve(finalWorkflow),
             error: reject

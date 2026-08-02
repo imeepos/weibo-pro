@@ -79,6 +79,6 @@ export function detectCycle(
     return false
   }
 
-  const testEdges = [...edges, { source: sourceId, target: targetId }]
+  const _testEdges = [...edges, { source: sourceId, target: targetId }]
   return dfs(sourceId)
 }

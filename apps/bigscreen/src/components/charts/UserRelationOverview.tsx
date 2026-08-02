@@ -57,7 +57,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   const handleNodeClick = useCallback((_node: UserRelationNode) => {
   }, []);
 
-  const handleNodeHover = useCallback((node: UserRelationNode | null) => {
+  const handleNodeHover = useCallback((_node: UserRelationNode | null) => {
   }, []);
 
   const fullscreenButton = (

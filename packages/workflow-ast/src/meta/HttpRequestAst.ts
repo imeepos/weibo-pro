@@ -37,5 +37,5 @@ export class HttpRequestAst extends Ast {
   @Output({ title: 'Content-Type', defaultValue: '' })
   contentType = '';
 
-  type: 'HttpRequestAst' = 'HttpRequestAst';
+  type = 'HttpRequestAst';
 }

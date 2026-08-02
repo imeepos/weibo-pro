@@ -7,7 +7,7 @@ import React from 'react'
 export class WeiboUserDetectionAstRender {
 
     @Render(WeiboUserDetectionAst)
-    render(ast: WeiboUserDetectionAst) {
+    render(_ast: WeiboUserDetectionAst) {
         return <></>
     }
 }

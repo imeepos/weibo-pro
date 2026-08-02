@@ -9,7 +9,7 @@ export class CollectorAst extends Ast {
     @Output({ title: '收集结果' })
     result: any[] = [];
 
-    type: 'CollectorAst' = 'CollectorAst';
+    type = 'CollectorAst';
 }
 
 
@@ -20,7 +20,7 @@ import { NodeEvent } from "./execution/events";
 @Injectable()
 export class CollectorVisitor {
     @Handler(CollectorAst)
-    handler(ast: CollectorAst, input$: Observable<CollectorAst>, ctx: WorkflowGraphAst) {
+    handler(ast: CollectorAst, input$: Observable<CollectorAst>, _ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent<CollectorAst>>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });

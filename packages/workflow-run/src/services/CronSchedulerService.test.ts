@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CronSchedulerService } from './CronSchedulerService'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { RedisClient } from '@sker/redis'
-import { DataSource, WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
+import { WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { logger } from '@sker/core'
 
 describe('CronSchedulerService - 动态调度加载', () => {
@@ -26,7 +26,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       setnx: vi.fn().mockResolvedValue(1),
       expire: vi.fn().mockResolvedValue(true),
       del: vi.fn().mockResolvedValue(1),
-      subscribe: vi.fn().mockImplementation((channel: string, callback: (ch: string, msg: string) => void) => {
+      subscribe: vi.fn().mockImplementation((_channel: string, _callback: (ch: string, msg: string) => void) => {
         // 返回取消订阅函数
         return vi.fn().mockImplementation(() => {
           // 清理逻辑
@@ -71,7 +71,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
   describe('startWatching - 启动监听数据库变更', () => {
     it('应能启动和停止监听', async () => {
       // Arrange
-      const stopWatching = vi.fn()
+      const _stopWatching = vi.fn()
 
       // Act & Assert
       expect(async () => {
@@ -111,7 +111,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       mockSchedules = [schedule]
 
       // Mock find 和 findOne
-      const mockFindOne = vi.fn()
+      const _mockFindOne = vi.fn()
         .mockResolvedValueOnce(schedule)  // initializeSchedules 调用
         .mockResolvedValueOnce(schedule)  // reloadSchedule 调用
 

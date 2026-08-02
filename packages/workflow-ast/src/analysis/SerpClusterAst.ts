@@ -31,5 +31,5 @@ export class SerpClusterAst extends Ast {
     @Output({ title: '聚类结果', defaultValue: [] })
     clusters = [];
 
-    type: 'SerpClusterAst' = 'SerpClusterAst';
+    type = 'SerpClusterAst';
 }

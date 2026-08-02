@@ -50,7 +50,7 @@ const KeywordAgentComponent: React.FC<{ ast: KeywordAgentAst }> = ({ ast }) => {
 @Injectable()
 export class KeywordAgentAstRender {
     @Render(KeywordAgentAst)
-    render(ast: KeywordAgentAst, ctx: any) {
+    render(ast: KeywordAgentAst, _ctx: any) {
         return <KeywordAgentComponent ast={ast} />
     }
 }

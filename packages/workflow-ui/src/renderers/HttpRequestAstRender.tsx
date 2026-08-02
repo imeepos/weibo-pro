@@ -47,7 +47,7 @@ const HttpRequestComponent: React.FC<{ ast: HttpRequestAst }> = ({ ast }) => {
 @Injectable()
 export class HttpRequestAstRender {
     @Render(HttpRequestAst)
-    render(ast: HttpRequestAst, ctx: any) {
+    render(ast: HttpRequestAst, _ctx: any) {
         return <HttpRequestComponent ast={ast} />
     }
 }

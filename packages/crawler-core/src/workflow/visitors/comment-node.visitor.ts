@@ -8,7 +8,7 @@ export class CommentNodeVisitor {
   constructor(private weiboClient: WeiboClient) {}
 
   @Handler(CommentNodeAst)
-  async visit(ast: CommentNodeAst, ctx: any) {
+  async visit(ast: CommentNodeAst, _ctx: any) {
     ast.state = 'running';
 
     try {

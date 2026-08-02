@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { program } from '../../src/cli.js';
-import { Command } from 'commander';
 
 // Mock主函数
 vi.mock('../../src/pdf/page-index.js', () => ({

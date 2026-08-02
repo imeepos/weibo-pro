@@ -15,5 +15,5 @@ export class TransformAst extends Ast {
   @Output({ title: '输出数据', defaultValue: null })
   output: any = null;
 
-  type: 'TransformAst' = 'TransformAst';
+  type = 'TransformAst';
 }

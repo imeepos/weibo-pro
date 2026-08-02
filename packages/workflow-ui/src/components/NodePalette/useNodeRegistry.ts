@@ -10,7 +10,7 @@ export function useNodeRegistry(): CompiledNodeMetadata[] {
   return useMemo(() => {
     const nodeTypes = getAllNodeTypes()
     const compiler = root.get(Compiler)
-    const seen = new Set<string>()
+    const _seen = new Set<string>()
 
     return nodeTypes
       .map(NodeClass => {

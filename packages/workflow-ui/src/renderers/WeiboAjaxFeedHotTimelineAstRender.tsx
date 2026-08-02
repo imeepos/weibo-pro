@@ -4,7 +4,7 @@ import { WeiboAjaxFeedHotTimelineAst } from "@sker/workflow-ast";
 import React from "react";
 
 
-const WeiboAjaxFeedHotTimelineComponent: React.FC<{ ast: WeiboAjaxFeedHotTimelineAst }> = ({ ast }) => {
+const WeiboAjaxFeedHotTimelineComponent: React.FC<{ ast: WeiboAjaxFeedHotTimelineAst }> = ({ ast: _ast }) => {
     return <></>
 };
 

@@ -8,7 +8,6 @@ import type {
   MetaReducer,
 } from './models';
 import {
-  combineReducers,
   omit,
   createReducerFactory,
   createFeatureReducerFactory,

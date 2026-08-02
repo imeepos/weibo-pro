@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@sker/core';
+import { Controller, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { UserStratificationService } from '../services/data/user-stratification.service';
 import * as sdk from '@sker/sdk';

@@ -594,7 +594,7 @@ export function WorkflowFormField({
               />
               <div className={cn(
                 'w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200',
-                Boolean(value)
+                value
                   ? 'bg-primary border-primary'
                   : 'bg-card border-border'
               )}>
@@ -786,23 +786,25 @@ function parseValue(value: string, type: string): any {
   }
 
   switch (type) {
-    case 'number':
+    case 'number': {
       const num = Number(value)
       if (isNaN(num)) {
         throw new Error('请输入有效的数字')
       }
       return num
+    }
 
     case 'boolean':
       return value.toLowerCase() === 'true'
 
     case 'date':
-    case 'datetime-local':
+    case 'datetime-local': {
       const date = new Date(value)
       if (isNaN(date.getTime())) {
         throw new Error('请输入有效的日期')
       }
       return date
+    }
 
     case 'text':
     case 'string':

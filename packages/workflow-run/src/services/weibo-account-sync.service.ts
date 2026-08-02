@@ -261,32 +261,26 @@ export class WeiboAccountSyncService {
    * @returns true=有效, false=无效/过期
    */
   private async checkAccountHealth(account: WeiboAccountEntity): Promise<boolean> {
+    // 1. 将 JSON 格式的 cookies 转换为 Cookie Header 格式
+    const cookieHeader = this.composeCookieHeader(account.cookies)
+    if (!cookieHeader) {
+      throw new Error('Cookie 格式无效或为空')
+    }
+
+    // 2. 使用 Playwright 获取微博首页 HTML
+    const html = await this.playwright.getHtml(this.testUrl, cookieHeader, this.userAgent)
+
+    // 3. 使用 WeiboHtmlParser 检测登录失效
     try {
-      // 1. 将 JSON 格式的 cookies 转换为 Cookie Header 格式
-      const cookieHeader = this.composeCookieHeader(account.cookies)
-      if (!cookieHeader) {
-        throw new Error('Cookie 格式无效或为空')
-      }
-
-      // 2. 使用 Playwright 获取微博首页 HTML
-      const html = await this.playwright.getHtml(this.testUrl, cookieHeader, this.userAgent)
-
-      // 3. 使用 WeiboHtmlParser 检测登录失效
-      try {
-        this.htmlParser.parseSearchResultHtml(html)
-        // 没有抛出 LOGIN_EXPIRED 错误，说明 Cookie 有效
-        return true
-      } catch (error) {
-        if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
-          logger.debug(`[WeiboAccountSyncService] 账号 ${account.id} Cookie 已过期`)
-          return false
-        }
-        // 其他解析错误，向上抛出
-        throw error
-      }
-
+      this.htmlParser.parseSearchResultHtml(html)
+      // 没有抛出 LOGIN_EXPIRED 错误，说明 Cookie 有效
+      return true
     } catch (error) {
-      // 网络错误等，向上抛出，由调用方处理
+      if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
+        logger.debug(`[WeiboAccountSyncService] 账号 ${account.id} Cookie 已过期`)
+        return false
+      }
+      // 其他解析错误，向上抛出
       throw error
     }
   }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Subject, debounceTime, distinctUntilChanged, switchMap, catchError, of, tap } from 'rxjs'
+import { Subject, debounceTime, switchMap, catchError, of, } from 'rxjs'
 import { WorkflowGraphAst } from '@sker/workflow'
 import { WorkflowController } from '@sker/sdk'
 import { root } from '@sker/core'
@@ -132,7 +132,7 @@ export function useAutoSave(
     try {
       isSavingRef.current = true
 
-      const { getViewport, onSaveSuccess, onSaveError } = callbacksRef.current
+      const { getViewport, onSaveSuccess, onSaveError: _onSaveError } = callbacksRef.current
       if (getViewport) {
         currentAst.viewport = getViewport()
       }

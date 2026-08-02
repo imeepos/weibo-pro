@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Injectable } from '@sker/core';
 import { Render, Setting, Preview } from '@sker/workflow';
-import { MarkdownUploadAst, type MarkdownHeading } from '@sker/workflow-ast';
+import { MarkdownUploadAst, } from '@sker/workflow-ast';
 import { Input } from '@sker/ui/components/ui/input';
 import { Label } from '@sker/ui/components/ui/label';
 import { FileText } from 'lucide-react';

@@ -1,4 +1,4 @@
-import { type INode, type IEdge, generateId, WorkflowGraphAst } from '@sker/workflow'
+import { type INode, type IEdge, generateId, } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { validateEdgesDetailed, EDGE_VALIDATION_RULES } from '../utils/edgeValidator'
 

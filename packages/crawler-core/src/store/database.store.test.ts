@@ -4,7 +4,7 @@ import { DatabaseStore } from './database.store'
 import type { ContentItem, CommentItem, CreatorItem } from '../types'
 
 // 配置TypeORM使用better-sqlite3
-const driverPath = require.resolve('better-sqlite3')
+const _driverPath = require.resolve('better-sqlite3')
 
 // Mock 实体类定义
 class MockContentEntity {

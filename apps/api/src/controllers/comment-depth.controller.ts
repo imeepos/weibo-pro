@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@sker/core';
+import { Controller, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { CommentDepthService } from '../services/data/comment-depth.service';
 import * as sdk from '@sker/sdk';

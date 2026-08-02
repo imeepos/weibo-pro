@@ -14,7 +14,7 @@ import React from "react";
 @Injectable()
 export class GroupChatLoopAstRender {
     @Render(GroupChatLoopAst)
-    render(ast: GroupChatLoopAst) {
+    render(_ast: GroupChatLoopAst) {
         return (<></>);
     }
 }

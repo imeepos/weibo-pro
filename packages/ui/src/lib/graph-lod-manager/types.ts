@@ -2,7 +2,6 @@
  * LOD (Level of Detail) 管理器类型定义
  */
 
-import type * as THREE from 'three';
 
 /**
  * LOD 级别配置

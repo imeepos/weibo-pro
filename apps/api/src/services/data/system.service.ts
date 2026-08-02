@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@sker/core';
-import { useEntityManager, WorkflowRunEntity } from '@sker/entities';
+import { useEntityManager, } from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
 
 interface ComponentStatus {

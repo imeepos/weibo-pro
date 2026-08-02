@@ -37,5 +37,5 @@ export class SqlExecuteAst extends Ast {
   @Output({ title: '列信息', defaultValue: [] })
   columns: SqlColumn[] = [];
 
-  type: 'SqlExecuteAst' = 'SqlExecuteAst';
+  type = 'SqlExecuteAst';
 }

@@ -4,8 +4,8 @@
  * 测试 ClaudeGateway 的 Socket.IO 事件处理
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Server as SocketIOServer, Socket } from 'socket.io';
+import { describe, it, expect, vi, } from 'vitest';
+import type { } from 'socket.io';
 
 // Mock dependencies
 vi.mock('@sker/core', () => ({

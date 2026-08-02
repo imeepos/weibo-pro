@@ -31,5 +31,5 @@ export class EventDispatcherAst extends Ast {
   @State({ title: '未爬取数量', type: 'number', defaultValue: 0 })
   uncrawledCount: number = 0;
 
-  type: 'EventDispatcherAst' = 'EventDispatcherAst';
+  type = 'EventDispatcherAst';
 }

@@ -70,7 +70,7 @@ export class RxQueueProducer<T> implements QueueProducer<T> {
                     failureCount++;
                     failedIndices.push(i);
                 }
-            } catch (error) {
+            } catch (_error) {
                 failureCount++;
                 failedIndices.push(i);
             }

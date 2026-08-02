@@ -23,7 +23,7 @@ const mockStratificationData: UserStratification = {
 
 // Mock controller
 class MockUserStratificationController {
-  async getStratification(eventId: string): Promise<UserStratification> {
+  async getStratification(_eventId: string): Promise<UserStratification> {
     return mockStratificationData;
   }
 }
@@ -173,7 +173,7 @@ describe('useUserStratification', () => {
         { initialProps: { eventId: 'event-123' } }
       );
 
-      const firstData = result.current.data;
+      const _firstData = result.current.data;
 
       await waitFor(() => {
         expect(result.current.data).toBeDefined();

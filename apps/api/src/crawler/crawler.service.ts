@@ -14,11 +14,11 @@ export class CrawlerService {
     return this.crawler.startCrawler(request)
   }
 
-  async stop(id: string) {
+  async stop(_id: string) {
     return this.crawler.stopCrawler()
   }
 
-  async getStatus(id: string) {
+  async getStatus(_id: string) {
     return this.crawler.getCrawlerStatus()
   }
 

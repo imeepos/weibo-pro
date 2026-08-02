@@ -12,7 +12,7 @@ function fixThreeJsPlugin(): Plugin {
   return {
     name: 'fix-three-js',
     enforce: 'pre',
-    resolveId(id, importer, options) {
+    resolveId(_id, _importer, _options) {
       // 让 Vite 自然解析 three，不需要手动干预
       // 因为 package.json 的 exports 字段会正确指向入口
       return null
@@ -83,14 +83,14 @@ export default defineConfig(({ command }) => {
           changeOrigin: true,
           secure: false,
           // SSE 关键配置：禁用响应缓冲，允许流式传输
-          configure: (proxy, options) => {
-            proxy.on('proxyReq', (proxyReq, req, res) => {
+          configure: (proxy, _options) => {
+            proxy.on('proxyReq', (proxyReq, _req, _res) => {
               // 设置正确的 SSE 请求头
               proxyReq.setHeader('Accept', 'text/event-stream');
               proxyReq.setHeader('Cache-Control', 'no-cache');
               proxyReq.setHeader('Connection', 'keep-alive');
             });
-            proxy.on('proxyRes', (proxyRes, req, res) => {
+            proxy.on('proxyRes', (proxyRes, _req, _res) => {
               // 确保响应头支持 SSE
               proxyRes.headers['content-type'] = 'text/event-stream';
               proxyRes.headers['cache-control'] = 'no-cache';
@@ -182,7 +182,7 @@ export default defineConfig(({ command }) => {
           entryFileNames: 'assets/js/[name]-[hash:8].js',
           assetFileNames: (assetInfo) => {
             const info = assetInfo.name?.split('.') || []
-            const extType = info[info.length - 1]
+            const _extType = info[info.length - 1]
 
             // 根据资源类型分目录
             if (/\.(mp4|webm|ogg|mp3|wav|flac|aac)(\?.*)?$/i.test(assetInfo.name || '')) {
@@ -278,7 +278,7 @@ export default defineConfig(({ command }) => {
 
     // 预加载优化
     experimental: {
-      renderBuiltUrl(filename: string, { hostType }: { hostType: 'js' | 'css' | 'html' }) {
+      renderBuiltUrl(_filename: string, { hostType: _hostType }: { hostType: 'js' | 'css' | 'html' }) {
         // 可以配置CDN地址
         return { relative: true }
       },

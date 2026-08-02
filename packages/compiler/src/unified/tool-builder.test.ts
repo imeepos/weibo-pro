@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { Injectable, Tool, ToolArg, root } from '@sker/core'
+import { Injectable, Tool, ToolArg, } from '@sker/core'
 import { z } from 'zod'
 import {
   buildUnifiedTools,
@@ -19,11 +19,11 @@ describe('unified-tool-builder', () => {
   describe('buildUnifiedTools', () => {
     it('should build unified tools from decorated methods', () => {
       @Injectable()
-      class TestService1 {
+      class _TestService1 {
         @Tool({ name: 'test_tool', description: 'A test tool' })
         testMethod(
-          @ToolArg({ zod: z.string().describe('A string param'), paramName: 'str' }) str: string,
-          @ToolArg({ zod: z.number().optional().describe('A number param'), paramName: 'num' }) num?: number
+          @ToolArg({ zod: z.string().describe('A string param'), paramName: 'str' }) _str: string,
+          @ToolArg({ zod: z.number().optional().describe('A number param'), paramName: 'num' }) _num?: number
         ): string {
           return 'test'
         }
@@ -44,17 +44,17 @@ describe('unified-tool-builder', () => {
 
     it('should handle multiple tools', () => {
       @Injectable()
-      class Service1 {
+      class _Service1 {
         @Tool({ name: 'tool1', description: 'First tool' })
-        method1(@ToolArg({ zod: z.string(), paramName: 'arg1' }) arg1: string): string {
+        method1(@ToolArg({ zod: z.string(), paramName: 'arg1' }) _arg1: string): string {
           return '1'
         }
       }
 
       @Injectable()
-      class Service2 {
+      class _Service2 {
         @Tool({ name: 'tool2', description: 'Second tool' })
-        method2(@ToolArg({ zod: z.number(), paramName: 'arg2' }) arg2: number): string {
+        method2(@ToolArg({ zod: z.number(), paramName: 'arg2' }) _arg2: number): string {
           return '2'
         }
       }

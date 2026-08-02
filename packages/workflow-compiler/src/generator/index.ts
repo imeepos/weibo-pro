@@ -19,7 +19,7 @@ export class CodeGenError extends Error {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type AstConstructor = new (...args: any[]) => Ast
 
 export interface GeneratorOptions {

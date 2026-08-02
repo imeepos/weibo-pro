@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core'
 import { Handler, LoopAst, NodeEvent, setAstError } from '@sker/workflow'
-import { Observable, from, of, EMPTY } from 'rxjs'
-import { concatMap, delay, mergeMap } from 'rxjs/operators'
+import { Observable, from, } from 'rxjs'
+import { concatMap, mergeMap } from 'rxjs/operators'
 import { ErrorHandlerOperators } from './utils/error-handler.util'
 
 /**
@@ -12,7 +12,7 @@ import { ErrorHandlerOperators } from './utils/error-handler.util'
 @Injectable()
 export class LoopAstVisitor {
     @Handler(LoopAst)
-    visit(ast: LoopAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>) {
+    visit(ast: LoopAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             ast.total = 0;

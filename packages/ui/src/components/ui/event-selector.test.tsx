@@ -82,7 +82,7 @@ describe('EventSelector 远程搜索', () => {
 
       const mockSearchFn = vi.fn().mockResolvedValue(searchResults)
 
-      const { container } = render(
+      const { container: _container } = render(
         <EventSelector
           events={mockEvents}
           onSearch={mockSearchFn}

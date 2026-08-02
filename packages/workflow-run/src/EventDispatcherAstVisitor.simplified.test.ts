@@ -14,8 +14,8 @@
  * - 保留 last_crawl_at 更新机制实现轮换
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { EventEntity, EventCategoryEntity, EntityManager } from '@sker/entities';
+import { describe, it, expect, } from 'vitest';
+import type { EventEntity, EventCategoryEntity, } from '@sker/entities';
 
 /**
  * Mock 数据创建函数
@@ -72,7 +72,7 @@ describe('EventDispatcherAstVisitor - 简化版本 - 事件轮换机制', () => 
 
       // 模拟选择事件 A
       const selectedEvent = eventA;
-      const selectedEventId = selectedEvent.id;
+      const _selectedEventId = selectedEvent.id;
 
       // 模拟更新 last_crawl_at
       const newLastCrawlAt = new Date();

@@ -10,12 +10,8 @@ import { componentRegistry } from './ComponentRegistry';
  * 初始化应用
  */
 export async function initializeApp() {
-  try {
-    // 1. 初始化组件注册表
-    initializeDefaultComponents();
-  } catch (error) {
-    throw error;
-  }
+  // 1. 初始化组件注册表
+  initializeDefaultComponents();
 }
 
 /**

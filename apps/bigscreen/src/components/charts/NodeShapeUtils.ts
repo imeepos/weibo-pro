@@ -14,7 +14,7 @@ export interface CommunityMapping {
   communities: Community[];
 }
 
-export const getUserNodeShape = (userType: string): NodeShape => {
+export const getUserNodeShape = (_userType: string): NodeShape => {
   // 统一使用球体形状，通过颜色和大小区分用户类型
   return 'sphere';
 };

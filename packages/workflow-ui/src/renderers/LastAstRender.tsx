@@ -31,7 +31,7 @@ const LastComponent: React.FC<{ ast: LastAst }> = ({ ast }) => {
 @Injectable()
 export class LastAstRender {
     @Render(LastAst)
-    render(ast: LastAst, ctx: any) {
+    render(ast: LastAst, _ctx: any) {
         return <LastComponent ast={ast} />
     }
 }

@@ -1,4 +1,4 @@
-import { Ast, Input, IS_MULTI, Node, Output } from '@sker/workflow'
+import { Ast, Input, Node, Output } from '@sker/workflow'
 
 /**
  * SmartAstV1 - 通用智能分发节点
@@ -58,5 +58,4 @@ export class SmartAstV1 extends Ast {
     })
     dispatchComplete: boolean = false
 
-    type: 'SmartAstV1' = 'SmartAstV1'
-}
+    type = 'SmartAstV1';}

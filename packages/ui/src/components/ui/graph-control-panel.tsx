@@ -8,7 +8,6 @@ import { Button } from "./button"
 import { Settings } from "lucide-react"
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,

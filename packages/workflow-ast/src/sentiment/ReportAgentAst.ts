@@ -154,5 +154,5 @@ ${history}
     @Output({ title: '舆情报告', defaultValue: '' })
     report = '';
 
-    type: 'ReportAgentAst' = 'ReportAgentAst';
+    type = 'ReportAgentAst';
 }

@@ -677,7 +677,7 @@ describe('UserRelationWordCloud', () => {
           verified: Math.random() > 0.5,
           userType: 'normal' as const,
         })),
-        edges: Array.from({ length: 5000 }, (_, i) => ({
+        edges: Array.from({ length: 5000 }, (_, _i) => ({
           source: `${Math.floor(Math.random() * 1000)}`,
           target: `${Math.floor(Math.random() * 1000)}`,
           weight: Math.floor(Math.random() * 10) + 1,

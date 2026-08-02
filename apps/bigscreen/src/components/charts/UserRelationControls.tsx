@@ -38,7 +38,7 @@ const UserRelationControls: React.FC<UserRelationControlsProps> = ({
   });
 
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [_selectedEvent, _setSelectedEvent] = useState<EventItem | null>(null);
 
   useEffect(() => {
     localStorage.setItem('userRelation.relationType', relationType);

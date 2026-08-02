@@ -15,10 +15,8 @@
 
 import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Observable, of } from 'rxjs';
-import type { EventEntity, EventCategoryEntity, EntityManager } from '@sker/entities';
-import type { ChatOpenAI } from '@langchain/openai';
-import type { Handler, NodeEvent } from '@sker/workflow';
+import type { EventEntity, EventCategoryEntity, } from '@sker/entities';
+import type { } from '@sker/workflow';
 
 // Import Visitor 和 AST（这些还不存在，测试应该失败）
 // import { EventDispatcherAstVisitor } from './EventDispatcherAstVisitor';
@@ -144,8 +142,8 @@ class MockLlmClient {
  * EventDispatcherAstVisitor 测试套件
  */
 describe('EventDispatcherAstVisitor - TDD 测试', () => {
-  let mockEntityManager: MockEntityManager;
-  let mockLlmClient: MockLlmClient;
+  let _mockEntityManager: MockEntityManager;
+  let _mockLlmClient: MockLlmClient;
   let categories: EventCategoryEntity[];
   let uncrawledEvents: EventEntity[];
 

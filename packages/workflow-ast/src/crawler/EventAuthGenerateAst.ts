@@ -43,5 +43,5 @@ export class EventAuthGenerateAst extends Ast {
   @Output({ title: '错误信息', defaultValue: '' })
   errorMessage: string = '';
 
-  type: 'EventAuthGenerateAst' = 'EventAuthGenerateAst';
+  type = 'EventAuthGenerateAst';
 }

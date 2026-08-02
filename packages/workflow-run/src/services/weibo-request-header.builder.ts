@@ -41,7 +41,7 @@ export class WeiboRequestHeaderBuilder {
      * @returns Headers 对象，可直接用于 fetch
      */
     static buildStandardHeaders(options: WeiboRequestHeaderOptions): Record<string, string> {
-        const { cookieHeader, xsrfToken, referer, method = 'GET' } = options;
+        const { cookieHeader, xsrfToken, referer, method: _method = 'GET' } = options;
 
         return {
             'accept': 'application/json, text/plain, */*',

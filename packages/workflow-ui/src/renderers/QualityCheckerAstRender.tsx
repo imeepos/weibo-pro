@@ -66,7 +66,7 @@ const QualityCheckerComponent: React.FC<{ ast: QualityCheckerAst }> = ({ ast }) 
 @Injectable()
 export class QualityCheckerAstRender {
     @Render(QualityCheckerAst)
-    render(ast: QualityCheckerAst, ctx: any) {
+    render(ast: QualityCheckerAst, _ctx: any) {
         return <QualityCheckerComponent ast={ast} />
     }
 }

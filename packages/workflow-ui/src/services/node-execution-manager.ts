@@ -1,4 +1,4 @@
-import { Injectable, root } from '@sker/core'
+import { Injectable, } from '@sker/core'
 // import { ReactiveScheduler, WorkflowEventBus, WorkflowEventType } from '@sker/workflow'
 import type { WorkflowGraphAst } from '@sker/workflow'
 import type { Subscription } from 'rxjs'
@@ -45,7 +45,7 @@ export class NodeExecutionManager {
    * @param workflow 工作流实例
    * @param nodeId 节点 ID
    */
-  executeNode(workflow: WorkflowGraphAst, nodeId: string): void {
+  executeNode(_workflow: WorkflowGraphAst, _nodeId: string): void {
     // // 如果节点正在执行，先取消
     // if (this.isNodeRunning(nodeId)) {
     //   console.log(`[NodeExecutionManager] 节点 ${nodeId} 正在执行，先取消`)

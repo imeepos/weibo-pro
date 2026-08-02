@@ -1,4 +1,3 @@
-import type { WritableDraft } from 'immer'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'

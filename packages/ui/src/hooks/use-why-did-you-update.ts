@@ -20,7 +20,7 @@ export function useWhyDidYouUpdate(componentName: string, props: IProps) {
       })
 
       if (Object.keys(changedProps).length) {
-        // eslint-disable-next-line no-console
+         
         console.log('[why-did-you-update]', componentName, changedProps)
       }
     }

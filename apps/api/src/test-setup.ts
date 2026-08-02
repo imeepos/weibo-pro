@@ -69,8 +69,8 @@ class MockEntityManager {
     async find(options?: any) {
         // Get entity name from first argument if it's a class
         let entityName = 'default';
-        if (arguments.length > 0 && typeof arguments[0] === 'function') {
-            entityName = arguments[0].name || 'default';
+        if (options && typeof options === 'function') {
+            entityName = options.name || 'default';
         }
         const repo = this.data.get(entityName);
         const results = repo ? Array.from(repo.values()) : [];

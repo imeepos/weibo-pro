@@ -4,7 +4,7 @@
  * @version 2.0
  */
 
-import { describe, it, expect, beforeEach, beforeAll } from 'vitest'
+import { describe, it, expect, beforeEach, } from 'vitest'
 import {
   UnifiedProvider,
   UnifiedRole,
@@ -16,7 +16,6 @@ import {
   UnifiedToolResultContent,
   UnifiedImageContent,
   UnifiedMessage,
-  UnifiedTool,
   UnifiedToolParameters,
   UnifiedUsage,
   UnifiedRequestAst,
@@ -34,47 +33,47 @@ import {
 } from './response-transformer'
 import { UnifiedToOriginalTransformer } from './reverse-transformer'
 import { UnifiedStreamAggregator } from './stream-aggregator'
-import { Observable, of, from } from 'rxjs'
+import { from } from 'rxjs'
 import { Ast } from '../ast'
 
 describe('统一抽象层测试套件', () => {
   // 辅助函数：创建 OpenAI 响应 AST 实例
-  const createOpenAiResponseAst = (data: any) => {
+  const _createOpenAiResponseAst = (data: any) => {
     const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 消息开始 AST 实例
-  const createAnthropicMessageStartAst = (data: any) => {
+  const _createAnthropicMessageStartAst = (data: any) => {
     const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 内容块开始 AST 实例
-  const createAnthropicContentBlockStartAst = (data: any) => {
+  const _createAnthropicContentBlockStartAst = (data: any) => {
     const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 内容块增量 AST 实例
-  const createAnthropicContentBlockDeltaAst = (data: any) => {
+  const _createAnthropicContentBlockDeltaAst = (data: any) => {
     const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Anthropic 消息增量 AST 实例
-  const createAnthropicMessageDeltaAst = (data: any) => {
+  const _createAnthropicMessageDeltaAst = (data: any) => {
     const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
   }
 
   // 辅助函数：创建 Google 响应 AST 实例
-  const createGoogleResponseAst = (data: any) => {
+  const _createGoogleResponseAst = (data: any) => {
     const ast = Object.create((class extends Ast { visit(): any {} }).prototype)
     Object.assign(ast, data)
     return ast
@@ -1401,7 +1400,7 @@ describe('统一抽象层测试套件', () => {
         const transformer = new GoogleToUnifiedTransformer()
         const result = transformer.transform(googleResponse as any)
 
-        const toolUse = result.content.find(c => c.type === 'tool_use') as any
+        const _toolUse = result.content.find(c => c.type === 'tool_use') as any
         const toolResult = result.content.find(c => c.type === 'tool_result') as any
         expect(toolResult.toolUseId).toBe('get_weather')
       })

@@ -28,7 +28,7 @@ const LlmTextToAudioComponent: React.FC<{ ast: LlmTextToAudioAst }> = ({ ast }) 
 @Injectable()
 export class LlmTextToAudioAstRender {
     @Render(LlmTextToAudioAst)
-    render(ast: LlmTextToAudioAst, ctx: any) {
+    render(ast: LlmTextToAudioAst, _ctx: any) {
         return <LlmTextToAudioComponent ast={ast} />
     }
 }

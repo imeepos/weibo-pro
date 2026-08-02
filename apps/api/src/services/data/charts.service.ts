@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, Optional } from '@sker/core';
+import { Injectable, Inject, Logger, } from '@sker/core';
 import {
   useEntityManager,
 } from '@sker/entities';

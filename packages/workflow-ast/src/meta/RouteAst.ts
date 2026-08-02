@@ -16,5 +16,5 @@ export class RouteAst extends Ast {
   @Output({ title: '默认输出', isRouter: true, defaultValue: undefined })
   default: any = undefined;
 
-  type: 'RouteAst' = 'RouteAst';
+  type = 'RouteAst';
 }

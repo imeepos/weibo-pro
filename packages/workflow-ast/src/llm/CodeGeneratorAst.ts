@@ -50,5 +50,5 @@ export class CodeGeneratorAst extends Ast {
     @Output({ title: '是否完成', defaultValue: false })
     isComplete: boolean = false;
 
-    type: 'CodeGeneratorAst' = 'CodeGeneratorAst';
+    type = 'CodeGeneratorAst';
 }

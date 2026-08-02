@@ -22,5 +22,5 @@ export class SearchNodeAst extends Ast {
   @State({ title: '当前页码' })
   currentPage: number = 1;
 
-  type: 'SearchNodeAst' = 'SearchNodeAst';
+  type = 'SearchNodeAst';
 }

@@ -3,7 +3,7 @@ import { Render } from "@sker/workflow";
 import { PostNLPAnalyzerAst } from "@sker/workflow-ast";
 import React from "react";
 
-const PostNLPAnalyzerComponent: React.FC<{ ast: PostNLPAnalyzerAst }> = ({ ast }) => (
+const PostNLPAnalyzerComponent: React.FC<{ ast: PostNLPAnalyzerAst }> = ({ ast: _ast }) => (
     <></>
 );
 

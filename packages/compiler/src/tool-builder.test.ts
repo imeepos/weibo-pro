@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Injectable, Tool, ToolArg, root, ToolMetadataKey, ToolArgMetadataKey } from '@sker/core'
+import { Injectable, Tool, ToolArg, } from '@sker/core'
 import { z } from 'zod'
 import { buildOpenAITools } from './tool-builder'
 
@@ -7,11 +7,11 @@ describe('tool-builder', () => {
   describe('buildOpenAITools', () => {
     it('should build OpenAI tool format from decorated methods', () => {
       @Injectable()
-      class TestService1 {
+      class _TestService1 {
         @Tool({ name: 'test_tool', description: 'A test tool' })
         testMethod(
-          @ToolArg({ zod: z.string().describe('A string param'), paramName: 'str' }) str: string,
-          @ToolArg({ zod: z.number().optional().describe('A number param'), paramName: 'num' }) num?: number
+          @ToolArg({ zod: z.string().describe('A string param'), paramName: 'str' }) _str: string,
+          @ToolArg({ zod: z.number().optional().describe('A number param'), paramName: 'num' }) _num?: number
         ): string {
           return 'test'
         }
@@ -40,17 +40,17 @@ describe('tool-builder', () => {
 
     it('should handle multiple tools', () => {
       @Injectable()
-      class Service1 {
+      class _Service1 {
         @Tool({ name: 'tool1', description: 'First tool' })
-        method1(@ToolArg({ zod: z.string(), paramName: 'arg1' }) arg1: string): string {
+        method1(@ToolArg({ zod: z.string(), paramName: 'arg1' }) _arg1: string): string {
           return '1'
         }
       }
 
       @Injectable()
-      class Service2 {
+      class _Service2 {
         @Tool({ name: 'tool2', description: 'Second tool' })
-        method2(@ToolArg({ zod: z.number(), paramName: 'arg2' }) arg2: number): string {
+        method2(@ToolArg({ zod: z.number(), paramName: 'arg2' }) _arg2: number): string {
           return '2'
         }
       }
@@ -68,7 +68,7 @@ describe('tool-builder', () => {
 
     it('should handle nested object schemas', () => {
       @Injectable()
-      class TestService3 {
+      class _TestService3 {
         @Tool({ name: 'complex_tool', description: 'Complex tool' })
         complexMethod(
           @ToolArg({
@@ -77,7 +77,7 @@ describe('tool-builder', () => {
               optional: z.number().optional()
             }),
             paramName: 'obj'
-          }) obj: any
+          }) _obj: any
         ): string {
           return 'complex'
         }
@@ -98,10 +98,10 @@ describe('tool-builder', () => {
 
     it('should handle array schemas', () => {
       @Injectable()
-      class TestService4 {
+      class _TestService4 {
         @Tool({ name: 'array_tool', description: 'Array tool' })
         arrayMethod(
-          @ToolArg({ zod: z.array(z.string()), paramName: 'items' }) items: string[]
+          @ToolArg({ zod: z.array(z.string()), paramName: 'items' }) _items: string[]
         ): string {
           return 'array'
         }
@@ -118,10 +118,10 @@ describe('tool-builder', () => {
 
     it('should handle boolean schemas', () => {
       @Injectable()
-      class TestService5 {
+      class _TestService5 {
         @Tool({ name: 'bool_tool', description: 'Boolean tool' })
         boolMethod(
-          @ToolArg({ zod: z.boolean(), paramName: 'flag' }) flag: boolean
+          @ToolArg({ zod: z.boolean(), paramName: 'flag' }) _flag: boolean
         ): string {
           return 'bool'
         }

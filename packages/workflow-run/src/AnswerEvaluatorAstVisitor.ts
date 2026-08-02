@@ -52,7 +52,7 @@ const EVALUATION_PROMPTS: Record<EvaluationType, string> = {
 export class AnswerEvaluatorAstVisitor {
 
   @Handler(AnswerEvaluatorAst)
-  visit(ast: AnswerEvaluatorAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  visit(ast: AnswerEvaluatorAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

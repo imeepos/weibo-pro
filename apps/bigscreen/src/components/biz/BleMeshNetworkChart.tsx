@@ -45,7 +45,7 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
     const edgeMap = new Map();
 
     // 1. 生成节点
-    data.forEach((item, index) => {
+    data.forEach((item, _index) => {
       // 安全检查数据项
       if (!item || typeof item !== 'object') {
         return;

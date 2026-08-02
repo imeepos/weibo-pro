@@ -42,7 +42,7 @@ const mockCentralityData: CentralityAnalysis = {
 
 // Mock controller
 class MockNetworkCentralityController {
-  async getAnalysis(eventId: string): Promise<CentralityAnalysis> {
+  async getAnalysis(_eventId: string): Promise<CentralityAnalysis> {
     return mockCentralityData;
   }
 }

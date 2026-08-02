@@ -75,11 +75,11 @@ export class PromptOptimizerAstVisitor {
   visit(
     ast: PromptOptimizerAst,
     input$: Observable<Record<string, unknown>>,
-    ctx: WorkflowGraphAst
+    _ctx: WorkflowGraphAst
   ) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
-      const startTime = Date.now();
+      const _startTime = Date.now();
 
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });
@@ -293,7 +293,7 @@ export class PromptOptimizerAstVisitor {
     } | null,
     model: string,
     temperature: number,
-    signal: AbortSignal
+    _signal: AbortSignal
   ): Promise<{ prompt: string; rationale: string }> {
     const llm = useLlmModel({ model, temperature });
 
@@ -357,7 +357,7 @@ ${previousEvaluation.suggestions}
     prompt: string,
     model: string,
     temperature: number,
-    signal: AbortSignal
+    _signal: AbortSignal
   ): Promise<string> {
     const llm = useLlmModel({ model, temperature });
 
@@ -378,7 +378,7 @@ ${previousEvaluation.suggestions}
     dimensions: EvaluationDimension[],
     model: string,
     temperature: number,
-    signal: AbortSignal
+    _signal: AbortSignal
   ): Promise<{
     dimensionScores: Record<string, number>;
     totalScore: number;

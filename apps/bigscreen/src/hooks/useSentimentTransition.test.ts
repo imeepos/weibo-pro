@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useSentimentTransition } from './useSentimentTransition';
 import { root } from '@sker/core';
-import { SentimentTransitionController } from '@sker/sdk';
 import type { SentimentTransitionAnalysis } from '@sker/sdk';
 
 // Mock SDK controller

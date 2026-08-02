@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { md_to_tree } from '../../src/markdown/page-index-md.js';
-import { readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('Markdown处理端到端测试', () => {

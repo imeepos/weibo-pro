@@ -44,7 +44,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
     if (network.nodes.length > 0 && network.edges.length > 0) {
       detect(network.nodes, network.edges);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [networkKey]);
 
   useEffect(() => {

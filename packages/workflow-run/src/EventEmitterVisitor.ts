@@ -18,7 +18,7 @@ export class EventEmitterVisitor {
   handler(
     ast: EventEmitterAst,
     input$: Observable<Record<string, unknown>>,
-    ctx: Record<string, unknown>
+    _ctx: Record<string, unknown>
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();

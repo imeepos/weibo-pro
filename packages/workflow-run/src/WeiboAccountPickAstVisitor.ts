@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@sker/core';
-import { Handler, NodeEvent, setAstError } from '@sker/workflow';
+import { Handler, NodeEvent, } from '@sker/workflow';
 import { WeiboAccountPickAst } from '@sker/workflow-ast';
 import {
     useEntityManager,

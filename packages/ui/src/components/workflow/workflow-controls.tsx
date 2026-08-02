@@ -78,7 +78,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onAiExport,
   onImport,
   onSettings,
-  onSchedule,
+  onSchedule: _onSchedule,
   onScheduleList,
   onRunHistory,
   onEventStoreToggle,

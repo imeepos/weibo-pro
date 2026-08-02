@@ -8,5 +8,5 @@ export class LastAst extends Ast {
   @Output({ title: '最后值', defaultValue: null })
   last: any = null;
 
-  type: 'LastAst' = 'LastAst';
+  type = 'LastAst';
 }

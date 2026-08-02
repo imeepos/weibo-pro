@@ -213,5 +213,4 @@ export class ClaudeCodeAst extends Ast {
   @Output({ title: '执行结果' })
   result!: string;
 
-  type: 'ClaudeCodeAst' = 'ClaudeCodeAst'
-}
+  type = 'ClaudeCodeAst';}

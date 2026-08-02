@@ -4,7 +4,7 @@ import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 import { WeiboWorkerProxyService } from "./services/weibo-worker-proxy.service";
-import { Handler, NodeEvent, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, } from "@sker/workflow";
 import { WeiboAjaxStatusesShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from "rxjs";

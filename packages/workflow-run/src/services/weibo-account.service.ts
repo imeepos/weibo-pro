@@ -71,7 +71,7 @@ export class WeiboAccountService {
             request.headers.Cookie = selection.cookieHeader;
             request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
             return selection;
-        } catch (error) {
+        } catch (_error) {
             return null;
         }
     }
@@ -236,7 +236,7 @@ export class WeiboAccountService {
         const cookiesJson = JSON.stringify(message.cookies);
 
         const account = await useEntityManager(async m => {
-            let existing = await m.findOne(WeiboAccountEntity, {
+            const existing = await m.findOne(WeiboAccountEntity, {
                 where: { weiboUid }
             });
 

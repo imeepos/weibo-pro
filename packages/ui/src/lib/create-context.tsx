@@ -17,7 +17,6 @@ function createContext<ContextValueType extends object | null>(
 
     const value = React.useMemo(
       () => context,
-      // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
       Object.values(context),
     ) as ContextValueType
     return <Context value={value}>{children}</Context>
@@ -82,7 +81,6 @@ function createContextScope(
 
       const value = React.useMemo(
         () => context,
-        // eslint-disable-next-line react-compiler/react-compiler, react-hooks/exhaustive-deps
         Object.values(context),
       ) as ContextValueType
       return <Context value={value}>{children}</Context>
@@ -154,7 +152,6 @@ function composeContextScopes(
         (nextScopes, { useScope, scopeName }) => {
           // We are calling a hook inside a callback which React warns against to avoid inconsistent
           // renders, however, scoping doesn't have render side effects so we ignore the rule.
-          // eslint-disable-next-line react-hooks/rules-of-hooks
           const scopeProps = useScope(overrideScopes)
           const currentScope = scopeProps[`__scope${scopeName}`]
           return { ...nextScopes, ...currentScope }

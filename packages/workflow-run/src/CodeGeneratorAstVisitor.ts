@@ -32,7 +32,7 @@ const CODE_GENERATOR_SYSTEM_PROMPT = `你是一个代码艺术家，专注于生
 @Injectable({ providedIn: 'auto' })
 export class CodeGeneratorAstVisitor {
     @Handler(CodeGeneratorAst)
-    visit(ast: CodeGeneratorAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+    visit(ast: CodeGeneratorAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             const abortController = new AbortController();
 

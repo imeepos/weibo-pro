@@ -12,7 +12,7 @@ export class MarkdownUploadAstVisitor {
   handler(
     ast: MarkdownUploadAst,
     input$: Observable<Record<string, unknown>>,
-    ctx: Record<string, unknown>
+    _ctx: Record<string, unknown>
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';

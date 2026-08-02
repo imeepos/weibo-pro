@@ -68,7 +68,7 @@ process.on('uncaughtException', (error) => {
   // 不退出进程，让 CLI 继续运行
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   console.error('未处理的 Promise 拒绝，但 CLI 继续运行:', reason);
   // 不退出进程，让 CLI 继续运行
 });

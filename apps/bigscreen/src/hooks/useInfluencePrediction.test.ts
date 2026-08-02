@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useInfluencePrediction } from './useInfluencePrediction';
 import { root } from '@sker/core';
-import { InfluencePredictionController } from '@sker/sdk';
 import type { InfluencePredictionAnalysis } from '@sker/sdk';
 
 // Mock SDK controller

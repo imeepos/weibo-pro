@@ -6,7 +6,7 @@ import React from "react";
 @Injectable()
 export class AnswerFinalizerAstRender {
     @Render(AnswerFinalizerAst)
-    render(ast: AnswerFinalizerAst, ctx: any) {
+    render(_ast: AnswerFinalizerAst, _ctx: any) {
         return <div></div>
     }
 }

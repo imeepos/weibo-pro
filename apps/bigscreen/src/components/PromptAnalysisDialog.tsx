@@ -3,7 +3,7 @@ import { root } from '@sker/core';
 import {
   LlmChatLogsController,
   type PromptAnalysisResult,
-  type PromptAnalysisItem
+  
 } from '@sker/sdk';
 import {
   Dialog,

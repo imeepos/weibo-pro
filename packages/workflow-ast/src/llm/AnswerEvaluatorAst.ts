@@ -43,5 +43,5 @@ export class AnswerEvaluatorAst extends Ast {
   @Output({ title: '总分', defaultValue: 0 })
   totalScore = 0;
 
-  type: 'AnswerEvaluatorAst' = 'AnswerEvaluatorAst';
+  type = 'AnswerEvaluatorAst';
 }

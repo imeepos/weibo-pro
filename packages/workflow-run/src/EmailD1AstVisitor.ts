@@ -19,7 +19,7 @@ interface EmailD1Data {
 @Injectable()
 export class EmailD1AstVisitor {
   @Handler(EmailD1Ast)
-  handler(ast: EmailD1Ast, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: EmailD1Ast, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -146,7 +146,7 @@ export class EmailD1AstVisitor {
         content: email.content,
         receivedAt: new Date(email.received_at),
       };
-    } catch (error) {
+    } catch (_error) {
       // JSON 解析失败说明暂无邮件，返回 null 继续轮询
       return null;
     }

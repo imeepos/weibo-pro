@@ -27,5 +27,5 @@ export class EmailD1Ast extends Ast {
     receivedAt: Date;
   } | undefined = undefined;
 
-  type: 'EmailD1Ast' = 'EmailD1Ast';
+  type = 'EmailD1Ast';
 }

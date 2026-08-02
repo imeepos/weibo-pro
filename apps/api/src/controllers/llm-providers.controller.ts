@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@sker/core';
+import { Controller, Body, Param, } from '@sker/core';
 import { root } from '@sker/core';
 import { LlmProviderService } from '../services/llm-provider.service';
 import { LlmProvider } from '@sker/entities';

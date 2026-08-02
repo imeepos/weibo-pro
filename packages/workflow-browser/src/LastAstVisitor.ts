@@ -6,7 +6,7 @@ import { Observable, takeLast } from 'rxjs';
 @Injectable()
 export class LastAstVisitor {
   @Handler(LastAst)
-  handler(ast: LastAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: LastAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });

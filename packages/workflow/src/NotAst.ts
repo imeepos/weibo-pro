@@ -13,7 +13,7 @@ export class NotAst extends Ast {
   @Output({ title: '输出', defaultValue: false })
   output: boolean = false;
 
-  type: 'NotAst' = 'NotAst';
+  type = 'NotAst';
 }
 
 @Injectable()

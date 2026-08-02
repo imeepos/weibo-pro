@@ -1,4 +1,4 @@
-import { Injectable, Inject, logger } from '@sker/core'
+import { Injectable, logger } from '@sker/core'
 import { useEntityManager, WorkflowScheduleEntity, WorkflowEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { executeAst, WorkflowGraphAst } from '@sker/workflow'
 import { withRetryOnNetworkError } from '../utils/retry-on-network-error'

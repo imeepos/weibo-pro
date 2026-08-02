@@ -78,7 +78,7 @@ export class CronSchedulerService {
     let job: nodeSchedule.Job | null = null
 
     switch (schedule.scheduleType) {
-      case ScheduleType.CRON:
+      case ScheduleType.CRON: {
         if (!schedule.cronExpression) {
           logger.error('❌ Cron 调度缺少表达式', { scheduleId: schedule.id })
           return
@@ -102,8 +102,9 @@ export class CronSchedulerService {
           nextRunAt: formatBeijingTime(nextInvocation)
         })
         break
+      }
 
-      case ScheduleType.INTERVAL:
+      case ScheduleType.INTERVAL: {
         if (!schedule.intervalSeconds) {
           logger.error('❌ 间隔调度缺少间隔时间', { scheduleId: schedule.id })
           return
@@ -128,8 +129,9 @@ export class CronSchedulerService {
           nextRunAt: formatBeijingTime(nextIntervalRun)
         })
         return
+      }
 
-      case ScheduleType.ONCE:
+      case ScheduleType.ONCE: {
         if (!schedule.startTime) {
           logger.error('❌ 一次性调度缺少开始时间', { scheduleId: schedule.id })
           return
@@ -151,6 +153,7 @@ export class CronSchedulerService {
           workflowId: schedule.workflowId
         })
         break
+      }
 
       case ScheduleType.MANUAL:
         // 手动触发不需要调度
@@ -673,7 +676,7 @@ export class CronSchedulerService {
 
     try {
       // 使用 Redis 订阅 workflow_schedule_change 通道
-      const unsubscribe = this.redis.subscribe(
+      const _unsubscribe = this.redis.subscribe(
         'workflow_schedule_change',
         async (_channel: string, message: string) => {
           if (stopped) return

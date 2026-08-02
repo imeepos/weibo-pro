@@ -121,7 +121,7 @@ function useAsyncData<T>(
         isRefreshing: false,
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [...dependencies]);
 
   // 手动刷新数据（后台刷新模式）

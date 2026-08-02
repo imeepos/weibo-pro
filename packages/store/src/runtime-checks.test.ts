@@ -2,7 +2,7 @@
  * 运行时检查功能测试
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, } from 'vitest';
 import { createStore, createAction, createReducer, on } from './index';
 
 describe('Runtime Checks', () => {
@@ -197,7 +197,7 @@ describe('Runtime Checks', () => {
     it('应跳过 @ngrx 前缀的 Action', () => {
       const internalAction = { type: '@ngrx/store/init' };
 
-      const testReducer = (state = {}, action: any) => state;
+      const testReducer = (state = {}, _action: any) => state;
 
       const store = createStore(
         { test: testReducer },
@@ -218,7 +218,7 @@ describe('Runtime Checks', () => {
     it('应跳过 @sker 前缀的 Action', () => {
       const internalAction = { type: '@sker/store/update' };
 
-      const testReducer = (state = {}, action: any) => state;
+      const testReducer = (state = {}, _action: any) => state;
 
       const store = createStore(
         { test: testReducer },

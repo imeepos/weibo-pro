@@ -16,5 +16,5 @@ export class AnswerFinalizerAst extends Ast {
     @Output({ title: '润色后内容', defaultValue: '' })
     finalized = ``;
 
-    type: 'AnswerFinalizerAst' = 'AnswerFinalizerAst';
+    type = 'AnswerFinalizerAst';
 }

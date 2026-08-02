@@ -714,7 +714,7 @@ export class EnvironmentInjector extends Injector {
       if (isOnDestroy(instance)) {
         await instance.onDestroy();
       }
-    } catch (error) {
+    } catch (_error) {
       // 吞没销毁过程中的错误，不影响其他实例的销毁
       // 在生产环境中可以考虑记录日志
     }

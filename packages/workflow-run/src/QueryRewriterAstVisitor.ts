@@ -15,7 +15,7 @@ const QueryRewriteSchema = z.object({
 export class QueryRewriterAstVisitor {
 
   @Handler(QueryRewriterAst)
-  handler(ast: QueryRewriterAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: QueryRewriterAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

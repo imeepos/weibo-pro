@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { WorkflowGraphAst, addNode as astAddNode, addEdge as astAddEdge } from '@sker/workflow'
+import { addNode as astAddNode, addEdge as astAddEdge } from '@sker/workflow'
 import { useClipboard } from '../../../hooks/useClipboard'
 import type { WorkflowNode, WorkflowEdge } from '../../../types'
 import type { UseWorkflowReturn } from '../../../hooks/useWorkflow'

@@ -134,7 +134,7 @@ describe('WeiboAccountSyncService', () => {
         updatedAt: new Date(),
       }
 
-      const inactiveAccount: WeiboAccountEntity = {
+      const _inactiveAccount: WeiboAccountEntity = {
         id: 'account-2',
         weiboUid: 'uid2',
         weiboNickname: 'nickname2',
@@ -167,8 +167,6 @@ describe('WeiboAccountSyncService', () => {
       // 只检查了 ACTIVE 账号
       expect(mockRedis.zscore).toHaveBeenCalledTimes(1)
       expect(mockRedis.zscore).toHaveBeenCalledWith('weibo:account:health', 'account-1')
-      // 验证 find 被调用时使用了正确的 where 条件
-      useEntityManagerMock.mock.calls[0][0]
     })
 
     it('Redis 中有已删除的账号，自动清理', async () => {

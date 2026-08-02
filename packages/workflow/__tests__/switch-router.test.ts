@@ -41,7 +41,7 @@ describe('Switch/Router Nodes', () => {
       entryNodeIds: ['n1']
     });
 
-    const events = await firstValueFrom(
+    const _events = await firstValueFrom(
       executeWorkflow(workflow, {}).pipe(toArray())
     );
 
@@ -64,7 +64,7 @@ describe('Switch/Router Nodes', () => {
       entryNodeIds: ['n1']
     });
 
-    const events = await firstValueFrom(
+    const _events = await firstValueFrom(
       executeWorkflow(workflow, {}).pipe(toArray())
     );
 

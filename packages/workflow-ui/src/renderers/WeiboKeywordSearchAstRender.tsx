@@ -3,7 +3,7 @@ import { Render } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import React from "react";
 
-const WeiboKeywordSearchComponent: React.FC<{ ast: WeiboKeywordSearchAst }> = ({ ast }) => (
+const WeiboKeywordSearchComponent: React.FC<{ ast: WeiboKeywordSearchAst }> = ({ ast: _ast }) => (
     <></>
 );
 

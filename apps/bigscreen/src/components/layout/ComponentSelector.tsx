@@ -239,7 +239,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
           </div>
         </div>
       );
-    } catch (error) {
+    } catch (_error) {
       // 如果组件渲染失败，回退到原始预览
       return (
         <div className="w-full h-20 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center">

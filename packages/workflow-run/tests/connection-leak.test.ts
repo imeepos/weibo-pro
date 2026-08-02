@@ -259,7 +259,7 @@ describe('数据库连接泄露测试', () => {
 
         // 模拟操作失败
         throw new Error('Transaction failed')
-      } catch (error) {
+      } catch (_error) {
         await queryRunner.rollbackTransaction()
       } finally {
         await queryRunner.release()

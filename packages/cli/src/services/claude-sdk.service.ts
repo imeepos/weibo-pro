@@ -17,7 +17,6 @@ import { query, type Options as SdkOptions, type PermissionResult, type Query } 
 import type {
   ClaudeCommand,
   ClaudeResponse,
-  ClaudeResponseType,
   ActiveSession,
   ModelUsage,
   TokenBudgetData,

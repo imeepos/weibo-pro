@@ -3,7 +3,6 @@ import {
   structureToList,
   getLeafNodes,
   writeNodeId,
-  getNodes,
   isLeafNode
 } from '../../src/utils/tree.js';
 import type { Node } from '../../src/types/node.types.js';

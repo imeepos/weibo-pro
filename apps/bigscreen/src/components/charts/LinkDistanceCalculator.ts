@@ -73,7 +73,7 @@ export const calculateAllLinkDistances = (
   config: LinkDistanceConfig = DEFAULT_LINK_CONFIG
 ): Map<string, number> => {
   const distanceMap = new Map<string, number>();
-  const nodeMap = new Map(nodes.map(node => [node.id, node]));
+  const _nodeMap = new Map(nodes.map(node => [node.id, node]));
 
   edges.forEach(edge => {
     const linkId = `${edge.source}-${edge.target}`;

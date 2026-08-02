@@ -6,7 +6,7 @@
 
 import { execSync } from 'child_process';
 import { existsSync, rmSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, } from 'path';
 
 const ROOT = resolve(__dirname, '../..');
 const DIST = resolve(__dirname, '../dist');

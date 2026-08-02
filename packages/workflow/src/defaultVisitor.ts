@@ -33,7 +33,7 @@ export const DEFAULT_VISITOR = new InjectionToken<IDefaultVisitor>('DEFAULT_VISI
  */
 @Injectable()
 export class DefaultVisitor implements IDefaultVisitor {
-    visit(ast: INode, input$: Observable<INode>, workflow?: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: INode, input$: Observable<INode>, _workflow?: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable(obs => {
             console.log(`DefaultVisitor run ${ast.type}`)
             if (!input$) throw new Error(`[DefaultVisitor.handler] input$ is empty`)

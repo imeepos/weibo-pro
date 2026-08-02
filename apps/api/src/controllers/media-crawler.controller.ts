@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query } from '@sker/core'
+import { Controller, Body, Query } from '@sker/core'
 import { root } from '@sker/core'
 import * as sdk from '@sker/sdk'
 import { MediaCrawlerService } from '../services/media-crawler.service'

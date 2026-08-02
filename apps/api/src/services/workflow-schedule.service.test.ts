@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkflowScheduleService } from './workflow-schedule.service';
-import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus, WorkflowEntity, useEntityManager } from '@sker/entities';
+import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus, WorkflowEntity, } from '@sker/entities';
 import { mockEntityManager } from '../test-setup';
 
 // Mock dependencies

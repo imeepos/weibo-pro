@@ -1,4 +1,4 @@
-import { Observable, throwError, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { catchError, retry, tap } from 'rxjs/operators';
 import { Ast, NodeEvent, setAstError } from '@sker/workflow';
 

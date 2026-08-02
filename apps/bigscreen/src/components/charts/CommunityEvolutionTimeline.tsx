@@ -265,7 +265,7 @@ export const CommunityEvolutionTimeline: React.FC<CommunityEvolutionTimelineProp
       return `${date.getMonth() + 1}/${date.getDate()}`;
     });
     const communityCounts = data.timeSlices.map(slice => slice.communities.length);
-    const memberCounts = data.timeSlices.map(slice => slice.totalMembers);
+    const _memberCounts = data.timeSlices.map(slice => slice.totalMembers);
 
     return {
       tooltip: {

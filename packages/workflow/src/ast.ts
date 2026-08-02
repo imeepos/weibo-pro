@@ -1,6 +1,6 @@
 import { Node, State } from "./decorator";
 import { NodeEvent } from "./execution/events";
-import { IAstStates, IEdge, INode, INodeInputMetadata, INodeOutputMetadata, INodeStateMetadata, INodeMetadata, CompiledNodeMetadata } from "./types";
+import { IAstStates, IEdge, INode, CompiledNodeMetadata } from "./types";
 import { generateId } from "./utils";
 import { SerializedError } from "@sker/core";
 import { BehaviorSubject, Observable } from 'rxjs';

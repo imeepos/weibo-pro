@@ -31,5 +31,5 @@ export class ResearchPlannerAst extends Ast {
   @Output({ title: '推理过程', defaultValue: '' })
   reasoning = ``;
 
-  type: 'ResearchPlannerAst' = 'ResearchPlannerAst';
+  type = 'ResearchPlannerAst';
 }

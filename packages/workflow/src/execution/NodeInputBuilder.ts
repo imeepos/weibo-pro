@@ -1,8 +1,5 @@
-import { Observable, EMPTY, of } from 'rxjs';
-import { map, withLatestFrom } from 'rxjs/operators';
 import { WorkflowGraphAst } from '../ast';
-import { IEdge, ROUTE_SKIPPED } from '../types';
-import { NodeEvent } from './events';
+import { IEdge, } from '../types';
 import { hasMultiMode } from '../decorator';
 import { Injectable, createLogger } from '@sker/core';
 

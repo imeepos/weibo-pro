@@ -145,7 +145,7 @@ export class ProxyBrowserLauncher {
   private async importPlaywright() {
     try {
       return await import('playwright')
-    } catch (error) {
+    } catch (_error) {
       throw new Error(
         'Playwright未安装。请运行: pnpm add playwright -D'
       )

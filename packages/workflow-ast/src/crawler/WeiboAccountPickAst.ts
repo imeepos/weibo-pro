@@ -1,5 +1,4 @@
 import { Ast, Input, IS_MULTI, Node, Output, State } from "@sker/workflow";
-import { BehaviorSubject } from 'rxjs';
 
 @Node({
     title: '微博账号选择器',

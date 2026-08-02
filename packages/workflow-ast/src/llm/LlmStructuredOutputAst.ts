@@ -1,4 +1,4 @@
-import { Ast, Input, IS_MULTI, Node, Output } from "@sker/workflow";
+import { Ast, Input, IS_MULTI, Node, } from "@sker/workflow";
 
 @Node({
     title: '结构化输出',

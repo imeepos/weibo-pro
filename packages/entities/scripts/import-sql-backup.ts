@@ -2,7 +2,6 @@ import "reflect-metadata";
 import 'dotenv/config';
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
-import { DataSource } from 'typeorm';
 import { useDataSource } from "../src/utils";
 
 // 导入所有实体以注册元数据

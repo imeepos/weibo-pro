@@ -2,7 +2,7 @@ import { root, ToolMetadataKey, ToolArgMetadataKey, ToolMetadata, ToolArgMetadat
 import { AnthropicTool, OpenAITool } from './ast'
 import { zodToJsonSchema, zodToJsonSchemaWithDescription, isOptionalParam } from './utils/zod-to-json-schema'
 
-export function buildAnthropicTools(tools: Type<any>[] = []): AnthropicTool[] {
+export function buildAnthropicTools(_tools: Type<any>[] = []): AnthropicTool[] {
     const toolMetadatas = root.get(ToolMetadataKey) ?? []
     const toolArgMetadatas = root.get(ToolArgMetadataKey) ?? []
 
@@ -42,7 +42,7 @@ export function buildAnthropicTools(tools: Type<any>[] = []): AnthropicTool[] {
     })
 }
 
-export function buildOpenAITools(tools: Type<any>[] = []): OpenAITool[] {
+export function buildOpenAITools(_tools: Type<any>[] = []): OpenAITool[] {
     const toolMetadatas = (root.get(ToolMetadataKey) ?? []).filter((m: any) => m?.target)
     const toolArgMetadatas = (root.get(ToolArgMetadataKey) ?? []).filter((m: any) => m?.target)
 

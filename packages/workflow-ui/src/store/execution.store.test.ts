@@ -176,7 +176,7 @@ describe('Execution Store', () => {
       const store = useExecutionStore.getState()
       store.startExecution()
       store.updateNodeState('node-1', 'running')
-      const recordId = store.recordNodeStart('node-2')
+      const _recordId = store.recordNodeStart('node-2')
 
       store.resetExecution()
 

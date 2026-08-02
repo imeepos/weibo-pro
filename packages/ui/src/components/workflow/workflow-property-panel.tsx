@@ -211,11 +211,11 @@ export interface DynamicPortItemProps {
   children?: ReactNode
 }
 
-function getPortTypeIcon(type: string) {
+function getPortTypeIcon(_type: string) {
   return <Type className="h-3 w-3 text-muted-foreground" />
 }
 
-function getPortTypeLabel(type: string): string {
+function _getPortTypeLabel(type: string): string {
   const typeLabels: Record<string, string> = {
     string: '字符串',
     text: '多行文本',

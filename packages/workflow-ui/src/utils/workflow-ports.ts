@@ -65,7 +65,7 @@ export function getExposedInputs(workflow: INode): PortInfo[] {
           required: inputMeta.required
         })
       }
-    } catch (error) {
+    } catch (_error) {
       continue
     }
   }
@@ -117,7 +117,7 @@ export function getExposedOutputs(workflow: INode): PortInfo[] {
           })
         }
       }
-    } catch (error) {
+    } catch (_error) {
       continue
     }
   }

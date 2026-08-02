@@ -1,5 +1,4 @@
-import { Ast, Input, Node, Output, State } from '@sker/workflow';
-import type { WeiboPostEntity } from '@sker/entities';
+import { Ast, Input, Node, Output, } from '@sker/workflow';
 
 /**
  * 帖子 NLP 循环器
@@ -47,5 +46,5 @@ export class PostNLPLooperAst extends Ast {
   @Output({ title: '是否有下一页', isRouter: true, defaultValue: true })
   hasMore!: boolean;
 
-  type: 'PostNLPLooperAst' = 'PostNLPLooperAst';
+  type = 'PostNLPLooperAst';
 }

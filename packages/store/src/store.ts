@@ -1,4 +1,4 @@
-import { Observable, type Observer, type OperatorFunction } from 'rxjs';
+import { Observable, type Observer, } from 'rxjs';
 import { distinctUntilChanged, map, pluck } from 'rxjs/operators';
 import { ActionsSubject } from './actions-subject';
 import type { Action, ActionReducer } from './models';

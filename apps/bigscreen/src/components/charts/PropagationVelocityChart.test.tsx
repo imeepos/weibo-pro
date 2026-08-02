@@ -26,7 +26,7 @@ vi.mock('@sker/ui/components/ui/chart-state', () => ({
 
 // Mock EChart 组件
 vi.mock('@sker/ui/components/ui/echart', () => ({
-  EChart: ({ option, height, className }: { option: any; height: number; className?: string }) => (
+  EChart: ({ option: _option, height, className }: { option: any; height: number; className?: string }) => (
     <div data-testid="echart" className={className} style={{ height }}>
       EChart Mock
     </div>

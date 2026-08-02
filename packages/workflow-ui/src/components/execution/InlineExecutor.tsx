@@ -203,7 +203,7 @@ export const WeiboLoginExecutor: React.FC<{
 }> = ({ onLoginSuccess, onLoginCancel, className }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, _setError] = useState<string | null>(null)
 
   useEffect(() => {
     // 监听二维码事件

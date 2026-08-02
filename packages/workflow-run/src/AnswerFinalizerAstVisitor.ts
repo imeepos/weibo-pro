@@ -53,7 +53,7 @@ IMPORTANT: Do not begin your response with phrases like "Sure", "Here is", "Belo
 export class AnswerFinalizerAstVisitor {
 
     @Handler(AnswerFinalizerAst)
-    visit(ast: AnswerFinalizerAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+    visit(ast: AnswerFinalizerAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 

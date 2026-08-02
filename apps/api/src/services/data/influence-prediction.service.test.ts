@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { EntityManager } from 'typeorm';
 import { InfluencePredictionService } from './influence-prediction.service';
-import { CacheService } from '../cache.service';
 import { useEntityManager } from '@sker/entities';
 
 vi.mock('@sker/entities', async () => {

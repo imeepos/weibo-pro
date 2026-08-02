@@ -30,5 +30,5 @@ export class WorkflowNodeGeneratorAst extends Ast {
   @Output({ title: '生成成功', defaultValue: false })
   success = false;
 
-  type: 'WorkflowNodeGeneratorAst' = 'WorkflowNodeGeneratorAst';
+  type = 'WorkflowNodeGeneratorAst';
 }

@@ -5,7 +5,7 @@ import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboAjaxStatusesLikeShowAst } from "@sker/workflow-ast";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
 import { Observable, from } from "rxjs";
-import { concatMap, mergeMap } from "rxjs/operators";
+import { mergeMap } from "rxjs/operators";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 import { WeiboWorkerProxyService } from "./services/weibo-worker-proxy.service";

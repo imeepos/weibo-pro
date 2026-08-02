@@ -226,7 +226,7 @@ export const useFileOperations = (workflow: any, options: FileOperationsOptions 
    * - 避免代码重复
    * - 便于维护和扩展
    */
-  const processImportFile = useCallback(async (file: File, isCanvasEmpty: boolean) => {
+  const processImportFile = useCallback(async (file: File, _isCanvasEmpty: boolean) => {
     try {
       const text = await file.text()
       const data = JSON.parse(text)

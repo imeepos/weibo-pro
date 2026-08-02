@@ -8,7 +8,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
-  const { realTimeData, isConnected } = useAppStore();
+  const { realTimeData, isConnected: _isConnected } = useAppStore();
 
   if (!realTimeData) {
     return (
@@ -22,7 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     );
   }
 
-  const { statistics } = realTimeData;
+  const { statistics: _statistics } = realTimeData;
 
   return (
     <aside className={cn(

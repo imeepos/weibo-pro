@@ -75,7 +75,7 @@ describe('Multi-Edge Scenarios', () => {
       entryNodeIds: ['n1', 'n2']
     });
 
-    const events = await firstValueFrom(
+    const _events = await firstValueFrom(
       executeWorkflow(workflow, {}).pipe(toArray())
     );
 
@@ -103,7 +103,7 @@ describe('Multi-Edge Scenarios', () => {
       entryNodeIds: ['n1', 'n2']
     });
 
-    const events = await firstValueFrom(
+    const _events = await firstValueFrom(
       executeWorkflow(workflow, {}).pipe(toArray())
     );
 

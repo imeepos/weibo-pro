@@ -16,13 +16,13 @@ export class BooleanAst extends Ast {
   @Output({ title: '布尔值', defaultValue: false })
   result!: boolean;
 
-  type: 'BooleanAst' = 'BooleanAst';
+  type = 'BooleanAst';
 }
 
 @Injectable()
 export class BooleanAstVisitor {
   @Handler(BooleanAst)
-  visit(ast: BooleanAst, input$: Observable<any>, ctx: any): Observable<NodeEvent> {
+  visit(ast: BooleanAst, input$: Observable<any>, _ctx: any): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       ast.state = 'running'
       obs.next({ type: 'node_runing', id: ast.id })

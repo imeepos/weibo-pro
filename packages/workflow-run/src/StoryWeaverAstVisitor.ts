@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { StoryWeaverAst } from '@sker/workflow-ast';
 import { Observable, throwError } from 'rxjs';
-import { concatMap, distinctUntilChanged, map, takeWhile } from 'rxjs/operators';
+import { concatMap, distinctUntilChanged, takeWhile } from 'rxjs/operators';
 import { ChapterGenerationService } from './services/ChapterGenerationService';
 
 /**

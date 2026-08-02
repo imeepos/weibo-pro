@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { tocTransformer, tocIndexExtractor } from '../../../src/pdf/toc-extractor.js';
-import { ChatGPT_API_with_finish_reason, ChatGPT_API } from '../../../src/utils/openai.js';
+import { ChatGPT_API_with_finish_reason, } from '../../../src/utils/openai.js';
 import { extractJson, getJsonContent } from '../../../src/utils/json.js';
 
 // Mock OpenAI API

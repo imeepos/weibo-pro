@@ -9,7 +9,7 @@ import { ErrorHandlerOperators } from "./utils/error-handler.util";
 export class LlmTextAgentAstVisitor {
 
     @Handler(LlmTextAgentAst)
-    visit(ast: LlmTextAgentAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: LlmTextAgentAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 
@@ -50,7 +50,7 @@ export class LlmTextAgentAstVisitor {
                 next: (event: NodeEvent) => {
                     obs.next(event);
                 },
-                error: (error) => {
+                error: (_error) => {
                     // 错误已在 catchError 中处理，这里只需要发送失败事件
                     obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message });
                 },

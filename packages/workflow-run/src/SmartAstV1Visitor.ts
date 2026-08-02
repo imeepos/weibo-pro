@@ -281,7 +281,7 @@ ${outputHints || '(无)'}
     const events: NodeEvent[] = []
 
     return new Promise((resolve, reject) => {
-      const subscription = this.streamingLlmInvoker.streamWithTools(
+      const _subscription = this.streamingLlmInvoker.streamWithTools(
         model,
         messages as any,
         signal,

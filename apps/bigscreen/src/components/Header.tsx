@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, LogIn, Search, Sparkles, Shield, Brain, MessageSquare, FileText, GitBranch } from 'lucide-react';
+import { Clock, Activity, Settings, Maximize, Minimize, Sun, Moon, User, ChevronDown, BarChart3, Users, Network, Brain, MessageSquare, FileText, GitBranch } from 'lucide-react';
 import { useAppStore } from '@/stores/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useFullscreen } from '@/hooks/useFullscreen';

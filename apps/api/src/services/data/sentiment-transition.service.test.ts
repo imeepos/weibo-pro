@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { EntityManager } from 'typeorm';
 import { SentimentTransitionService } from './sentiment-transition.service';
-import { CacheService } from '../cache.service';
-import { useEntityManager, PostNLPResultEntity } from '@sker/entities';
-import { SentimentTransitionLLMAnalyzerService } from './sentiment-transition-llm-analyzer.service';
+import { useEntityManager, } from '@sker/entities';
 
 vi.mock('@sker/entities', async () => {
   const actual = await vi.importActual('@sker/entities');

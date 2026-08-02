@@ -17,5 +17,5 @@ export class VideoAst extends Ast {
     @Output({ title: '视频', defaultValue: '' })
     video = ``;
 
-    type: 'VideoAst' = 'VideoAst';
+    type = 'VideoAst';
 }

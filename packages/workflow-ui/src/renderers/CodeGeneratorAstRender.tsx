@@ -48,7 +48,7 @@ const CodeGeneratorComponent: React.FC<{ ast: CodeGeneratorAst }> = ({ ast }) =>
 @Injectable()
 export class CodeGeneratorAstRender {
     @Render(CodeGeneratorAst)
-    render(ast: CodeGeneratorAst, ctx: any) {
+    render(ast: CodeGeneratorAst, _ctx: any) {
         return <CodeGeneratorComponent ast={ast} />
     }
 }

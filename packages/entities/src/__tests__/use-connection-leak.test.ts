@@ -29,7 +29,7 @@ describe('useEntityManager - 连接泄露集成测试', () => {
     try {
       dataSourceInstance = await useDataSource()
       hasDatabase = !!dataSourceInstance
-    } catch (error) {
+    } catch (_error) {
       hasDatabase = false
       console.warn('⚠️  无法连接数据库，跳过集成测试')
     }
@@ -69,7 +69,7 @@ describe('useEntityManager - 连接泄露集成测试', () => {
           // 执行一个简单查询
           await manager.query('SELECT 1')
         })
-      } catch (error) {
+      } catch (_error) {
         // 忽略查询错误，我们只关心 DataSource 实例
       }
     }
@@ -99,7 +99,7 @@ describe('useEntityManager - 连接泄露集成测试', () => {
           await manager.query('SELECT 1')
           return true
         })
-      } catch (error) {
+      } catch (_error) {
         return false
       }
     })
@@ -129,7 +129,7 @@ describe('useEntityManager - 连接泄露集成测试', () => {
           // 模拟查询操作
           await manager.query('SELECT 1')
         })
-      } catch (error) {
+      } catch (_error) {
         // 忽略错误
       }
 

@@ -11,5 +11,5 @@ export class HtmlDisplayAst extends Ast {
   @Output({ title: '渲染结果', defaultValue: '' })
   rendered = '';
 
-  type: 'HtmlDisplayAst' = 'HtmlDisplayAst';
+  type = 'HtmlDisplayAst';
 }

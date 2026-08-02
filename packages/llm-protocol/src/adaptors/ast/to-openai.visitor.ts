@@ -13,7 +13,7 @@ import type {
     CodexFunctionCall,
     CodexFunctionCallOutput,
 } from '../types/codex';
-import type { ClaudeRequest, ClaudeResponse, ClaudeStreamEvent, ClaudeContentBlock, ClaudeTool } from '../types/claude';
+import type { ClaudeRequest, ClaudeResponse, ClaudeStreamEvent, } from '../types/claude';
 import type { OpenAIRequest, OpenAIResponse, OpenAIStreamResponse, OpenAIMessage, OpenAIContentPart } from '../types/openai';
 import type {
     CodexRequestAst,
@@ -29,27 +29,27 @@ import type {
 
 @Injectable()
 export class ToOpenAiVisitor extends BaseVisitor {
-    visitCodexRequestAst(ast: CodexRequestAst, ctx: any): OpenAIRequest {
+    visitCodexRequestAst(ast: CodexRequestAst, _ctx: any): OpenAIRequest {
         return this.convertCodexToOpenAI(ast.request);
     }
 
-    visitCodexResponseAst(ast: CodexResponseAst, ctx: any): OpenAIResponse {
+    visitCodexResponseAst(ast: CodexResponseAst, _ctx: any): OpenAIResponse {
         return this.convertCodexResponseToOpenAI(ast.response);
     }
 
-    visitOpenAiRequestAst(ast: OpenAiRequestAst, ctx: any): OpenAIRequest {
+    visitOpenAiRequestAst(ast: OpenAiRequestAst, _ctx: any): OpenAIRequest {
         return ast.request;
     }
 
-    visitOpenAIResponseAst(ast: OpenAIResponseAst, ctx: any): OpenAIResponse {
+    visitOpenAIResponseAst(ast: OpenAIResponseAst, _ctx: any): OpenAIResponse {
         return ast.response;
     }
 
-    visitClaudeRequestAst(ast: ClaudeRequestAst, ctx: any): OpenAIRequest {
+    visitClaudeRequestAst(ast: ClaudeRequestAst, _ctx: any): OpenAIRequest {
         return this.convertClaudeRequestToOpenAI(ast.request);
     }
 
-    visitClaudeResponseAst(ast: ClaudeResponseAst, ctx: any): OpenAIResponse {
+    visitClaudeResponseAst(ast: ClaudeResponseAst, _ctx: any): OpenAIResponse {
         return this.convertClaudeResponseToOpenAI(ast.response);
     }
 
@@ -196,7 +196,7 @@ export class ToOpenAiVisitor extends BaseVisitor {
         }
     }
 
-    visitOpenAIStreamResponseAst(ast: OpenAIStreamResponseAst, ctx: any): OpenAIStreamResponse {
+    visitOpenAIStreamResponseAst(ast: OpenAIStreamResponseAst, _ctx: any): OpenAIStreamResponse {
         return ast.streamEvent;
     }
 

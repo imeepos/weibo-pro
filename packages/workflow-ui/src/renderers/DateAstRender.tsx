@@ -5,7 +5,7 @@ import React from "react";
 @Injectable()
 export class DateAstRender {
     @Render(DateAst)
-    render(ast: DateAst, ctx: any) {
+    render(ast: DateAst, _ctx: any) {
         return (
             <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
                 {ast.dateStr}

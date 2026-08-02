@@ -39,7 +39,7 @@ const mockHeatmapData: PostingTimeHeatmap = {
 
 // Mock controller
 class MockPostingTimeController {
-  async getHeatmap(eventId: string): Promise<PostingTimeHeatmap> {
+  async getHeatmap(_eventId: string): Promise<PostingTimeHeatmap> {
     return mockHeatmapData;
   }
 }
@@ -112,7 +112,7 @@ describe('usePostingTimeHeatmap', () => {
         expect(result.current.data).toEqual(mockHeatmapData);
       });
 
-      const getSpy = vi.spyOn(root, 'get');
+      const _getSpy = vi.spyOn(root, 'get');
 
       // 重新渲染相同的事件ID
       rerender({ eventId: 'test-event-123' });

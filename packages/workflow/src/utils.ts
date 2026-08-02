@@ -30,7 +30,7 @@ export const clone = (obj: any, seen = new WeakSet()): any => {
 
 	const cloned: any = {};
 	for (const key in obj) {
-		if (obj.hasOwnProperty(key)) {
+		if (Object.prototype.hasOwnProperty.call(obj, key)) {
 			const value = clone(obj[key], seen);
 			if (value !== undefined) {
 				cloned[key] = value;

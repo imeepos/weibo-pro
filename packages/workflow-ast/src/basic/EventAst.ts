@@ -49,5 +49,5 @@ export class EventAst extends Ast {
   @Output({ title: '停止原因', defaultValue: null })
   crawl_end_reason: string | null = null;
 
-  type: 'EventAst' = 'EventAst';
+  type = 'EventAst';
 }

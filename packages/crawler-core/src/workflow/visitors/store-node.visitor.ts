@@ -6,7 +6,7 @@ import { StoreFactory } from '../../store/factory';
 @Injectable()
 export class StoreNodeVisitor {
   @Handler(StoreNodeAst)
-  async visit(ast: StoreNodeAst, ctx: any) {
+  async visit(ast: StoreNodeAst, _ctx: any) {
     ast.state = 'running';
 
     try {

@@ -106,7 +106,7 @@ describe('Tabs Components', () => {
 
     it('应该支持点击切换选项卡', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      const { container: _container } = render(
         <Tabs defaultValue="tab1">
           <TabsList>
             <TabsTrigger value="tab1">标签1</TabsTrigger>

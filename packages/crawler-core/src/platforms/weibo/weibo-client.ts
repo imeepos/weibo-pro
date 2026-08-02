@@ -89,7 +89,7 @@ export class WeiboClient {
   }
 
   async loadCookies(cookies: Record<string, string>) {
-    const cookieString = Object.entries(cookies)
+    const _cookieString = Object.entries(cookies)
       .map(([key, value]) => `${key}=${value}`)
       .join('; ')
     await this.httpClient.loadCookies(JSON.stringify(cookies))

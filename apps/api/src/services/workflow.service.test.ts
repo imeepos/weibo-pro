@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkflowService } from './workflow.service';
-import { WorkflowEntity, WorkflowShareEntity, WorkflowStatus, useEntityManager } from '@sker/entities';
+import { WorkflowEntity, WorkflowShareEntity, WorkflowStatus, } from '@sker/entities';
 import type { WorkflowGraphAst } from '@sker/workflow';
 import { mockEntityManager } from '../test-setup';
 
@@ -74,7 +74,7 @@ describe('WorkflowService', () => {
             mockWorkflowRepo.create.mockReturnValue({ id: 'wf-1', ...params });
             mockWorkflowRepo.save.mockResolvedValue({ id: 'wf-1' });
 
-            const result = await service.saveWorkflow(params as unknown as WorkflowGraphAst);
+            const _result = await service.saveWorkflow(params as unknown as WorkflowGraphAst);
 
             expect(mockWorkflowRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({

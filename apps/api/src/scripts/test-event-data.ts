@@ -1,6 +1,6 @@
 import { config } from 'dotenv'
 import { useEntityManager } from '@sker/entities'
-import { EventEntity, PostNLPResultEntity, WeiboPostEntity, EventHourlyStatisticsEntity } from '@sker/entities'
+import { EventEntity, PostNLPResultEntity, EventHourlyStatisticsEntity } from '@sker/entities'
 import { EventQueryService } from '../services/data/events/event-query.service'
 import { root } from '@sker/core'
 

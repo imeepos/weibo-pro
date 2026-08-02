@@ -13,5 +13,5 @@ export class DetailNodeAst extends Ast {
   @Output({ title: '帖子详情' })
   detail: any = null;
 
-  type: 'DetailNodeAst' = 'DetailNodeAst';
+  type = 'DetailNodeAst';
 }

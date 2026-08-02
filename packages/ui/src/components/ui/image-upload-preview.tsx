@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Button } from "./button"
-import { Upload, Edit, Crop, Image as ImageIcon } from "lucide-react"
+import { Upload, Edit, Crop, } from "lucide-react"
 import { cn } from "@sker/ui/lib/utils"
 
 interface ImageUploadPreviewProps {

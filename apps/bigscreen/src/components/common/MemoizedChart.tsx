@@ -53,13 +53,13 @@ const deepEqual = (obj1: unknown, obj2: unknown): boolean => {
 
 const MemoizedChart: React.FC<MemoizedChartProps> = ({
   option,
-  height = 400,
+  height: _height = 400,
   className,
-  loading = false,
+  loading: _loading = false,
   notMerge = true,
   lazyUpdate = true,
-  onEvents,
-  style,
+  onEvents: _onEvents,
+  style: _style,
 }) => {
   const previousOption = useRef<EChartsOption | undefined>(undefined);
 

@@ -94,7 +94,7 @@ export class GraphologyCommunityDetector<N extends GraphNode, E extends GraphEdg
     }
 
     const result: Community[] = Array.from(communityMap.entries())
-      .map(([id, nodes], index) => ({
+      .map(([id, nodes], _index) => ({
         id,
         nodes: Array.from(nodes),
         color: '',

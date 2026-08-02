@@ -1,6 +1,5 @@
 import { Ast } from './ast'
 import { Input, Node, Output, State, IS_MULTI, IS_BUFFER } from './decorator'
-import { BehaviorSubject } from 'rxjs'
 
 /**
  * 合并模式
@@ -42,5 +41,4 @@ export class MergeAst extends Ast {
     @Output({ title: '数据总量' })
     totalCount: number = 0
 
-    type: 'MergeAst' = 'MergeAst'
-}
+    type = 'MergeAst';}

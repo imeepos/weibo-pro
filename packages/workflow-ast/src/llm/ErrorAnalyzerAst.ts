@@ -28,5 +28,5 @@ export class ErrorAnalyzerAst extends Ast {
   @Output({ title: '改进建议', defaultValue: '' })
   improvement = ``;
 
-  type: 'ErrorAnalyzerAst' = 'ErrorAnalyzerAst';
+  type = 'ErrorAnalyzerAst';
 }

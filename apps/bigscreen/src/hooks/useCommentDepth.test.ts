@@ -30,7 +30,7 @@ const mockCommentDepthData: CommentDepthAnalysis = {
 
 // Mock controller
 class MockCommentDepthController {
-  async getAnalysis(eventId: string): Promise<CommentDepthAnalysis> {
+  async getAnalysis(_eventId: string): Promise<CommentDepthAnalysis> {
     return mockCommentDepthData;
   }
 }
@@ -90,7 +90,7 @@ describe('useCommentDepth Hook', () => {
     it('4. 错误处理', async () => {
       const mockError = new Error('Network error');
       const errorController = {
-        async getAnalysis(eventId: string): Promise<CommentDepthAnalysis> {
+        async getAnalysis(_eventId: string): Promise<CommentDepthAnalysis> {
           throw mockError;
         }
       };
@@ -110,7 +110,7 @@ describe('useCommentDepth Hook', () => {
     it('5. 加载状态', async () => {
       let resolve: any;
       const pendingController = {
-        async getAnalysis(eventId: string): Promise<CommentDepthAnalysis> {
+        async getAnalysis(_eventId: string): Promise<CommentDepthAnalysis> {
           return new Promise(r => { resolve = r; });
         }
       };
@@ -144,7 +144,7 @@ describe('useCommentDepth Hook', () => {
       };
 
       const emptyController = {
-        async getAnalysis(eventId: string): Promise<CommentDepthAnalysis> {
+        async getAnalysis(_eventId: string): Promise<CommentDepthAnalysis> {
           return emptyData;
         }
       };

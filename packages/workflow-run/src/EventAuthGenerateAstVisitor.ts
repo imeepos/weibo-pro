@@ -211,7 +211,7 @@ export class EventAuthGenerateAstVisitor {
 - 综合评分 = 阅读分 + 讨论分 + 原创分（最高100分）`;
 
   @Handler(EventAuthGenerateAst)
-  visit(ast: EventAuthGenerateAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+  visit(ast: EventAuthGenerateAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

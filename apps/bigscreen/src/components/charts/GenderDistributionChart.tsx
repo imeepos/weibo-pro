@@ -13,7 +13,7 @@ interface GenderDistributionChartProps {
 }
 
 const GenderDistributionChart: React.FC<GenderDistributionChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = "",
 }) => {
   const { isDark } = useTheme();

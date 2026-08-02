@@ -16,7 +16,7 @@ const mockData: SpreadBreadthAnalysis = {
 };
 
 class MockSpreadBreadthController {
-  async getAnalysis(eventId: string): Promise<SpreadBreadthAnalysis> {
+  async getAnalysis(_eventId: string): Promise<SpreadBreadthAnalysis> {
     return mockData;
   }
 }

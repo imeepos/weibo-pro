@@ -67,5 +67,5 @@ export class QualityCheckerAst extends Ast {
   @Output({ title: '是否通过', defaultValue: false })
   passed: boolean = false;
 
-  type: 'QualityCheckerAst' = 'QualityCheckerAst';
+  type = 'QualityCheckerAst';
 }

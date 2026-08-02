@@ -66,10 +66,10 @@
     "@sker/typescript-config": "workspace:*",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^26.1.2",
-    "eslint": "^9.38.0",
+    "eslint": "^10.8.0",
     "minimatch": "^10.1.1",
     "tsx": "^4.19.2",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^4.0.16"
   },
   "engines": {

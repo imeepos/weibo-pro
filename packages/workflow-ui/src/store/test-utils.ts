@@ -8,7 +8,7 @@ import { WorkflowGraphAst } from '@sker/workflow';
  */
 @Injectable()
 export class WorkflowEventBus {
-  emitNodeSuccess(nodeId: string, payload: any, workflowId: string): void {
+  emitNodeSuccess(_nodeId: string, _payload: any, _workflowId: string): void {
     // Mock implementation - does nothing since event listening is commented out
   }
 }

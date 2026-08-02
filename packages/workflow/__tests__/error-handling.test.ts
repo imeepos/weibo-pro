@@ -27,7 +27,7 @@ class ErrorAst extends Ast {
 @Injectable()
 class ErrorAstVisitor {
   @Handler(ErrorAst)
-  handler(ast: ErrorAst, input$: Observable<any>): Observable<NodeEvent> {
+  handler(ast: ErrorAst, _input$: Observable<any>): Observable<NodeEvent> {
     return new Observable(obs => {
       obs.next({ type: 'node_runing', id: ast.id });
       obs.error(new Error('Test error'));

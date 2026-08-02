@@ -6,7 +6,7 @@ import {
   Clock,
   Repeat,
   Hand,
-  Infinity,
+  Infinity as InfinityIcon,
   Play,
   Power,
   PowerOff,
@@ -38,7 +38,7 @@ const scheduleTypeIcons: Record<ScheduleType, React.ComponentType<{ className?: 
   once: Calendar,
   cron: Clock,
   interval: Repeat,
-  continuous: Infinity,
+  continuous: InfinityIcon,
   manual: Hand
 }
 

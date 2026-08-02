@@ -16,7 +16,7 @@
  * 3. 第二次调用：模拟相同数据再次处理，验证统计表不应重复累加
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityManager } from 'typeorm';
 import { HourlyStatisticsHelper } from '@sker/entities';
 import { UserRelationStatisticsHelper, UserRelationType } from '@sker/entities';
@@ -68,16 +68,16 @@ class MockEntityManager extends EntityManager {
     return {
       insert() {
         return {
-          into(entity: any) {
+          into(_entity: any) {
             return {
               values(values: any) {
                 return {
                   orUpdate(columns: string[], conflictColumns: string[]) {
                     return {
-                      updateEntity(bool: boolean) {
+                      updateEntity(_bool: boolean) {
                         return this;
                       },
-                      callListeners(bool: boolean) {
+                      callListeners(_bool: boolean) {
                         return this;
                       },
                       async execute() {
@@ -99,7 +99,7 @@ class MockEntityManager extends EntityManager {
   /**
    * 处理 UPSERT 逻辑
    */
-  private handleUpsert(values: any, conflictColumns: string[]) {
+  private handleUpsert(values: any, _conflictColumns: string[]) {
     // 处理 EventHourlyStatisticsEntity 的 UPSERT
     if (values.event_id !== undefined) {
       const key = `stats_${values.event_id}_${values.year}_${values.month}_${values.day}_${values.hour}`;
@@ -666,7 +666,7 @@ describe('统计表重复更新问题测试', () => {
   describe('修复验证测试', () => {
     it.skip('修复后：相同的帖子ID不应该重复计数', async () => {
       const eventId = 'test-event-fixed-1';
-      const postId = 'post123';
+      const _postId = 'post123';
       const timeDimensions = { year: 2026, month: 1, day: 22, hour: 10 };
 
       // 第一次：处理帖子
@@ -693,7 +693,7 @@ describe('统计表重复更新问题测试', () => {
       const relationType = UserRelationType.LIKE;
       const eventId = 'test-event-fixed-2';
       const interactionTime = new Date('2026-01-22T10:00:00Z');
-      const likeId = 'like789'; // 唯一标识
+      const _likeId = 'like789'; // 唯一标识
 
       // 第一次：记录点赞
       await UserRelationStatisticsHelper.upsertRelation(

@@ -137,7 +137,7 @@ const calculateTrend = (statistics: Array<{
 };
 
 /** 生成趋势数据 */
-const generateTrendData = (statistics: Array<{
+const _generateTrendData = (statistics: Array<{
   post_count: number;
   user_count: number;
   hotness: number;

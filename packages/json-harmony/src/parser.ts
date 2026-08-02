@@ -39,7 +39,7 @@ export class JsonHarmonyParser {
       // 尾随逗号
       trailingComma: /,\s*([}\]])/g,
       // YAML 键值对结构
-      yamlStructure: /^[\s]*[\w\-\.]+:\s*.*$/m,
+      yamlStructure: /^[\s]*[\w\-.]+:\s*.*$/m,
       // YAML 列表
       yamlList: /^[\s]*-\s+/m,
       // YAML 多行字符串
@@ -369,13 +369,13 @@ export class JsonHarmonyParser {
   private fixUnescapedQuotesInStrings(text: string): string {
     let result = ''
     let inString = false
-    let stringStartPos = -1
+    let _stringStartPos = -1
     let escapeNext = false
     let colonFound = false
 
     for (let i = 0; i < text.length; i++) {
       const char = text[i]
-      const prevChar = i > 0 ? text[i - 1] : ''
+      const _prevChar = i > 0 ? text[i - 1] : ''
 
       if (escapeNext) {
         result += char
@@ -393,7 +393,7 @@ export class JsonHarmonyParser {
         if (!inString) {
           // 进入字符串
           inString = true
-          stringStartPos = i
+          _stringStartPos = i
           colonFound = false
           result += char
         } else {

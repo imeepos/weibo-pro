@@ -1,5 +1,5 @@
 import { root } from '@sker/core'
-import { ParserVisitor, buildAnthropicTools, AggregatedMessage } from '../src'
+import { ParserVisitor, buildAnthropicTools, } from '../src'
 import { BaseProvider, Message, AgentMessage } from './base-provider'
 import { ToolCall } from './tool-executor'
 

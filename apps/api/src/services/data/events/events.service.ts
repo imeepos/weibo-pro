@@ -10,7 +10,6 @@ import type {
   TimeSeriesData,
   TrendAnalysis,
   InfluenceUser,
-  GeographicDistribution,
   GeographicResponse,
   EventSentimentHotness,
   EventSentimentDistribution,
@@ -200,11 +199,11 @@ export class EventsService {
 
   // 新增：基于 EventHourlyStatisticsEntity 的互动指标接口
 
-  async getEngagementTrend(id: string, limit?: number): Promise<EventEngagementTrend[]> {
+  async getEngagementTrend(id: string, _limit?: number): Promise<EventEngagementTrend[]> {
     return await this.queryService.getEngagementTrend(id);
   }
 
-  async getAnomalies(id: string, limit?: number): Promise<EventAnomaly[]> {
+  async getAnomalies(id: string, _limit?: number): Promise<EventAnomaly[]> {
     return await this.queryService.getAnomalies(id);
   }
 

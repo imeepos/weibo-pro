@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@sker/core';
 import { useEntityManager, LayoutConfigurationEntity } from '@sker/entities';
-import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
+import { CacheService, CACHE_TTL } from '../cache.service';
 
 export interface CreateLayoutPayload {
   name: string;

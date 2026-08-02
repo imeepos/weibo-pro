@@ -50,7 +50,7 @@ const EventAuthGenerateComponent: React.FC<{ ast: EventAuthGenerateAst }> = ({ a
 @Injectable()
 export class EventAuthGenerateAstRender {
     @Render(EventAuthGenerateAst)
-    render(ast: EventAuthGenerateAst, ctx: any) {
+    render(ast: EventAuthGenerateAst, _ctx: any) {
         return <EventAuthGenerateComponent ast={ast} />
     }
 }

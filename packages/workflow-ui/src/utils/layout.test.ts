@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, } from 'vitest'
 import { calculateDagreLayout } from './layout'
 import type { WorkflowNode, WorkflowEdge } from '../types'
-import type { INode } from '@sker/workflow'
 
 // 创建测试节点
 function createTestNode(id: string, collapsed = false): WorkflowNode {

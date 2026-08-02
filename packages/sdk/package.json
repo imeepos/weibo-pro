@@ -37,6 +37,6 @@
     "@sker/typescript-config": "workspace:*",
     "@types/node": "^26.1.2",
     "tsup": "^8.4.0",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   }
 }

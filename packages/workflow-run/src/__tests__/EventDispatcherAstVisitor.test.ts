@@ -8,8 +8,8 @@
  * - 优先选择时间差值大且更新时间早的事件
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { EventEntity, EventCategoryEntity, WeiboPostEntity } from '@sker/entities';
+import { describe, it, expect, } from 'vitest';
+import { EventEntity, EventCategoryEntity, } from '@sker/entities';
 
 /**
  * 时间范围接口
@@ -22,7 +22,7 @@ interface TimeRange {
 /**
  * 模拟的查询结果类型
  */
-interface TimeRangeResult {
+interface _TimeRangeResult {
   event_id: string;
   min: Date;
   max: Date;
@@ -394,8 +394,8 @@ ${customPrompt.trim()}
   describe('边界情况', () => {
     it('应该处理空事件列表', () => {
       const events: EventEntity[] = [];
-      const timeRangeMap = new Map();
-      const currentTime = new Date('2026-01-31T00:00:00Z');
+      const _timeRangeMap = new Map();
+      const _currentTime = new Date('2026-01-31T00:00:00Z');
 
       const eventList = events.map((e, idx) => `${idx + 1}. ID: ${e.id}`).join('\n\n');
 
@@ -403,7 +403,7 @@ ${customPrompt.trim()}
     });
 
     it('应该处理事件没有分类的情况', () => {
-      const currentTime = new Date('2026-01-31T00:00:00Z');
+      const _currentTime = new Date('2026-01-31T00:00:00Z');
       const event = createMockEventWithDates('event-1', '无分类事件', null, '2026-01-01T00:00:00Z', '2026-01-25T00:00:00Z');
       event.category = undefined as any;
 

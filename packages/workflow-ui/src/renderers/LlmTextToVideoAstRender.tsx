@@ -28,7 +28,7 @@ const LlmTextToVideoComponent: React.FC<{ ast: LlmTextToVideoAst }> = ({ ast }) 
 @Injectable()
 export class LlmTextToVideoAstRender {
     @Render(LlmTextToVideoAst)
-    render(ast: LlmTextToVideoAst, ctx: any) {
+    render(ast: LlmTextToVideoAst, _ctx: any) {
         return <LlmTextToVideoComponent ast={ast} />
     }
 }

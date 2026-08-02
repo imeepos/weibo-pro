@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Body } from '@sker/core';
+import { Controller, Query, Body } from '@sker/core';
 import { root } from '@sker/core';
 import { SentimentService } from '../services/data/sentiment.service';
 import type { TimeRange } from '@sker/entities';

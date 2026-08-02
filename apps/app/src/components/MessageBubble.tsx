@@ -21,7 +21,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       await navigator.clipboard.writeText(message.content);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (_err) {
       // Fallback for environments where clipboard API is not available
       const textArea = document.createElement('textarea');
       textArea.value = message.content;

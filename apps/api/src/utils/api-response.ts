@@ -31,7 +31,7 @@ export function success<T>(data: T, meta?: Omit<ApiResponse['meta'], 'timestamp'
 export function error(
   err: Error | AppError | unknown,
   path?: string,
-  method?: string
+  _method?: string
 ): ApiResponse {
   if (err instanceof AppError) {
     return {

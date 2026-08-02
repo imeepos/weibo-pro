@@ -29,7 +29,7 @@ const JsonDisplayComponent: React.FC<{ ast: JsonDisplayAst }> = ({ ast }) => {
 @Injectable()
 export class JsonDisplayAstRender {
     @Render(JsonDisplayAst)
-    render(ast: JsonDisplayAst, ctx: any) {
+    render(ast: JsonDisplayAst, _ctx: any) {
         return <JsonDisplayComponent ast={ast} />
     }
 }

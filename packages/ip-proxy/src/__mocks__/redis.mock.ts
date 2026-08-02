@@ -63,7 +63,7 @@ export class MockRedisClient {
     return this.data.get(key) || {}
   })
 
-  expire = vi.fn(async (key: string, seconds: number) => {
+  expire = vi.fn(async (_key: string, _seconds: number) => {
     return 1
   })
 

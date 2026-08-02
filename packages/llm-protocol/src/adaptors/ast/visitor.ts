@@ -28,31 +28,31 @@ export class BaseVisitor implements Visitor {
     visit(ast: Ast, ctx: any) {
         return ast.visit(this, ctx)
     }
-    visitCodexRequestAst(ast: CodexRequestAst, ctx: any) {
+    visitCodexRequestAst(_ast: CodexRequestAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitCodexResponseAst(ast: CodexResponseAst, ctx: any) {
+    visitCodexResponseAst(_ast: CodexResponseAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitOpenAiRequestAst(ast: OpenAiRequestAst, ctx: any) {
+    visitOpenAiRequestAst(_ast: OpenAiRequestAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitOpenAIResponseAst(ast: OpenAIResponseAst, ctx: any) {
+    visitOpenAIResponseAst(_ast: OpenAIResponseAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitClaudeRequestAst(ast: ClaudeRequestAst, ctx: any) {
+    visitClaudeRequestAst(_ast: ClaudeRequestAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitClaudeResponseAst(ast: ClaudeResponseAst, ctx: any) {
+    visitClaudeResponseAst(_ast: ClaudeResponseAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitOpenAIStreamResponseAst(ast: OpenAIStreamResponseAst, ctx: any) {
+    visitOpenAIStreamResponseAst(_ast: OpenAIStreamResponseAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitClaudeStreamEventAst(ast: ClaudeStreamEventAst, ctx: any) {
+    visitClaudeStreamEventAst(_ast: ClaudeStreamEventAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
-    visitCodexStreamEventAst(ast: CodexStreamEventAst, ctx: any) {
+    visitCodexStreamEventAst(_ast: CodexStreamEventAst, _ctx: any) {
         throw new Error("Method not implemented.");
     }
 }

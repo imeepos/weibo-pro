@@ -8,9 +8,7 @@ export class SwitchAst extends Ast {
     @Output({ title: 'Default', condition: 'true', defaultValue: '' })
     output_default = ``
 
-    type: 'SwitchAst' = 'SwitchAst'
-
-    /**
+    type = 'SwitchAst';/**
      * 🔧 编译后的元数据（由 Compiler 生成）
      * 明确重新声明 metadata 类型，确保 TypeScript 正确识别
      */

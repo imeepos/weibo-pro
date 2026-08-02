@@ -41,7 +41,7 @@ const LlmInferenceComponent: React.FC<{ ast: LlmInferenceAst }> = ({ ast }) => {
 @Injectable()
 export class LlmInferenceAstRender {
     @Render(LlmInferenceAst)
-    render(ast: LlmInferenceAst, ctx: any) {
+    render(ast: LlmInferenceAst, _ctx: any) {
         return <LlmInferenceComponent ast={ast} />
     }
 }

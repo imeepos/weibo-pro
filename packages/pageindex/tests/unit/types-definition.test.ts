@@ -15,8 +15,7 @@ import type {
   VerifyResult,
   IncorrectResult,
   ChatMessage,
-  OpenAIConfig,
-} from '../../src/types/new-index.js';
+  } from '../../src/types/new-index.js';
 
 describe('核心类型系统验证 (GREEN阶段)', () => {
   describe('Config 类型', () => {

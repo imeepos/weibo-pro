@@ -41,7 +41,7 @@ export interface NodeEmitEvent<T = any> {
   data: Partial<T>;
 }
 // 节点成功
-export interface NodeSuccessEvent<T = any> {
+export interface NodeSuccessEvent<_T = any> {
   type: 'node_success';
   id: string;
 }
@@ -125,7 +125,7 @@ export interface TimeTravelDebuggerProps {
  * - 纯展示：不包含业务逻辑，所有状态由外部管理
  */
 export const TimeTravelDebugger: React.FC<TimeTravelDebuggerProps> = ({
-  events,
+  events: _events,
   currentIndex,
   totalEvents,
   currentEvent,

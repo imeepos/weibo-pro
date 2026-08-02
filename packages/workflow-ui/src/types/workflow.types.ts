@@ -1,4 +1,4 @@
-import type { Node, Edge, NodeProps as FlowNodeProps } from '@xyflow/react'
+import type { Node, Edge, } from '@xyflow/react'
 import type { IEdge, INode } from '@sker/workflow'
 
 /**

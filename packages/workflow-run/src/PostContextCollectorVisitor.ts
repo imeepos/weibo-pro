@@ -8,7 +8,7 @@ import {
   WeiboRepostEntity,
 } from '@sker/entities';
 import { Observable, from } from 'rxjs';
-import { concatMap, mergeMap } from 'rxjs/operators';
+import { mergeMap } from 'rxjs/operators';
 import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 @Injectable()

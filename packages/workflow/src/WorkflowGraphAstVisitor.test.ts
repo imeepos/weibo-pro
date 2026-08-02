@@ -40,7 +40,7 @@ class ProcessorAst extends Ast {
 @Injectable()
 class SourceVisitor {
   @Handler(SourceAst)
-  visit(ast: SourceAst, input$: Observable<Record<string, unknown>>): Observable<NodeEvent> {
+  visit(ast: SourceAst, _input$: Observable<Record<string, unknown>>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       obs.next({ type: 'node_runing', id: ast.id });
 
@@ -65,7 +65,7 @@ class SourceVisitor {
 @Injectable()
 class ProcessorVisitor {
   @Handler(ProcessorAst)
-  visit(ast: ProcessorAst, input$: Observable<Record<string, unknown>>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
+  visit(ast: ProcessorAst, input$: Observable<Record<string, unknown>>, _parent?: WorkflowGraphAst): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       obs.next({ type: 'node_runing', id: ast.id });
 
@@ -211,7 +211,7 @@ describe('WorkflowGraphAstVisitor - 边连接问题复现', () => {
     @Injectable()
     class StaticConfigVisitor {
       @Handler(StaticConfigAst)
-      visit(ast: StaticConfigAst, input$: Observable<Record<string, unknown>>): Observable<NodeEvent> {
+      visit(ast: StaticConfigAst, _input$: Observable<Record<string, unknown>>): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
           obs.next({ type: 'node_runing', id: ast.id });
           // 只发射一次就完成
@@ -239,7 +239,7 @@ describe('WorkflowGraphAstVisitor - 边连接问题复现', () => {
     @Injectable()
     class MultiInputProcessorVisitor {
       @Handler(MultiInputProcessorAst)
-      visit(ast: MultiInputProcessorAst, input$: Observable<Record<string, unknown>>, parent?: WorkflowGraphAst): Observable<NodeEvent> {
+      visit(ast: MultiInputProcessorAst, input$: Observable<Record<string, unknown>>, _parent?: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
           obs.next({ type: 'node_runing', id: ast.id });
 

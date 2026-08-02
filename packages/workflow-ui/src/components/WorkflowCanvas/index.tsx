@@ -150,7 +150,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     }
   )
 
-  const { triggerSave, saveNow } = useAutoSave(workflow.workflowAst, {
+  const { triggerSave, saveNow: _saveNow } = useAutoSave(workflow.workflowAst, {
     debounce: 1000,
     enabled: true,
     onSaveSuccess: useCallback(() => {}, []),
@@ -180,9 +180,9 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     openSubWorkflowModal,
     closeSubWorkflowModal,
     showToast,
-    settingPanel,
+    settingPanel: _settingPanel,
     openSettingPanel,
-    closeSettingPanel,
+    closeSettingPanel: _closeSettingPanel,
     drawer,
     openDrawer,
     closeDrawer,
@@ -531,7 +531,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     },
 
     // 视图操作
-    autoLayout: (direction?: 'TB' | 'LR') => {
+    autoLayout: (_direction?: 'TB' | 'LR') => {
       // autoLayout 不接受参数，这里忽略参数
       autoLayout()
     },
@@ -665,7 +665,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     console.log('[handleEdgeContextMenu] 右键边:', edge.id)
     // 打开右键菜单
     const screenPosition = { x: event.clientX, y: event.clientY }
-    const flowPosition = screenToFlowPosition(screenPosition)
+    const _flowPosition = screenToFlowPosition(screenPosition)
 
     // 使用 useCanvasControls 的 menu 系统
     const customEvent = new CustomEvent('edge-context-menu', {

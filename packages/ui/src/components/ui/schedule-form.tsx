@@ -163,7 +163,7 @@ function ScheduleForm({
                 disabled={data.cronExpression !== '__custom__' && cronTemplates.some(t => t.value && t.value !== '__custom__' && t.value === data.cronExpression)}
               />
               <p className="text-muted-foreground text-xs">
-                格式:分 时 日 月 周,例如 "0 9 * * 1-5" 表示工作日早上9点
+                格式:分 时 日 月 周,例如 &quot;0 9 * * 1-5&quot; 表示工作日早上9点
               </p>
             </div>
           </CardContent>

@@ -10,7 +10,7 @@ import { ErrorHandlerOperators } from "./utils/error-handler.util";
 export class MediaAgentAstVisitor {
 
     @Handler(MediaAgentAst)
-    visit(ast: MediaAgentAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    visit(ast: MediaAgentAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 

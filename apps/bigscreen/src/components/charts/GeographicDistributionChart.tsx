@@ -69,7 +69,7 @@ const GeographicDistributionChart: React.FC<GeographicDistributionChartProps> = 
     const regions = processedData.map(d => d.region);
     const userCounts = processedData.map(d => d.count);
     const postCounts = processedData.map(d => d.posts);
-    const sentimentColors = processedData.map(d => getSentimentColor(d.sentiment));
+    const _sentimentColors = processedData.map(d => getSentimentColor(d.sentiment));
 
     return {
       tooltip: {

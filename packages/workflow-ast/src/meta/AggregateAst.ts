@@ -1,4 +1,4 @@
-import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output, State } from '@sker/workflow';
+import { Ast, Input, IS_BUFFER, IS_MULTI, Node, Output, } from '@sker/workflow';
 
 export type AggregateOperation = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'concat' | 'merge';
 
@@ -21,5 +21,5 @@ export class AggregateAst extends Ast {
   @Output({ title: '聚合结果', defaultValue: null })
   result: any = null;
 
-  type: 'AggregateAst' = 'AggregateAst';
+  type = 'AggregateAst';
 }

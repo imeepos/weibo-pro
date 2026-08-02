@@ -13,7 +13,7 @@ interface EventCountChartProps {
 const logger = createLogger('EventCountChart');
 
 const EventCountChart: React.FC<EventCountChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = ''
 }) => {
   const { isDark } = useTheme();

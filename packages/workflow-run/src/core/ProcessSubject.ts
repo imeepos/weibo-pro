@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
-import { from, Subject, fromEvent, Observable } from 'rxjs'
-import { takeUntil, tap } from 'rxjs/operators'
+import { Subject, fromEvent, Observable } from 'rxjs'
+import { takeUntil, } from 'rxjs/operators'
 import type { Subscriber, TeardownLogic } from 'rxjs'
 import type { ChildProcessWithoutNullStreams } from 'child_process'
 import { logger } from '@sker/core'
@@ -21,7 +21,7 @@ export class ProcessSubject<T = string> extends Subject<string> {
         this.controller = new AbortController()
         this.signal = this.controller.signal
         const env = process.env
-        const { DEV, ...otherEnv } = env
+        const { DEV: _DEV, ...otherEnv } = env
 
         logger.info(`[ProcessSubject] 启动子进程: ${cmd} ${args.join(' ')}`)
 
@@ -174,7 +174,7 @@ class IncrementalJsonBuffer<T> {
                 } else {
                     logger.warn(`[ProcessSubject] stderr JSON: ${JSON.stringify(parsed)}`)
                 }
-            } catch (err) {
+            } catch (_err) {
                 // JSON 解析失败时，发出原始文本
                 this.subscriber.next(trimmed)
                 // stderr 的非 JSON 输出记录为警告
@@ -197,7 +197,7 @@ class IncrementalJsonBuffer<T> {
                     if (this.streamName === 'stdout') {
                         this.subscriber.next(parsed)
                     }
-                } catch (err) {
+                } catch (_err) {
                     // JSON 解析失败时，发出原始文本
                     this.subscriber.next(this.buffer.trim())
                     if (this.streamName === 'stderr') {

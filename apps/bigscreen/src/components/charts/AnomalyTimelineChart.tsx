@@ -1,7 +1,5 @@
 import React from 'react'
 import { EChart } from '@sker/ui/components/ui/echart'
-import { motion } from 'framer-motion'
-import { cn } from '@/utils'
 import { useTheme } from '@/hooks/useTheme'
 
 interface AnomalyDataPoint {

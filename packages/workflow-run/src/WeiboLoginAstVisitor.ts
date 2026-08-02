@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@sker/core";
-import { Handler, INode, NodeEvent, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, setAstError } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
 import { WeiboAuthService } from "./services/weibo-auth.service";
 import { Observable } from 'rxjs'
@@ -16,7 +16,7 @@ export class WeiboLoginAstVisitor {
   ) { }
 
   @Handler(WeiboLoginAst)
-  handler(ast: WeiboLoginAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+  handler(ast: WeiboLoginAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
       obs.next({ type: 'node_runing', id: ast.id });

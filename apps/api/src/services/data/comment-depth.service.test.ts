@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CommentDepthService } from './comment-depth.service';
 import { CacheService } from '../cache.service';
 import { mockEntityManager, mockRedis } from '../../test-setup';
-import { WeiboCommentEntity } from '@sker/entities';
 
 // Mock dependencies
 vi.mock('@sker/entities', async () => {
@@ -39,7 +38,7 @@ describe('CommentDepthService', () => {
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
-    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
       return fn();
     });
 

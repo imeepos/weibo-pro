@@ -1,10 +1,9 @@
 'use client'
 
-import React, { useCallback, useMemo } from 'react'
+import { useCallback } from 'react';
 import {
   ReactFlow,
   Background,
-  MiniMap,
   Controls,
   BackgroundVariant,
   SelectionMode,

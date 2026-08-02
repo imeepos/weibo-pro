@@ -1,11 +1,11 @@
 import { Injectable, Inject } from '@sker/core';
-import { Observable, EMPTY, of, isObservable, throwError, merge, zip, combineLatest } from 'rxjs';
-import { map, catchError, shareReplay, concatMap, filter, tap, withLatestFrom, startWith } from 'rxjs/operators';
+import { Observable, EMPTY, of, isObservable, combineLatest } from 'rxjs';
+import { map, catchError, shareReplay, concatMap, withLatestFrom, startWith } from 'rxjs/operators';
 import { NodeExecutor } from './executor';
 import { Handler } from './decorator';
 import { WorkflowGraphAst } from './ast';
 import { NodeEvent } from './execution/events';
-import { EdgeMode, IEdge, ROUTE_SKIPPED, EDGE_MODE_PRIORITY } from './types';
+import { EdgeMode, IEdge, EDGE_MODE_PRIORITY } from './types';
 import { NodeInputBuilder } from './execution/NodeInputBuilder';
 import { EdgeStreamBuilder } from './execution/EdgeStreamBuilder';
 import { EdgeCombiner } from './execution/EdgeCombiner';
@@ -69,7 +69,7 @@ export class WorkflowGraphAstVisitor {
                 const nodeInputStreams = this.buildNodeInputStreams(ast, of(input), nodeEventStreams);
 
                 // 2. 为每个节点创建执行流
-                ast.nodes.forEach((node, index) => {
+                ast.nodes.forEach((node, _index) => {
                     const nodeInput$ = nodeInputStreams.get(node.id) || EMPTY;
 
                     const eventStream$ = this.nodeExecutor.run(node, nodeInput$, ast).pipe(

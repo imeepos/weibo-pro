@@ -10,7 +10,7 @@ import { ErrorHandlerOperators } from './utils/error-handler.util'
 @Injectable()
 export class MergeAstVisitor {
     @Handler(MergeAst)
-    visit(ast: MergeAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>) {
+    visit(ast: MergeAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>) {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });

@@ -77,5 +77,5 @@ export class StoryWeaverAst extends Ast {
   @Output({ title: '生成完成', defaultValue: false })
   isComplete: boolean = false;
 
-  type: 'StoryWeaverAst' = 'StoryWeaverAst';
+  type = 'StoryWeaverAst';
 }

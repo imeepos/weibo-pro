@@ -14,7 +14,7 @@ export class XhsLogin implements ILogin {
   }
 
   async begin(): Promise<void> {
-    const { browser, context } = await this.browserManager.launch({ headless: false })
+    const { browser: _browser, context } = await this.browserManager.launch({ headless: false })
     this.context = context
     this.page = await this.context?.newPage()
     if (!this.page) {

@@ -102,7 +102,7 @@ ${JSON.stringify(ast.chapter, null, 2)}
                                          resultText.match(/```\s*([\s\S]*?)\s*```/) ||
                                          [null, resultText]
                         assessment = JSON.parse(jsonMatch[1])
-                    } catch (error) {
+                    } catch (_error) {
                         // JSON 解析失败，创建默认结果
                         assessment = {
                             dimensions: (ast.dimensions || []).map(d => ({

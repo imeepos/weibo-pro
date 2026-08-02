@@ -46,7 +46,7 @@ const WorkflowNodeGeneratorComponent: React.FC<{ ast: WorkflowNodeGeneratorAst }
 @Injectable()
 export class WorkflowNodeGeneratorAstRender {
     @Render(WorkflowNodeGeneratorAst)
-    render(ast: WorkflowNodeGeneratorAst, ctx: any) {
+    render(ast: WorkflowNodeGeneratorAst, _ctx: any) {
         return <WorkflowNodeGeneratorComponent ast={ast} />
     }
 }

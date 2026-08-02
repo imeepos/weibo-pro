@@ -28,7 +28,7 @@ const SwitchComponent: React.FC<{ ast: SwitchAst }> = ({ ast }) => {
 @Injectable()
 export class SwitchAstRender {
     @Render(SwitchAst)
-    render(ast: SwitchAst, ctx: any) {
+    render(ast: SwitchAst, _ctx: any) {
         return <SwitchComponent ast={ast} />
     }
 }

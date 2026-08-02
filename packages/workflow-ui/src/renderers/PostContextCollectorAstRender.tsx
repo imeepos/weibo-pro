@@ -3,7 +3,7 @@ import { Render } from "@sker/workflow";
 import { PostContextCollectorAst } from "@sker/workflow-ast";
 import React from "react";
 
-const PostContextCollectorComponent: React.FC<{ ast: PostContextCollectorAst }> = ({ ast }) => (
+const PostContextCollectorComponent: React.FC<{ ast: PostContextCollectorAst }> = ({ ast: _ast }) => (
     <></>
 );
 

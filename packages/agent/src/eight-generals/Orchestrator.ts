@@ -10,13 +10,12 @@ import type {
   AgentContext,
   AgentCapability,
   TaskType,
-  TaskPriority,
   ExecutionResult,
 } from './types';
-import { createTask, createContext, GENERAL_META } from './types';
+import { createTask, createContext, } from './types';
 
 /** 任务类型到角色的映射 */
-const TASK_ROLE_MAP: Record<TaskType, GeneralRole[]> = {
+const _TASK_ROLE_MAP: Record<TaskType, GeneralRole[]> = {
   code: ['zheng', 'feng'],
   architecture: ['fan', 'yao'],
   deploy: ['tuo', 'huo'],
@@ -312,7 +311,7 @@ ${agentList || '暂无注册的智能体'}
         }
       ),
       tool(
-        async ({}) => {
+        async () => {
           const statuses = Array.from(this.generals.entries()).map(([role, g]) => ({
             role,
             name: g.name,

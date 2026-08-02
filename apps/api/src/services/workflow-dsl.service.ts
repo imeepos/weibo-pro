@@ -297,7 +297,7 @@ export class WorkflowDSLService {
       throw new Error(`未找到节点类型: ${nodeType}`);
     }
 
-    const instance = new NodeClass();
+    const _instance = new NodeClass();
     const metadata = root.get(NODE, []).find((m: any) => m.target === NodeClass);
     const inputs = Reflect.getMetadata('node:inputs', NodeClass.prototype) || [];
     const outputs = Reflect.getMetadata('node:outputs', NodeClass.prototype) || [];

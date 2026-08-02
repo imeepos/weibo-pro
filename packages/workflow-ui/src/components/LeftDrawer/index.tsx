@@ -35,7 +35,7 @@ export interface LeftDrawerProps {
   className?: string
 }
 
-export function LeftDrawer({ visible, onClose, onRunNode, onLocateNode, onAutoSave, onUpdateNode, className }: LeftDrawerProps) {
+export function LeftDrawer({ visible, onClose, onRunNode: _onRunNode, onLocateNode, onAutoSave, onUpdateNode, className }: LeftDrawerProps) {
   const selectedNode = useSelectedNode()
 
   // useSelectedNode 已确保节点已编译，可安全获取 metadata

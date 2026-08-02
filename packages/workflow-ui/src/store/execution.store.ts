@@ -81,7 +81,7 @@ const generateRecordId = (nodeId: string) => {
   return `${nodeId}-${Date.now()}-${recordIdCounter}`
 }
 
-export const useExecutionStore = create<ExecutionState>((set, get) => ({
+export const useExecutionStore = create<ExecutionState>((set, _get) => ({
   isExecuting: false,
   executionError: null,
   nodeStates: {},

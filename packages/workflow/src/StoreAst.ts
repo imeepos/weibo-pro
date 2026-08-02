@@ -1,6 +1,5 @@
 import { Ast } from "./ast";
 import { Input, Node, Output } from "./decorator";
-import { BehaviorSubject } from "rxjs";
 
 /**
  * 存储获取节点

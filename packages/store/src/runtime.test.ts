@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { firstValueFrom, take, toArray } from 'rxjs';
+import { firstValueFrom, } from 'rxjs';
 import {
   createStore,
   createAction,

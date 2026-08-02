@@ -65,7 +65,7 @@ export function TimeSeriesChart({
   timeFormatter = defaultTimeFormatter,
   series = {},
 }: TimeSeriesChartProps) {
-  const { isDark, colors } = useEChartTheme()
+  const { isDark: _isDark, colors } = useEChartTheme()
 
   const {
     totalLabel = '总量',

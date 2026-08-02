@@ -4,7 +4,7 @@
  * 测试 ClaudeService 的消息路由和客户端管理
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, } from 'vitest';
 import type { Socket } from 'socket.io';
 
 // Mock dependencies

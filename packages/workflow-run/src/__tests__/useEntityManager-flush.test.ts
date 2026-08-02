@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useEntityManager } from '@sker/entities'
 import { DataSource, EntityManager } from 'typeorm'
 
 /**
@@ -65,8 +64,8 @@ describe('useEntityManager - flush 功能测试', () => {
   describe('基本 flush 行为', () => {
     it('应该在回调执行后自动调用 flush', async () => {
       // Arrange
-      const callback = vi.fn().mockResolvedValue('result')
-      const originalUseDataSource = require('@sker/entities').useDataSource
+      const _callback = vi.fn().mockResolvedValue('result')
+      const _originalUseDataSource = require('@sker/entities').useDataSource
       vi.doMock('@sker/entities', async () => {
         const actual = await vi.importActual('@sker/entities')
         return {
@@ -122,7 +121,7 @@ describe('useEntityManager - flush 功能测试', () => {
       }
 
       // Act
-      const updateResult = await mockEntityManager.update('WorkflowScheduleEntity', testData.id, {
+      const _updateResult = await mockEntityManager.update('WorkflowScheduleEntity', testData.id, {
         lastRunAt: testData.lastRunAt,
         nextRunAt: testData.nextRunAt
       })

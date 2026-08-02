@@ -191,7 +191,7 @@ describe('useEventLifecycle', () => {
 
   describe('生命周期整体指标', () => {
     it('应该正确识别当前阶段', () => {
-      const now = new Date();
+      const _now = new Date();
       const mockData: HourlyStatistics[] = [
         { year: 2024, month: 1, day: 1, hour: 0, hotness: 5, post_count: 10, user_count: 5, sentiment_positive: 0.3 },
         { year: 2024, month: 1, day: 1, hour: 1, hotness: 25, post_count: 50, user_count: 22, sentiment_positive: 0.45 },

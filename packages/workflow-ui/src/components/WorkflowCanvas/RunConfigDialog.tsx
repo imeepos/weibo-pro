@@ -108,7 +108,7 @@ function RunConfigDialog({
   onCancel,
 }: RunConfigDialogProps) {
   const [inputs, setInputs] = useState<Record<string, unknown>>({})
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [_isInitialized, setIsInitialized] = useState(false)
   const dialogVisibleRef = useRef(false)
 
   // 每次打开对话框时，从工作流获取最新状态
@@ -579,7 +579,7 @@ function groupFieldsByNode(fields: InputField[]): Array<{ nodeId: string; nodeNa
     grouped.get(key)!.push(field)
   })
 
-  return Array.from(grouped.entries()).map(([key, fields]) => ({
+  return Array.from(grouped.entries()).map(([_key, fields]) => ({
     nodeId: fields[0]!.nodeId,
     nodeName: fields[0]!.nodeName,
     fields,

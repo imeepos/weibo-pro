@@ -75,11 +75,12 @@ export const createSamplingStrategy = (
   let sampledEdges: any[];
 
   switch (config.samplingStrategy) {
-    case 'importance':
+    case 'importance': {
       // 基于影响力的重要性采样
       const sortedNodes = nodes.sort((a, b) => (b.influence || 0) - (a.influence || 0));
       sampledNodes = sortedNodes.slice(0, config.maxNodes);
       break;
+    }
 
     case 'random':
       // 随机采样
@@ -89,7 +90,7 @@ export const createSamplingStrategy = (
       break;
 
     case 'hybrid':
-    default:
+    default: {
       // 混合策略：前70%基于重要性，后30%随机
       const importanceCount = Math.floor(config.maxNodes * 0.7);
       const randomCount = config.maxNodes - importanceCount;
@@ -104,6 +105,7 @@ export const createSamplingStrategy = (
 
       sampledNodes = [...importanceNodes, ...randomNodes];
       break;
+    }
   }
 
   const sampledNodeIds = new Set(sampledNodes.map(n => n.id));
@@ -226,7 +228,7 @@ export const getAdaptivePerformanceConfig = (
   frameRate: number,
   memoryUsageMB: number
 ): PerformanceConfig => {
-  let newConfig = { ...currentConfig };
+  const newConfig = { ...currentConfig };
 
   // 基于帧率调整
   if (frameRate < 25) {

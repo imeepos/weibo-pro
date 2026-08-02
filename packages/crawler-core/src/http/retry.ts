@@ -31,7 +31,7 @@ export class RetryHandler {
     config?: AxiosRequestConfig
   ): Promise<T> {
     let lastError: any;
-    const retryCount = (config as any)?.__retryCount || 0;
+    const _retryCount = (config as any)?.__retryCount || 0;
 
     for (let i = 0; i <= this.config.maxRetries; i++) {
       try {

@@ -1,6 +1,6 @@
 import { Injectable } from '@sker/core'
 import type { BrowserContext, Page } from 'playwright'
-import { ILogin, LoginMethod, LoginResult } from '../../login.interface'
+import { ILogin, LoginResult } from '../../login.interface'
 import { BrowserManager } from '../../browser'
 
 @Injectable()

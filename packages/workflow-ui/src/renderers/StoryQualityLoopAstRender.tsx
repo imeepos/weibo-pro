@@ -41,7 +41,7 @@ const StoryQualityLoopComponent: React.FC<{ ast: StoryQualityLoopAst }> = ({ ast
 @Injectable()
 export class StoryQualityLoopAstRender {
     @Render(StoryQualityLoopAst)
-    render(ast: StoryQualityLoopAst, ctx: any) {
+    render(ast: StoryQualityLoopAst, _ctx: any) {
         return <StoryQualityLoopComponent ast={ast} />
     }
 }

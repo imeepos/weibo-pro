@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { KeywordsService } from './keywords.service';
 import { CacheService } from '../cache.service';
 import { mockEntityManager, mockRedis } from '../../test-setup';
-import { PostNLPResultEntity } from '@sker/entities';
 
 // Mock dependencies
 vi.mock('@sker/entities', async () => {
@@ -34,7 +33,7 @@ describe('KeywordsService', () => {
 
         // 创建 mock cache service 并 spy getOrSet
         cacheService = new CacheService(mockRedis as any);
-        vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+        vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
             return fn();
         });
 

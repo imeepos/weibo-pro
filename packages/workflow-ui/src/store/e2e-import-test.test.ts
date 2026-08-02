@@ -13,7 +13,7 @@ import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
  * 模拟真实的导入过程,包括 fromJson + initWorkflow
  */
 describe('E2E - 真实文件导入流程', () => {
-  let compiler: any
+  let _compiler: any
 
   beforeEach(() => {
     root.set([{ provide: WorkflowEventBus, useClass: WorkflowEventBus }])

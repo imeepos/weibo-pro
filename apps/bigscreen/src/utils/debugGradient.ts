@@ -28,8 +28,7 @@ export function enableGradientDebugging() {
       console.trace('Call stack:');
       console.groupEnd();
       
-      // 触发断点帮助调试
-      debugger;
+      // 触发断点帮助调试（已移除 debugger 语句）
     }
     originalError.apply(console, args);
   };
@@ -46,7 +45,6 @@ export function enableGradientDebugging() {
       console.log('Current component stack:', componentRenderStack);
       console.trace('Call stack:');
       console.groupEnd();
-      debugger;
     }
   });
 
@@ -74,8 +72,7 @@ export function enableGradientDebugging() {
             const undefinedColors = scanForUndefinedColors(option, 'ROOT');
             if (undefinedColors.length > 0) {
               console.error('🚨 FOUND UNDEFINED COLORS:', undefinedColors);
-              // 立即触发断点
-              debugger;
+              // 立即触发断点（已移除 debugger 语句）
             }
             console.groupEnd();
             

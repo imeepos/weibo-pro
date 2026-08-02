@@ -72,5 +72,5 @@ export class StoryQualityLoopAst extends Ast {
   @Output({ title: '是否完成', defaultValue: false })
   isComplete = false;
 
-  type: 'StoryQualityLoopAst' = 'StoryQualityLoopAst';
+  type = 'StoryQualityLoopAst';
 }

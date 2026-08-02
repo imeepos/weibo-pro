@@ -30,8 +30,8 @@ export function isEqualCheck(a: any, b: any): boolean {
 }
 
 function isArgumentsChanged(
-  args: IArguments,
-  lastArguments: IArguments,
+  args: IArguments | any[],
+  lastArguments: IArguments | any[],
   comparator: ComparatorFn
 ) {
   for (let i = 0; i < args.length; i++) {
@@ -60,7 +60,7 @@ export function defaultMemoize(
   isArgumentsEqual = isEqualCheck,
   isResultEqual = isEqualCheck
 ): MemoizedProjection {
-  let lastArguments: null | IArguments = null;
+  let lastArguments: null | IArguments | any[] = null;
   let lastResult: any = null;
   let overrideResult: any;
 
@@ -77,23 +77,23 @@ export function defaultMemoize(
     overrideResult = undefined;
   }
 
-  function memoized(): any {
+  function memoized(...args: any[]): any {
     if (overrideResult !== undefined) {
       return overrideResult.result;
     }
 
     if (!lastArguments) {
-      lastResult = projectionFn.apply(null, arguments as any);
-      lastArguments = arguments;
+      lastResult = projectionFn(...args);
+      lastArguments = args;
       return lastResult;
     }
 
-    if (!isArgumentsChanged(arguments, lastArguments, isArgumentsEqual)) {
+    if (!isArgumentsChanged(args, lastArguments, isArgumentsEqual)) {
       return lastResult;
     }
 
-    const newResult = projectionFn.apply(null, arguments as any);
-    lastArguments = arguments;
+    const newResult = projectionFn(...args);
+    lastArguments = args;
 
     if (isResultEqual(lastResult, newResult)) {
       return lastResult;
@@ -206,7 +206,7 @@ export function createSelectorFactory<T = any, V = any>(
     );
 
     const memoizedProjector = memoize(function (...selectors: any[]) {
-      return projector.apply(null, selectors);
+      return projector(...selectors);
     });
 
     const memoizedState = defaultMemoize(function (state: any, props: any) {

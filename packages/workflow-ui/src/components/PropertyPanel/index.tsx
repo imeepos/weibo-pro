@@ -258,7 +258,7 @@ export function PropertyPanel({
     })
   }
 
-  const handleConfirmAddInput = () => {
+  const _handleConfirmAddInput = () => {
     const property = generateDefaultPropertyName('input')
 
     const newInput: INodeInputMetadata = {
@@ -279,7 +279,7 @@ export function PropertyPanel({
     setCurrentDynamicInputs(updatedInputs)
   }
 
-  const handleConfirmAddOutput = () => {
+  const _handleConfirmAddOutput = () => {
     const property = generateDefaultPropertyName('output')
 
     const newOutput: INodeOutputMetadata = {
@@ -301,7 +301,7 @@ export function PropertyPanel({
     setCurrentDynamicOutputs(outputs)
   }
 
-  const handleUpdateInput = (property: string, field: keyof INodeInputMetadata, value: any) => {
+  const _handleUpdateInput = (property: string, field: keyof INodeInputMetadata, value: any) => {
     const nowUpdateInputs = currentDynamicInputs.map((item: INodeInputMetadata) => {
       if (item.property === property) {
         return { ...item, [field]: value }
@@ -312,7 +312,7 @@ export function PropertyPanel({
     setCurrentDynamicInputs(nowUpdateInputs)
   }
 
-  const handleUpdateOutput = (property: string, field: keyof INodeOutputMetadata, value: any) => {
+  const _handleUpdateOutput = (property: string, field: keyof INodeOutputMetadata, value: any) => {
     const nowUpdateOutputs = currentDynamicOutputs.map((item: INodeOutputMetadata) => {
       if (item.property === property) {
         return { ...item, [field]: value }

@@ -1,5 +1,5 @@
-import { Injectable, Inject } from '@sker/core';
-import { DataSource, Repository } from 'typeorm';
+import { Injectable, } from '@sker/core';
+import { } from 'typeorm';
 import { LlmProvider, useEntityManager } from '@sker/entities';
 
 /**

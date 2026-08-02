@@ -42,5 +42,5 @@ export class EventEmitterAst extends Ast {
   @Output({ title: '是否最后一个', defaultValue: false })
   isLast: boolean = false;
 
-  type: 'EventEmitterAst' = 'EventEmitterAst';
+  type = 'EventEmitterAst';
 }

@@ -61,5 +61,4 @@ export class ScheduledWorkflowAst extends Ast {
   @State({ title: '状态' })
   status: string = 'enabled'
 
-  type: 'ScheduledWorkflowAst' = 'ScheduledWorkflowAst'
-}
+  type = 'ScheduledWorkflowAst';}

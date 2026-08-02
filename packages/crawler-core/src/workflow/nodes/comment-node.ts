@@ -16,5 +16,5 @@ export class CommentNodeAst extends Ast {
   @Output({ title: '评论列表' })
   comments: any[] = [];
 
-  type: 'CommentNodeAst' = 'CommentNodeAst';
+  type = 'CommentNodeAst';
 }

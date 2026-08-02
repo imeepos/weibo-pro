@@ -33,7 +33,7 @@ const InsightAgentComponent: React.FC<{ ast: InsightAgentAst }> = ({ ast }) => {
 @Injectable()
 export class InsightAgentAstRender {
     @Render(InsightAgentAst)
-    render(ast: InsightAgentAst, ctx: any) {
+    render(ast: InsightAgentAst, _ctx: any) {
         return <InsightAgentComponent ast={ast} />
     }
 }

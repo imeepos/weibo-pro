@@ -1,7 +1,7 @@
 import { Injectable } from '@sker/core'
 import { Ast, WorkflowGraphAst } from './ast'
 import { Input, Node, Output, State, IS_MULTI, Handler } from './decorator'
-import { BehaviorSubject, Observable } from 'rxjs'
+import { Observable } from 'rxjs'
 import { NodeEvent } from './execution/events'
 
 /**
@@ -69,15 +69,14 @@ export class FilterAst extends Ast {
     @Output({ title: '匹配数量' })
     matchedCount: number = 0
 
-    type: 'FilterAst' = 'FilterAst'
-}
+    type = 'FilterAst';}
 
 
 
 @Injectable()
 export class FilterAstVisitor {
     @Handler(FilterAst)
-    handler(ast: FilterAst, workflow: WorkflowGraphAst): Observable<NodeEvent> {
+    handler(ast: FilterAst, _workflow: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running'
             obs.next({ type: 'node_runing', id: ast.id })

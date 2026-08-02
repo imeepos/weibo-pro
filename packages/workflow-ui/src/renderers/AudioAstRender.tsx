@@ -157,7 +157,7 @@ const AudioComponent: React.FC<{ ast: AudioAst }> = ({ ast }) => {
 @Injectable()
 export class AudioAstRender {
     @Render(AudioAst)
-    render(ast: AudioAst, ctx: any) {
+    render(ast: AudioAst, _ctx: any) {
         return <AudioComponent ast={ast} />;
     }
 }

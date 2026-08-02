@@ -15,7 +15,7 @@ interface SimpleSentimentPieChartProps {
 const logger = createLogger('SimpleSentimentPieChart');
 
 const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = "",
 }) => {
   const { isDark } = useTheme();

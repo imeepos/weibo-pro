@@ -54,15 +54,15 @@ export function useChinaMap(options?: UseChinaMapOptions): UseChinaMapReturn {
     const loadMap = async () => {
       try {
         await loadFromLocal()
-      } catch (localError) {
+      } catch (_localError) {
         if (cancelled) return
         try {
           await loadFromOnline()
-        } catch (onlineError) {
+        } catch (_onlineError) {
           if (cancelled) return
           try {
             await loadFallback()
-          } catch (fallbackError) {
+          } catch (_fallbackError) {
             if (cancelled) return
             if (enableBuiltinFallback) {
               loadBuiltinFallback()

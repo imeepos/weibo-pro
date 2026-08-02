@@ -6,7 +6,6 @@ process.env.DATABASE_URL = 'postgresql://postgres:Postgres2025Secure@43.240.223.
 process.env.OPENAI_BASE_URL = 'https://api.siliconflow.cn/v1'
 process.env.OPENAI_API_KEY = 'sk-smyexxqrjjkstwhrkcijnimvadoaghvomzhtvsdbssarvyjx'
 
-import { root } from '@sker/core'
 import { WorkflowGraphAst, executeAst } from '@sker/workflow'
 import { readFileSync } from 'fs'
 import { join } from 'path'

@@ -16,5 +16,5 @@ export class StoreNodeAst extends Ast {
   @Output({ title: '存储成功' })
   success: boolean = false;
 
-  type: 'StoreNodeAst' = 'StoreNodeAst';
+  type = 'StoreNodeAst';
 }

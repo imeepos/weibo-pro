@@ -35,5 +35,5 @@ export class PostNLPAnalyzerAst extends Ast {
   @Output({ title: '错误详情', defaultValue: [] })
   errors: Array<{ postId?: string; error: string }> = [];
 
-  type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
+  type = 'PostNLPAnalyzerAst';
 }

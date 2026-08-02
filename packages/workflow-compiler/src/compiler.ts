@@ -1,4 +1,4 @@
-import { Ast, WorkflowGraphAst } from '@sker/workflow'
+import { WorkflowGraphAst } from '@sker/workflow'
 import { Lexer, LexerError } from './lexer'
 import { Parser, ParserError, WorkflowDefinition } from './parser'
 import { CodeGenerator, CodeGenError, GeneratorOptions } from './generator'

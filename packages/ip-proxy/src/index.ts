@@ -1,4 +1,4 @@
-import { Provider, InjectionToken } from '@sker/core'
+import { Provider, } from '@sker/core'
 import { Logger } from '@sker/core'
 import type { KuaidailiConfig, ValidatorConfig } from './types'
 import { ProxyCache } from './core/proxy-cache'

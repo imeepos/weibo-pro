@@ -7,9 +7,9 @@
  * - 避免重复处理导致统计数据重复累加
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityManager } from 'typeorm';
-import { WeiboPostEntity, WeiboUserEntity, HourlyStatisticsHelper } from '@sker/entities';
+import { WeiboPostEntity, HourlyStatisticsHelper } from '@sker/entities';
 
 /**
  * Mock EntityManager 用于测试
@@ -43,7 +43,7 @@ class MockEntityManager extends EntityManager {
   /**
    * 模拟 upsert - 插入或更新
    */
-  async upsert(entity: any, data: any, conflictPaths: string[]): Promise<any> {
+  async upsert(entity: any, data: any, _conflictPaths: string[]): Promise<any> {
     this.upsertCallCount++;
     const key = `${entity.name || entity}_${data.id}`;
 
@@ -87,16 +87,16 @@ class MockEntityManager extends EntityManager {
     return {
       insert() {
         return {
-          into(entity: any) {
+          into(_entity: any) {
             return {
               values(values: any) {
                 return {
-                  orUpdate(columns: string[], conflictColumns: string[]) {
+                  orUpdate(_columns: string[], _conflictColumns: string[]) {
                     return {
-                      updateEntity(bool: boolean) {
+                      updateEntity(_bool: boolean) {
                         return this;
                       },
-                      callListeners(bool: boolean) {
+                      callListeners(_bool: boolean) {
                         return this;
                       },
                       async execute() {
@@ -174,7 +174,7 @@ describe('WeiboAjaxStatusesShowAstVisitor - 统计更新修复验证', () => {
   describe('帖子存在性检查', () => {
     it('应该正确识别新帖子', async () => {
       const postId = 'new-post-123';
-      const post = mockManager.create(WeiboPostEntity, {
+      const _post = mockManager.create(WeiboPostEntity, {
         id: postId,
         text: '新帖子',
         created_at: '2026-01-22T10:30:00Z'

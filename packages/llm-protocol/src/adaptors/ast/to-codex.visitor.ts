@@ -9,16 +9,12 @@ import type {
     CodexInputItem,
     CodexMessageInput,
     CodexContent,
-    CodexInputText,
-    CodexOutputText,
     CodexFunctionTool,
-    CodexFunctionCall,
-    CodexFunctionCallOutput,
     CodexTokenUsage,
 } from '../types/codex';
 import type { ClaudeContentBlock, ClaudeTool, ClaudeTextContent, ClaudeImageContent, ClaudeToolUseContent, ClaudeToolResultContent } from '../types/claude';
 import type { ClaudeRequest, ClaudeResponse, ClaudeStreamEvent } from '../types/claude';
-import type { OpenAIRequest, OpenAIResponse, OpenAIStreamResponse } from '../types/openai';
+import type { OpenAIResponse, OpenAIStreamResponse } from '../types/openai';
 import type {
     CodexRequestAst,
     CodexResponseAst,
@@ -35,27 +31,27 @@ import type {
 export class ToCodexVisitor extends BaseVisitor {
     private openaiConverter = new OpenAIToCodexConverter();
 
-    visitCodexRequestAst(ast: CodexRequestAst, ctx: any): CodexRequest {
+    visitCodexRequestAst(ast: CodexRequestAst, _ctx: any): CodexRequest {
         return ast.request;
     }
 
-    visitCodexResponseAst(ast: CodexResponseAst, ctx: any): CodexResponse {
+    visitCodexResponseAst(ast: CodexResponseAst, _ctx: any): CodexResponse {
         return ast.response;
     }
 
-    visitClaudeRequestAst(ast: ClaudeRequestAst, ctx: any): CodexRequest {
+    visitClaudeRequestAst(ast: ClaudeRequestAst, _ctx: any): CodexRequest {
         return this.convertClaudeToCodex(ast.request);
     }
 
-    visitClaudeResponseAst(ast: ClaudeResponseAst, ctx: any): CodexResponse {
+    visitClaudeResponseAst(ast: ClaudeResponseAst, _ctx: any): CodexResponse {
         return this.convertClaudeResponseToCodex(ast.response);
     }
 
-    visitOpenAIResponseAst(ast: OpenAIResponseAst, ctx: any): CodexResponse {
+    visitOpenAIResponseAst(ast: OpenAIResponseAst, _ctx: any): CodexResponse {
         return this.convertOpenAIResponseToCodex(ast.response);
     }
 
-    visitOpenAiRequestAst(ast: OpenAiRequestAst, ctx: any): CodexRequest {
+    visitOpenAiRequestAst(ast: OpenAiRequestAst, _ctx: any): CodexRequest {
         return this.openaiConverter.convert(ast.request);
     }
 
@@ -67,7 +63,7 @@ export class ToCodexVisitor extends BaseVisitor {
         return this.convertClaudeStreamToCodex(ast.streamEvent, ctx);
     }
 
-    visitCodexStreamEventAst(ast: CodexStreamEventAst, ctx: any): CodexResponseEvent {
+    visitCodexStreamEventAst(ast: CodexStreamEventAst, _ctx: any): CodexResponseEvent {
         return ast.streamEvent;
     }
 
@@ -524,7 +520,7 @@ export class ToCodexVisitor extends BaseVisitor {
             case 'message_delta':
                 return null;
 
-            case 'message_stop':
+            case 'message_stop': {
                 const messageId = ctx.messageId || `msg_${Date.now()}`;
                 return {
                     type: 'response.completed',
@@ -537,6 +533,7 @@ export class ToCodexVisitor extends BaseVisitor {
                         total_tokens: (ctx.usage.input_tokens || 0) + (ctx.usage.output_tokens || 0),
                     } : undefined,
                 };
+            }
 
             case 'ping':
                 return null;

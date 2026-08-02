@@ -1,5 +1,5 @@
 import { Controller, Get } from '@sker/core'
-import { checkPostgreSQL, checkRedis, checkRabbitMQ, checkMongoDB } from '../config/startup-check'
+import { checkPostgreSQL, checkRedis, checkRabbitMQ, } from '../config/startup-check'
 import { success } from '../utils/api-response'
 
 @Controller('health')

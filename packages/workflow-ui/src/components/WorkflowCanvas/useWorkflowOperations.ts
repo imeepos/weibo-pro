@@ -1,4 +1,5 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React from 'react';
+import { useCallback, useRef } from 'react';
 import { executeAstWithWorkflowGraph, executeNodeIsolated, executeAst, fromJson, toJson, type WorkflowGraphAst, getNodeById, type INode, type IAstStates, globalRuntime } from '@sker/workflow'
 import type { useWorkflow } from '../../hooks/useWorkflow'
 import type { ToastType } from './useCanvasState'
@@ -19,7 +20,7 @@ function extractErrorInfo(error: unknown): { message: string; type?: string } {
     const err = error as any
     const deepError = err.cause ? extractDeepestError(err.cause) : err
     const rawMessage = deepError?.message || err.message || '执行失败'
-    let message = typeof rawMessage === 'string' ? rawMessage : JSON.stringify(rawMessage)
+    const message = typeof rawMessage === 'string' ? rawMessage : JSON.stringify(rawMessage)
 
     if (message.includes('登录') || message.includes('LOGIN')) {
       return { message: '登录态已过期，需要更换账号', type: 'LOGIN_EXPIRED' }
@@ -923,7 +924,7 @@ export function useWorkflowOperations(
         } else {
           onShowToast?.('error', '保存失败', '无法找到对应的子工作流节点')
         }
-      } catch (error) {
+      } catch (_error) {
         onShowToast?.('error', '保存失败', '无法更新子工作流')
       }
     },

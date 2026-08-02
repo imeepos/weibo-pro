@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, } from 'vitest'
 import { ProcessSubject } from './ProcessSubject.js'
-import { firstValueFrom, timeout, catchError, take, toArray, EmptyError } from 'rxjs'
+import { firstValueFrom, timeout, catchError, take, toArray, } from 'rxjs'
 import { writeFileSync, unlinkSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -118,7 +118,7 @@ describe('ProcessSubject', () => {
       let completed = false
 
       const subscription = process$.subscribe({
-        next: data => {
+        next: _data => {
           // stderr 作为正常数据处理
         },
         complete: () => {

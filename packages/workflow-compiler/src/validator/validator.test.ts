@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WorkflowValidator, ValidationError } from './index'
+import { WorkflowValidator, } from './index'
 import { WorkflowDefinition } from '../parser'
 
 describe('WorkflowValidator', () => {

@@ -1,6 +1,6 @@
+import { useMemo } from 'react';
 import { root } from "@sker/core";
 import { Ast, RENDER_METHOD } from "@sker/workflow";
-import React, { useMemo } from "react";
 import "../../renderers";
 export function useRender(ast: Ast) {
     return useMemo(() => {
@@ -13,7 +13,7 @@ export function useRender(ast: Ast) {
                 return render(ast);
             }
             return null;
-        } catch (e) {
+        } catch (_e) {
             return null;
         }
     }, [ast])

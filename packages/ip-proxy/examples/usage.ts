@@ -39,7 +39,7 @@ try {
     timeout: 10000,
   })
 
-  const response = await axiosWithProxy.get('/v2/search/topics')
+  const _response = await axiosWithProxy.get('/v2/search/topics')
   const latency = Date.now() - startTime
 
   // 记录成功结果

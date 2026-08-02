@@ -33,7 +33,7 @@ const SYSTEM_PROMPT = `你是搜索结果分析器，负责将搜索引擎返回
 export class SerpClusterAstVisitor {
 
     @Handler(SerpClusterAst)
-    handler(ast: SerpClusterAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+    handler(ast: SerpClusterAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 

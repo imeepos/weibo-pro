@@ -102,7 +102,7 @@ export const createSamplingStrategy = <N extends GraphNode, E extends GraphEdge>
       break;
 
     case 'hybrid':
-    default:
+    default: {
       if (!sortFn) {
         throw new Error('sortFn is required for hybrid sampling');
       }
@@ -116,6 +116,7 @@ export const createSamplingStrategy = <N extends GraphNode, E extends GraphEdge>
 
       sampledNodes = [...importanceNodes, ...randomNodes];
       break;
+    }
   }
 
   const sampledNodeIds = new Set(sampledNodes.map(n => n.id));

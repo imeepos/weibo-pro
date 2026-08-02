@@ -29,7 +29,7 @@ const CrawlerControl: React.FC = () => {
   // ========== 状态管理 ==========
   const [workflowStatus, setWorkflowStatus] = useState<CrawlerControlStatusSummary | null>(null);
   const [executions, setExecutions] = useState<TaskExecution[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
 
   // NLP 单任务表单
   const [nlpPostId, setNlpPostId] = useState('');
@@ -37,7 +37,7 @@ const CrawlerControl: React.FC = () => {
 
   // NLP 批量任务表单
   const [batchPostIds, setBatchPostIds] = useState('');
-  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchLoading, _setBatchLoading] = useState(false);
 
   // 微博搜索表单
   const [searchKeyword, setSearchKeyword] = useState('');

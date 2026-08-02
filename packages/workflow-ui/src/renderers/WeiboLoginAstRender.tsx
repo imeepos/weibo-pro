@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react';
 import { WeiboLoginAst } from '@sker/workflow-ast'
 import { InlineExecutor } from '../components/execution/InlineExecutor'
 import { Preview, Render, Setting } from '@sker/workflow'
 import { Injectable } from '@sker/core'
-import type { WeiboAccountEntity } from '@sker/entities'
 
 // 微博登录预览组件
-const WeiboLoginPreview = ({ ast }: { ast: WeiboLoginAst }) => {
+const WeiboLoginPreview = ({ ast: _ast }: { ast: WeiboLoginAst }) => {
   return (
     <div className="flex flex-col items-center justify-center h-16 bg-slate-700/50 rounded border border-slate-600 p-2">
       <div className="text-lg">🔐</div>

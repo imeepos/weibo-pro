@@ -1,6 +1,6 @@
 import { Injectable } from '@sker/core';
 import { Observable, Subject, from, of, throwError, forkJoin } from 'rxjs';
-import { concatMap, expand, take, map, catchError, finalize } from 'rxjs/operators';
+import { concatMap, expand, map, catchError, finalize } from 'rxjs/operators';
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
 import { Runnable } from '@langchain/core/runnables';
 import { BaseLanguageModelInput } from '@langchain/core/language_models/base';

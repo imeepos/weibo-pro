@@ -29,7 +29,7 @@ const CHART_COLORS = [
 ];
 
 const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = "",
 }) => {
   const { isDark } = useTheme();

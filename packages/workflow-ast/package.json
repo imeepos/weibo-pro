@@ -39,8 +39,8 @@
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
     "@types/node": "^26.1.2",
-    "eslint": "^9.38.0",
+    "eslint": "^10.8.0",
     "tsup": "^8.4.0",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   }
 }

@@ -6,7 +6,7 @@ import React from "react";
 @Injectable()
 export class LlmTextAgentAstRender {
     @Render(LlmTextAgentAst)
-    render(ast: LlmTextAgentAst, ctx: any) {
+    render(_ast: LlmTextAgentAst, _ctx: any) {
         return <div></div>
     }
 }

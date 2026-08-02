@@ -1,6 +1,5 @@
 import { Ast } from "./ast";
 import { Input, Node, Output } from "./decorator";
-import { BehaviorSubject } from "rxjs";
 
 /**
  * 消息队列推送节点

@@ -34,5 +34,5 @@ export class ProxyAutoSelectAst extends Ast {
         expiresAt: number;
     } | null = null;
 
-    type: 'ProxyAutoSelectAst' = 'ProxyAutoSelectAst';
+    type = 'ProxyAutoSelectAst';
 }

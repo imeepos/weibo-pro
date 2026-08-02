@@ -55,7 +55,9 @@ export class ExcelStore implements IStore {
     const workbook = new Workbook()
     try {
       await workbook.xlsx.readFile(path)
-    } catch {}
+    } catch {
+      // 读取失败时返回空 workbook
+    }
     return workbook
   }
 

@@ -105,5 +105,5 @@ ${speeches ? `参考其他Agent的发言：\n${speeches}\n\n` : ''}请作为Quer
    @Output({ title: '分析结果', defaultValue: '' })
    analysisResult = '';
 
-   type: 'QueryAgentAst' = 'QueryAgentAst';
+   type = 'QueryAgentAst';
 }

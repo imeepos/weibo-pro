@@ -67,7 +67,7 @@ function toPortMetadata(
   // 从 mode 位标志计算 isMulti 和 isBuffer
   const mode = metadata.mode ?? 0
   const isMulti = hasMultiMode(mode)
-  const isBuffer = hasBufferMode(mode)
+  const _isBuffer = hasBufferMode(mode)
 
   return {
     property,

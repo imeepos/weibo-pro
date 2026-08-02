@@ -16,13 +16,13 @@ export class ArrayEmitterAst extends Ast {
     @Output({ title: '输出', type: 'any', defaultValue: null })
     output: any = null;
 
-    type: 'ArrayEmitterAst' = 'ArrayEmitterAst';
+    type = 'ArrayEmitterAst';
 }
 
 @Injectable()
 export class ArrayEmitterAstVisitor {
     @Handler(ArrayEmitterAst)
-    handler(ast: ArrayEmitterAst, input$: Observable<ArrayEmitterAst>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    handler(ast: ArrayEmitterAst, input$: Observable<ArrayEmitterAst>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         return new Observable<NodeEvent>(obs => {
             ast.state = 'running';
             obs.next({ type: 'node_runing', id: ast.id });

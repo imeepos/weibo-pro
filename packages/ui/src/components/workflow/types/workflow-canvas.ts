@@ -5,7 +5,6 @@ import type {
   OnEdgesChange,
   OnConnect,
   NodeProps,
-  EdgeProps,
   Viewport,
   ConnectionMode,
   SelectionMode,

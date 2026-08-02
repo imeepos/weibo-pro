@@ -24,7 +24,7 @@ export class SentimentAnalyzer {
 
   async analyzeComplete(
     context: PostContext,
-    options?: {
+    _options?: {
       availableCategories?: string[];
       availableTags?: string[];
       recentEvents?: Array<{ title: string; description?: string }>;

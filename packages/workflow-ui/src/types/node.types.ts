@@ -1,4 +1,3 @@
-import type { IAstStates } from '@sker/workflow'
 import type { Position } from '@xyflow/react'
 
 /**

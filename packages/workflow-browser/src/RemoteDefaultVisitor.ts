@@ -1,6 +1,6 @@
 import { Injectable } from '@sker/core';
 import { Ast, IDefaultVisitor, WorkflowGraphAst } from '@sker/workflow';
-import { INode, NodeEvent } from '@sker/workflow';
+import { NodeEvent } from '@sker/workflow';
 import { Observable } from 'rxjs';
 import { handlerRemote } from './execute-remote.js';
 

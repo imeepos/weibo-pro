@@ -1,4 +1,4 @@
-import { Injectable, Inject, createLogger, Logger } from '@sker/core';
+import { Injectable, Inject, Logger } from '@sker/core';
 import { EventQueryService } from '../events/event-query.service';
 import { OverviewService } from '../overview.service';
 

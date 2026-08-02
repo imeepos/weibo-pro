@@ -15,5 +15,5 @@ export class PropertySelectorAst extends Ast {
   @Output({ title: '提取值', defaultValue: null })
   value: any = null;
 
-  type: 'PropertySelectorAst' = 'PropertySelectorAst';
+  type = 'PropertySelectorAst';
 }

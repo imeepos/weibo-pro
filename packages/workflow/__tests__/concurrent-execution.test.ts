@@ -5,8 +5,8 @@ import { TextAreaAst, TextAreaAstVisitor } from '../src/TextAreaAst';
 import { WorkflowGraphAstVisitor } from '../src/WorkflowGraphAstVisitor';
 import { Compiler } from '../src/compiler';
 import { root } from '@sker/core';
-import { firstValueFrom, lastValueFrom } from 'rxjs';
-import { toArray, delay } from 'rxjs/operators';
+import { firstValueFrom, } from 'rxjs';
+import { toArray, } from 'rxjs/operators';
 import { NodeEvent } from '../src/execution/events';
 import { ExecutionContext } from '../src/execution/ExecutionContext';
 
@@ -87,7 +87,7 @@ describe('Concurrent Workflow Execution', () => {
         }
 
         // 每次执行都应该成功
-        results.forEach((events, i) => {
+        results.forEach((events, _i) => {
             const hasSuccess = events.some(e => e.type === 'node_success' && e.id === workflow.id);
             expect(hasSuccess).toBe(true);
         });

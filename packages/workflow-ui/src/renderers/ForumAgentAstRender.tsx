@@ -27,7 +27,7 @@ const ForumAgentComponent: React.FC<{ ast: ForumAgentAst }> = ({ ast }) => {
 @Injectable()
 export class ForumAgentAstRender {
     @Render(ForumAgentAst)
-    render(ast: ForumAgentAst, ctx: any) {
+    render(ast: ForumAgentAst, _ctx: any) {
         return <ForumAgentComponent ast={ast} />
     }
 }

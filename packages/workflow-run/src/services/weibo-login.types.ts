@@ -1,6 +1,5 @@
 import { Subscriber } from "rxjs";
 import { BrowserContext, Page } from "playwright";
-import { WeiboLoginAst } from "@sker/workflow-ast";
 import { NodeEvent } from "@sker/workflow";
 
 /**

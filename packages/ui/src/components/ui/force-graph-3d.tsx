@@ -145,11 +145,11 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(({
       if (!fgRef.current) return;
       fgRef.current.resumeAnimation();
     },
-    centerAt: (x, y, transitionDuration) => {
+    centerAt: (_x, _y, _transitionDuration) => {
       if (!fgRef.current) return;
       // 这里需要实现 centerAt 逻辑
     },
-    zoom: (distance, transitionDuration) => {
+    zoom: (_distance, _transitionDuration) => {
       if (!fgRef.current) return;
       // 这里需要实现 zoom 逻辑
     },

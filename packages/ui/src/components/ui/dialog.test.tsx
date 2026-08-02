@@ -28,7 +28,7 @@ describe('Dialog Components', () => {
     })
 
     it('应该默认不显示内容', () => {
-      const { container } = render(
+      const { container: _container } = render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>对话框内容</DialogContent>
@@ -247,7 +247,7 @@ describe('Dialog Components', () => {
   describe('DialogClose', () => {
     it('应该关闭对话框', async () => {
       const user = userEvent.setup()
-      const { container } = render(
+      const { container: _container } = render(
         <Dialog>
           <DialogTrigger>打开</DialogTrigger>
           <DialogContent>

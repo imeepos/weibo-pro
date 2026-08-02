@@ -169,7 +169,7 @@ const WordCloud = React.forwardRef<WordCloudRef, WordCloudProps>(({
     }
 
     return newOption
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [dataHash, shape, sizeRange[0], sizeRange[1], rotationRange[0], rotationRange[1], animated, isDark])
 
   const onWordClickRef = React.useRef(onWordClick)

@@ -22,7 +22,7 @@ interface AgeDistributionChartProps {
 }
 
 const AgeDistributionChart: React.FC<AgeDistributionChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = "",
 }) => {
   const { isDark } = useTheme();

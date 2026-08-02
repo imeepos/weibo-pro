@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { exec, spawn } from 'child_process';
+import { exec, } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);

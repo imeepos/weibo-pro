@@ -1,6 +1,5 @@
-import { WorkflowGraphAst, fromJson, INode, IEdge, toJson } from '@sker/workflow'
+import { WorkflowGraphAst, fromJson, INode, toJson } from '@sker/workflow'
 import { validateEdges } from './edgeValidator'
-import type { Edge } from '@xyflow/react'
 
 /**
  * 工作流工厂 - 提供创建和操作工作流的纯函数

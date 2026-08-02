@@ -6,7 +6,7 @@ import React from "react";
 @Injectable()
 export class WeiboAjaxProfileInfoAstRender {
     @Render(WeiboAjaxProfileInfoAst)
-    render(ast: WeiboAjaxProfileInfoAst) {
+    render(_ast: WeiboAjaxProfileInfoAst) {
         return (
             <></>
         );

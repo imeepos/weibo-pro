@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { root } from '@sker/core';
 import { UserRelationController } from '@sker/sdk';
 import type { UserRelationNetwork, UserRelationType, TimeRange } from '@sker/sdk';
@@ -25,7 +25,9 @@ function getCachedData(): UserRelationNetwork | null {
 function setCachedData(data: UserRelationNetwork) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-  } catch {}
+  } catch {
+    // 缓存写入失败不影响功能
+  }
 }
 
 export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {

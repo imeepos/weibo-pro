@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React from 'react';
+import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
 import { useSentimentTransition } from '../../hooks/useSentimentTransition';
 import { useEChartTheme } from '@sker/ui/hooks/use-echart-theme';
@@ -21,7 +22,7 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
   };
 
   // 格式化时间
-  const formatTime = (timestamp: string | Date): string => {
+  const _formatTime = (timestamp: string | Date): string => {
     const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     return date.toLocaleString('zh-CN', {
       year: 'numeric',

@@ -4,7 +4,6 @@ import {
   LlmProvidersController,
   LlmModelsController,
   LlmModelProvidersController,
-  LlmChatLogsController,
   type LlmModelProviderWithRelations
 } from '@sker/sdk';
 import type { LlmProvider, LlmModel } from '@sker/entities';
@@ -18,7 +17,7 @@ import {
   DialogFooter
 } from '@sker/ui/components/ui/dialog';
 import { Badge } from '@sker/ui/components/ui/badge';
-import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, HomeIcon, SearchIcon, ToggleLeftIcon, ToggleRightIcon } from 'lucide-react';
+import { PlusIcon, TrashIcon, PencilIcon, RefreshCwIcon, ServerIcon, CpuIcon, LinkIcon, SearchIcon, ToggleLeftIcon, ToggleRightIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PromptAnalysisDialog } from '@/components/PromptAnalysisDialog';
 import { cn } from '@/utils';
@@ -26,7 +25,7 @@ import { cn } from '@/utils';
 type DeleteTarget = { type: 'provider' | 'model' | 'binding'; id: string; name: string } | null;
 
 const LlmManagement: React.FC = () => {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [providers, setProviders] = useState<LlmProvider[]>([]);
   const [models, setModels] = useState<LlmModel[]>([]);
   const [bindings, setBindings] = useState<LlmModelProviderWithRelations[]>([]);

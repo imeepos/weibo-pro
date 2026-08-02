@@ -17,7 +17,7 @@ import React from "react";
 @Injectable()
 export class ShareAstVisitor {
     @Render(ShareAst)
-    render(ast: ShareAst) {
+    render(_ast: ShareAst) {
         return (<></>);
     }
 }

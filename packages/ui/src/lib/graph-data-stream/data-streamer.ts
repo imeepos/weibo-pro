@@ -123,7 +123,7 @@ export class DataStreamer {
   /**
    * 将节点数据转换为二进制格式（高效传输）
    */
-  nodesToBinary(nodes: UserRelationNode[], startIndex: number = 0): BinaryNodeData {
+  nodesToBinary(nodes: UserRelationNode[], _startIndex: number = 0): BinaryNodeData {
     const positions = new Float32Array(nodes.length * 3);
     const colors = new Float32Array(nodes.length * 3);
     const sizes = new Float32Array(nodes.length);

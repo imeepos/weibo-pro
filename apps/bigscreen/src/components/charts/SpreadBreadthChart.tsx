@@ -4,7 +4,7 @@ import { ChartState } from '@sker/ui/components/ui/chart-state';
 import { useEChartTheme } from '@sker/ui/hooks/use-echart-theme';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
-import type { SpreadBreadthAnalysis, AggregatedNode, TopUser, LevelStats } from '@sker/sdk';
+import type { SpreadBreadthAnalysis, AggregatedNode, TopUser, } from '@sker/sdk';
 
 // 聚合节点颜色配置
 const NODE_COLORS = {

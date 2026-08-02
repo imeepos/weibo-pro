@@ -4,7 +4,7 @@ import { concatMap, expand, filter, take, map, catchError } from 'rxjs/operators
 import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
 import { Runnable } from '@langchain/core/runnables';
 import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
-import { AIMessage, AIMessageChunk } from '@langchain/core/messages';
+import { AIMessageChunk } from '@langchain/core/messages';
 import { StructuredToolInterface } from '@langchain/core/tools';
 
 interface MessageContent {

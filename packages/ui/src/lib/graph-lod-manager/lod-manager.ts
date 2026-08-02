@@ -10,8 +10,7 @@ import type {
   LODManagerConfig,
   LODUpdateResult,
   FrustumCullingResult,
-  LODLevel,
-} from './types';
+  } from './types';
 
 const DEFAULT_CONFIG: Required<Omit<LODManagerConfig, 'levels'>> = {
   octreeConfig: {

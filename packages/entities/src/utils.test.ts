@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, } from 'vitest';
 
 describe('cleanupIdleConnections', () => {
   // 由于cleanupIdleConnections函数内部使用useDataSource，
@@ -49,7 +49,7 @@ describe('cleanupIdleConnections', () => {
   });
 
   it('应该构建正确的SQL查询语句', () => {
-    const dbName = 'testdb';
+    const _dbName = 'testdb';
     const idleTimeThreshold = 30;
 
     const expectedQuery = `

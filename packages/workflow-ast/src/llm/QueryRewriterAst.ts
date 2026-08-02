@@ -28,5 +28,5 @@ export class QueryRewriterAst extends Ast {
   @Output({ title: '推理过程', defaultValue: '' })
   reasoning = ``;
 
-  type: 'QueryRewriterAst' = 'QueryRewriterAst';
+  type = 'QueryRewriterAst';
 }

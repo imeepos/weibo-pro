@@ -1,4 +1,4 @@
-import { Injectable, root } from '@sker/core';
+import { Injectable, } from '@sker/core';
 import { Handler, NodeEvent, setAstError, WorkflowGraphAst } from '@sker/workflow';
 import { PromptRoleSkillAst } from '@sker/workflow-ast';
 import { PromptRoleSkillRefEntity, PromptSkillEntity, useEntityManager, In, type SkillSummary } from '@sker/entities';
@@ -21,7 +21,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export class PromptRoleSkillAstVisitor {
 
   @Handler(PromptRoleSkillAst)
-  handler(ast: PromptRoleSkillAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: PromptRoleSkillAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
       ast.state = 'running';

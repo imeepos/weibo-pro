@@ -1,4 +1,4 @@
-import { mergeMap, tap, catchError, of } from 'rxjs';
+import { mergeMap, catchError, of } from 'rxjs';
 import type { TaskQueue } from './task-queue.js';
 import type { CrawlerTask, TaskHandler } from './types.js';
 import { TaskStatus } from './types.js';

@@ -33,7 +33,7 @@ const QueryAgentComponent: React.FC<{ ast: QueryAgentAst }> = ({ ast }) => {
 @Injectable()
 export class QueryAgentAstRender {
     @Render(QueryAgentAst)
-    render(ast: QueryAgentAst, ctx: any) {
+    render(ast: QueryAgentAst, _ctx: any) {
         return <QueryAgentComponent ast={ast} />
     }
 }

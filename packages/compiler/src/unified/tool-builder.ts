@@ -6,7 +6,7 @@
 
 import { root, ToolMetadataKey, ToolArgMetadataKey, Type } from '@sker/core'
 import { ToolMetadata, ToolArgMetadata } from '@sker/core'
-import { AnthropicTool, OpenAITool, GoogleTool, GoogleToolFunctionDeclaration, UnifiedTool, UnifiedToolParameters } from '../ast'
+import { AnthropicTool, OpenAITool, GoogleTool, GoogleToolFunctionDeclaration, UnifiedTool, } from '../ast'
 import { zodToJsonSchema, isOptionalParam } from '../utils/zod-to-json-schema'
 
 // ==================== 核心构建函数 ====================
@@ -16,7 +16,7 @@ import { zodToJsonSchema, isOptionalParam } from '../utils/zod-to-json-schema'
  * @param tools 可选的工具类列表（未使用，兼容现有 API）
  * @returns UnifiedTool[] 统一工具列表
  */
-export function buildUnifiedTools(tools: Type<any>[] = []): UnifiedTool[] {
+export function buildUnifiedTools(_tools: Type<any>[] = []): UnifiedTool[] {
     const toolMetadatas = root.get(ToolMetadataKey) ?? []
     const toolArgMetadatas = root.get(ToolArgMetadataKey) ?? []
 

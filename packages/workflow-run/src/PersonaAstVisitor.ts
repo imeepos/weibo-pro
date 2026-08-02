@@ -30,7 +30,7 @@ type ExtractedMemory = z.infer<typeof MemoryExtractionSchema>['memories'][number
 export class PersonaAstVisitor {
 
   @Handler(PersonaAst)
-  handler(ast: PersonaAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: PersonaAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { root } from '@sker/core';
-import { WorkflowController, type WorkflowNodeInfo } from '@sker/sdk';
+import { WorkflowController, } from '@sker/sdk';
 import { WorkflowNodeSelector, type WorkflowNode } from '@sker/ui/components/blocks/workflow-node-selector';
 import { Card, CardHeader, CardTitle, CardContent } from '@sker/ui/components/ui/card';
 import { Spinner } from '@sker/ui/components/ui/spinner';

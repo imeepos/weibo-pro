@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page, LaunchOptions } from 'playwright';
+import type { Browser, BrowserContext, } from 'playwright';
 
 export interface BrowserConfig {
   headless?: boolean;

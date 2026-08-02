@@ -134,7 +134,7 @@ export class WeiboAjaxStatusesCommentAstVisitor extends WeiboApiClient {
             console.log(`[WeiboAjaxStatusesCommentAstVisitor] 共${entities.length}个`);
 
             if (entities.length > 0) {
-                for (let child of entities) {
+                for (const child of entities) {
                     // 检查取消信号（子评论循环中）
                     if (wrappedCtx.abortSignal?.aborted) {
                         throw new Error('工作流已取消');

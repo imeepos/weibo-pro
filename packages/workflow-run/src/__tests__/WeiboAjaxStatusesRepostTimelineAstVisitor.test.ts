@@ -7,9 +7,9 @@
  * - 避免重复处理导致统计数据重复累加
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { EntityManager } from 'typeorm';
-import { WeiboRepostEntity, WeiboUserEntity, WeiboPostEntity, UserRelationStatisticsHelper, HourlyStatisticsHelper } from '@sker/entities';
+import { WeiboRepostEntity, WeiboPostEntity, UserRelationStatisticsHelper, HourlyStatisticsHelper } from '@sker/entities';
 
 /**
  * Mock EntityManager 用于测试
@@ -61,7 +61,7 @@ class MockEntityManager extends EntityManager {
   /**
    * 模拟 upsert - 插入或更新
    */
-  async upsert(entity: any, data: any | any[], conflictPaths: string[]): Promise<any> {
+  async upsert(entity: any, data: any | any[], _conflictPaths: string[]): Promise<any> {
     this.upsertCallCount++;
 
     // 支持批量 upsert
@@ -101,23 +101,23 @@ class MockEntityManager extends EntityManager {
    * 模拟 createQueryBuilder - 用于统计表的 UPSERT 操作
    */
   createQueryBuilder(): any {
-    const self = this;
+    const _self = this;
     const statsData: Map<string, any> = new Map();
     const relationData: Map<string, any> = new Map();
 
     return {
       insert() {
         return {
-          into(entity: any) {
+          into(_entity: any) {
             return {
               values(values: any) {
                 return {
-                  orUpdate(columns: string[], conflictColumns: string[]) {
+                  orUpdate(_columns: string[], _conflictColumns: string[]) {
                     return {
-                      updateEntity(bool: boolean) {
+                      updateEntity(_bool: boolean) {
                         return this;
                       },
-                      callListeners(bool: boolean) {
+                      callListeners(_bool: boolean) {
                         return this;
                       },
                       async execute() {
@@ -373,7 +373,7 @@ describe('WeiboAjaxStatusesRepostTimelineAstVisitor - 统计更新修复验证',
 
       // 因为没有新数据，统计更新逻辑不应该执行
       let statsCallCount = 0;
-      for (const repost of newReposts) {
+      for (const _repost of newReposts) {
         statsCallCount++;
       }
 
@@ -449,12 +449,12 @@ describe('WeiboAjaxStatusesRepostTimelineAstVisitor - 统计更新修复验证',
 
       // 第一次处理
       const ids1 = repostEntities.map(e => e.id).filter(Boolean);
-      let existingRecords1 = await mockManager.find(WeiboRepostEntity, {
+      const existingRecords1 = await mockManager.find(WeiboRepostEntity, {
         where: ids1.map(id => ({ id }))
       });
 
-      let existingIds1 = new Set(existingRecords1.map(r => r.id));
-      let newReposts1 = repostEntities.filter(e => !existingIds1.has(e.id));
+      const existingIds1 = new Set(existingRecords1.map(r => r.id));
+      const newReposts1 = repostEntities.filter(e => !existingIds1.has(e.id));
 
       expect(newReposts1.length).toBe(2);
 
@@ -473,19 +473,19 @@ describe('WeiboAjaxStatusesRepostTimelineAstVisitor - 统计更新修复验证',
       }
 
       // 第二次处理（模拟重复执行）
-      let existingRecords2 = await mockManager.find(WeiboRepostEntity, {
+      const existingRecords2 = await mockManager.find(WeiboRepostEntity, {
         where: ids1.map(id => ({ id }))
       });
 
-      let existingIds2 = new Set(existingRecords2.map(r => r.id));
-      let newReposts2 = repostEntities.filter(e => !existingIds2.has(e.id));
+      const existingIds2 = new Set(existingRecords2.map(r => r.id));
+      const newReposts2 = repostEntities.filter(e => !existingIds2.has(e.id));
 
       // 关键验证：第二次处理时，应该没有新数据
       expect(newReposts2.length).toBe(0);
 
       // 统计更新（第二次）- 不应该执行
       let statsCallCount = 0;
-      for (const repost of newReposts2) {
+      for (const _repost of newReposts2) {
         statsCallCount++;
       }
 

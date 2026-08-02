@@ -6,7 +6,7 @@ import React from "react";
 @Injectable()
 export class MarkdownAstRender {
     @Render(MarkdownAst)
-    render(ast: MarkdownAst, ctx: any) {
+    render(ast: MarkdownAst, _ctx: any) {
         const output = serializeToString(ast.output || ast.input)
         return <MarkdownViewer showFullscreen maxHeight="300px">{output}</MarkdownViewer>;
     }

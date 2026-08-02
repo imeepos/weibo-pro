@@ -243,7 +243,7 @@ export function useWorkflow(
       return
     }
 
-    let hasPositionChanged = false
+    const _hasPositionChanged = false
 
     // 递归更新 AST 节点（不可变方式）
     const updateAstNodes = (nodeList: INode[]): { nodes: INode[]; changed: boolean } => {
@@ -252,7 +252,7 @@ export function useWorkflow(
         const flowNode = nodes.find(n => n.id === astNode.id)
         if (!flowNode) return astNode
 
-        let updates: any = {}
+        const updates: any = {}
         const currentPos = astNode.position
         const newPos = flowNode.position
 
@@ -377,7 +377,7 @@ export function useWorkflow(
    * - 保存后的 INode 自包含元数据，无需依赖装饰器
    */
   const addNode = useCallback(
-    (nodeClass: any, position: { x: number; y: number }, label?: string) => {
+    (nodeClass: any, position: { x: number; y: number }, _label?: string) => {
       const ast = new nodeClass()
       ast.id = generateId()
       ast.position = position

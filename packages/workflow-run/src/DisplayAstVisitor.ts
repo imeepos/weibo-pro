@@ -87,7 +87,7 @@ export class DisplayAstVisitor {
                         ast.formatted = typeof ast.json === 'string'
                             ? ast.json
                             : JSON.stringify(ast.json, null, 2)
-                    } catch (error) {
+                    } catch (_error) {
                         ast.formatted = String(ast.json)
                     }
 

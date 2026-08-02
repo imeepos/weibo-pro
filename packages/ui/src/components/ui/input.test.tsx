@@ -61,7 +61,7 @@ describe('Input Component', () => {
   })
 
   it('应该支持 aria 属性', () => {
-    const { container } = render(<Input aria-label="搜索框" />)
+    const { container: _container } = render(<Input aria-label="搜索框" />)
     expect(screen.getByLabelText('搜索框')).toBeInTheDocument()
   })
 

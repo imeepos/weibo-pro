@@ -1,4 +1,4 @@
-import { Injectable, Inject, createLogger, Logger, Optional } from '@sker/core';
+import { Injectable, Inject, Logger, } from '@sker/core';
 import {
   WeiboPostEntity,
   PostNLPResultEntity,
@@ -304,7 +304,7 @@ export class OverviewService {
             trend = 'down';
           }
         }
-        let region: string = (location?.region || '');
+        const region: string = (location?.region || '');
         
         return {
           region: region.replace(`发布于`, '').trim(),

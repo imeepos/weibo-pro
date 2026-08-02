@@ -31,7 +31,7 @@ export class EventStatisticsController implements sdk.EventStatisticsController 
   }
 
   async triggerDailyGeneration(
-    body: sdk.TriggerGenerationRequest
+    _body: sdk.TriggerGenerationRequest
   ): Promise<{ success: boolean; message: string }> {
     try {
       logger.info('Manual daily statistics generation requested')

@@ -20,7 +20,7 @@ interface ErrorDetailPanelProps {
   depth?: number
 }
 
-export const ErrorDetailPanel = ({ error, depth = 0 }: ErrorDetailPanelProps) => {
+export const ErrorDetailPanel = ({ error, depth: _depth = 0 }: ErrorDetailPanelProps) => {
 
   if (!error) {
     return null

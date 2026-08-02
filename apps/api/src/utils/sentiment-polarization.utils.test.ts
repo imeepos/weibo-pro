@@ -7,8 +7,7 @@ import {
   calculateSentimentPolarization,
   getPolarizationLevel,
   getPolarizationColor,
-  type SentimentPolarizationResult,
-} from './sentiment-polarization.utils';
+  } from './sentiment-polarization.utils';
 
 describe('SentimentPolarizationUtils', () => {
   describe('calculateSentimentPolarization', () => {

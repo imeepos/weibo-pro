@@ -42,5 +42,5 @@ export class ExcelUploadAst extends Ast {
   @Output({ title: '是否末行', defaultValue: false })
   isLast: boolean = false;
 
-  type: 'ExcelUploadAst' = 'ExcelUploadAst';
+  type = 'ExcelUploadAst';
 }

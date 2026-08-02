@@ -7,12 +7,10 @@
  * 3. 类型安全的 actions
  */
 
-import type { WritableDraft } from 'immer'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
 import { getNodeById } from '@sker/workflow'
-import { root } from '@sker/core'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { flowToAst } from '../adapters'
 import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
@@ -223,7 +221,7 @@ export const useWorkflowStore: {
           return
         }
 
-        const previousState = node.state
+        const _previousState = node.state
 
         // ✨ 2. 使用 updateNodeReducer 更新 AST
         set((draft) => {

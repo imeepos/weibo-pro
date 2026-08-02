@@ -41,7 +41,7 @@ describe('SpreadBreadthService', () => {
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
-    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+    vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
       return fn();
     });
 
@@ -372,7 +372,7 @@ describe('SpreadBreadthService', () => {
 
     it('缓存失效后应该重新计算', async () => {
       let callCount = 0;
-      vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, ttl) => {
+      vi.spyOn(cacheService, 'getOrSet').mockImplementation(async (key, fn, _ttl) => {
         callCount++;
         return fn();
       });

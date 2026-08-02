@@ -33,7 +33,7 @@ const MediaAgentComponent: React.FC<{ ast: MediaAgentAst }> = ({ ast }) => {
 @Injectable()
 export class MediaAgentAstRender {
     @Render(MediaAgentAst)
-    render(ast: MediaAgentAst, ctx: any) {
+    render(ast: MediaAgentAst, _ctx: any) {
         return <MediaAgentComponent ast={ast} />
     }
 }

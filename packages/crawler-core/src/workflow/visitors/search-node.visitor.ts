@@ -8,7 +8,7 @@ export class SearchNodeVisitor {
   constructor(private weiboClient: WeiboClient) {}
 
   @Handler(SearchNodeAst)
-  async visit(ast: SearchNodeAst, ctx: any) {
+  async visit(ast: SearchNodeAst, _ctx: any) {
     ast.state = 'running';
 
     try {

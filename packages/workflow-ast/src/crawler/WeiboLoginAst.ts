@@ -1,4 +1,4 @@
-import { Ast, Node, Output, State } from "@sker/workflow";
+import { Ast, Node, Output, } from "@sker/workflow";
 import type { WeiboAccountEntity } from "@sker/entities";
 
 /**

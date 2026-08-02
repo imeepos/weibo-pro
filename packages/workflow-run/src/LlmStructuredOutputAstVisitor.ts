@@ -19,7 +19,7 @@ const buildJsonPrompt = (outputs: INodeOutputMetadata[]) => {
 export class LlmStructuredOutputAstVisitor {
 
     @Handler(LlmStructuredOutputAst)
-    visit(ast: LlmStructuredOutputAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+    visit(ast: LlmStructuredOutputAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
         return new Observable<NodeEvent>((obs) => {
             const abortController = new AbortController();
 

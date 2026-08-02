@@ -1,5 +1,5 @@
-import { BehaviorSubject, Observable, combineLatest, interval, from } from 'rxjs';
-import { map, switchMap, take, concatMap, delay } from 'rxjs/operators';
+import { BehaviorSubject, Observable, combineLatest, from } from 'rxjs';
+import { map, concatMap, delay } from 'rxjs/operators';
 import { NodeEvent } from '../execution/events';
 
 /**

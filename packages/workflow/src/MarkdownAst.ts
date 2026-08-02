@@ -20,7 +20,7 @@ export class MarkdownAst extends Ast {
 @Injectable()
 export class MarkdownAstVisitor {
     @Handler(MarkdownAst)
-    handler(ast: MarkdownAst, input$: Observable<MarkdownAst>, ctx: WorkflowGraphAst): Observable<NodeEvent> {
+    handler(ast: MarkdownAst, input$: Observable<MarkdownAst>, _ctx: WorkflowGraphAst): Observable<NodeEvent> {
         if (!input$) throw new Error(`[MarkdownAstVisitor.handler] input$ is empty`)
         if (!isObservable(input$)) throw new Error(`[MarkdownAstVisitor.handler] input$ must be an Observable`)
         return new Observable<NodeEvent>(obs => {

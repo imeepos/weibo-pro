@@ -3,7 +3,7 @@ import { Injectable, root } from '@sker/core';
 import { Render, Setting } from '@sker/workflow';
 import { PersonaAst, RetrievedMemory } from '@sker/workflow-ast';
 import { PersonaController } from '@sker/sdk';
-import { PersonaSelector, type PersonaItem } from '@sker/ui/components/ui';
+import { PersonaSelector, } from '@sker/ui/components/ui';
 import { useAsyncData } from '../hooks';
 
 const MemoryTypeColors: Record<string, string> = {

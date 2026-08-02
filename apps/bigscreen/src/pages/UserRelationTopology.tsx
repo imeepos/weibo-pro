@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
-import { Network } from 'lucide-react';
 import UserRelationGraph3DOffscreen from '../components/charts/UserRelationGraph3DOffscreen';
 import { getUserTypeColor } from '../components/charts/UserRelationGraph3D.utils';
 import UserRelationControls from '../components/charts/UserRelationControls';
@@ -22,7 +21,7 @@ const USER_TYPE_CONFIGS = [
 ];
 
 const UserRelationTopology: React.FC = () => {
-  const { selectedTimeRange, setSelectedTimeRange } = useAppStore();
+  const { selectedTimeRange, setSelectedTimeRange: _setSelectedTimeRange } = useAppStore();
   const [relationType, setRelationType] = useState<UserRelationType>(() => {
     const saved = localStorage.getItem('userRelation.relationType');
     return (saved as UserRelationType) || 'comprehensive';
@@ -89,7 +88,7 @@ const UserRelationTopology: React.FC = () => {
     setSelectedNode(node);
   }, []);
 
-  const handleNodeHover = useCallback((node: UserRelationNode | null) => {
+  const handleNodeHover = useCallback((_node: UserRelationNode | null) => {
   }, []);
 
   return (

@@ -29,7 +29,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
   const { selectedTimeRange } = useAppStore();
   const [events, setEvents] = useState<HotEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [_isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;

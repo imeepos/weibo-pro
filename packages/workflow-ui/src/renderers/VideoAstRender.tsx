@@ -261,7 +261,7 @@ const VideoComponent: React.FC<{ ast: VideoAst }> = ({ ast }) => {
 @Injectable()
 export class VideoAstRender {
     @Render(VideoAst)
-    render(ast: VideoAst, ctx: any) {
+    render(ast: VideoAst, _ctx: any) {
         return <VideoComponent ast={ast} />;
     }
 }

@@ -1,7 +1,6 @@
 import { DataSource, DataSourceOptions, EntityManager } from 'typeorm';
 import { ENTITY } from "./decorator";
-import { APP_INITIALIZER, Initializer, Provider, root, Inject } from '@sker/core';
-import { RedisClient } from '@sker/redis';
+import { APP_INITIALIZER, Initializer, Provider, root, } from '@sker/core';
 import { WorkflowScheduleSubscriber } from './subscribers/workflow-schedule.subscriber';
 
 export const createDatabaseConfig = (): DataSourceOptions => {
@@ -74,7 +73,7 @@ let useDataSourceCallCount = 0; // 调用计数器
  * ⚠️ 重要：不要在每次 useDataSource 调用时检查连接存活
  * 这会导致频繁的重连，进而累积大量未关闭的连接
  */
-const isConnectionAlive = async (dataSource: DataSource): Promise<boolean> => {
+const _isConnectionAlive = async (dataSource: DataSource): Promise<boolean> => {
   try {
     await dataSource.query('SELECT 1');
     return true;
@@ -370,7 +369,7 @@ export const cleanupIdleConnections = async (
     const query = `
       SELECT pid
       FROM pg_stat_activity
-      WHERE datname = \$1
+      WHERE datname = $1
         AND state = 'idle'
         AND state_change < NOW() - INTERVAL '${idleTimeThreshold} seconds'
         AND pid != pg_backend_pid()

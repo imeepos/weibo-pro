@@ -21,7 +21,7 @@ export interface NodeEmitEvent<T = any> {
     data: Partial<T>;
 }
 // 节点成功
-export interface NodeSuccessEvent<T = any> {
+export interface NodeSuccessEvent<_T = any> {
     type: 'node_success';
     id: string;
 }

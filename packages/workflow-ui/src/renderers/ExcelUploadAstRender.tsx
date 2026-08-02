@@ -154,7 +154,7 @@ const ExcelSetting: React.FC<ExcelSettingProps> = ({ ast, onPropertyChange }) =>
   );
 };
 
-const ExcelRender: React.FC<{ ast: ExcelUploadAst }> = ({ ast }) => {
+const ExcelRender: React.FC<{ ast: ExcelUploadAst }> = ({ ast: _ast }) => {
   return null;
 };
 

@@ -33,7 +33,6 @@ vi.mock('@/utils/errorHandler', () => ({
 }));
 
 import { root } from '@sker/core';
-import { ChartsController } from '@sker/sdk';
 
 describe('useChartData hooks', () => {
   let mockController: Record<string, jest.Mock>;

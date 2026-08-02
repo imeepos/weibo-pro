@@ -15,8 +15,6 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import { UserDetailDialog } from '@/components/common/UserDetailDialog';
-import { formatNumber } from '@/utils';
-import { DEFAULT_PAGE_SIZE } from '@/utils/userUtils';
 import { ForceGraph3D, type ForceGraph3DHandle, type GraphNode, type GraphLink, type GraphData } from '@sker/ui/components/ui/force-graph-3d';
 import * as THREE from 'three';
 import {
@@ -64,7 +62,7 @@ const UserDetection3D: React.FC = () => {
   const debouncedSearch = useDebounce(searchTerm, 1000);
   const fgRef = useRef<ForceGraph3DHandle>(null);
 
-  const { users, riskLevels, statistics, isLoading, error, refetch } = useUserDetection({
+  const { users, riskLevels: _riskLevels, statistics, isLoading, error, refetch } = useUserDetection({
     timeRange: selectedTimeRange,
     page: 1,
     pageSize: 500,

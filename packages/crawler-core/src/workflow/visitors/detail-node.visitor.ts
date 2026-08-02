@@ -8,7 +8,7 @@ export class DetailNodeVisitor {
   constructor(private weiboClient: WeiboClient) {}
 
   @Handler(DetailNodeAst)
-  async visit(ast: DetailNodeAst, ctx: any) {
+  async visit(ast: DetailNodeAst, _ctx: any) {
     ast.state = 'running';
 
     try {

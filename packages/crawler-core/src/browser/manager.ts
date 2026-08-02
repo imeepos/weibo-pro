@@ -1,4 +1,4 @@
-import { chromium, firefox, webkit, type Browser, type BrowserContext, type CDPSession } from 'playwright';
+import { chromium, type Browser, type BrowserContext, } from 'playwright';
 import type { BrowserConfig, BrowserInstance, StorageState } from './types';
 import { STEALTH_SCRIPT } from './stealth';
 
@@ -38,7 +38,7 @@ export class BrowserManager {
   }
 
   async release(browser: Browser): Promise<void> {
-    for (const [key, instance] of Array.from(this.pool.entries())) {
+    for (const [_key, instance] of Array.from(this.pool.entries())) {
       if (instance.browser === browser) {
         instance.inUse = false;
         return;

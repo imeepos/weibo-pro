@@ -81,7 +81,7 @@ export function props<
  */
 export function union<
   C extends { [key: string]: ActionCreator<string, Creator> },
->(creators: C): ReturnType<C[keyof C]> {
+>(_creators: C): ReturnType<C[keyof C]> {
   return undefined!;
 }
 

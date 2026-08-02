@@ -75,7 +75,7 @@ export function SubWorkflowModal({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [visible, localWorkflowAst, parentNodeId, hasChanges])
 
-  const handleWorkflowChange = useCallback((updatedAst: WorkflowGraphAst) => {
+  const _handleWorkflowChange = useCallback((updatedAst: WorkflowGraphAst) => {
     setLocalWorkflowAst(updatedAst)
     setHasChanges(true)
   }, [])

@@ -11,7 +11,7 @@ export class WorkflowNodeGeneratorAstVisitor {
   visit(
     ast: WorkflowNodeGeneratorAst,
     input$: Observable<Record<string, unknown>>,
-    ctx: WorkflowGraphAst
+    _ctx: WorkflowGraphAst
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();

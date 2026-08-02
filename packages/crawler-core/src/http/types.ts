@@ -1,4 +1,4 @@
-import type { AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 export interface HttpProxyConfig {
   protocol: 'http' | 'https' | 'socks5';

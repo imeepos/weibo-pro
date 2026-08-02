@@ -1,4 +1,4 @@
-import { Controller, Get } from '@sker/core';
+import { Controller, } from '@sker/core';
 import { root } from '@sker/core';
 import { SystemService, type SystemStatus, type SystemPerformance, type SystemHealth } from '../services/data/system.service';
 import * as sdk from '@sker/sdk';

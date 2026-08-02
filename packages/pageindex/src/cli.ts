@@ -43,10 +43,10 @@ program
       }
 
       // 动态导入PDF处理模块
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       let page_index_main: any;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const pdfModule = await import('./pdf/page-index.js') as any;
         page_index_main = pdfModule.page_index_main;
       } catch (error) {
@@ -113,10 +113,10 @@ program
       }
 
       // 动态导入Markdown处理模块
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       let md_to_tree: any;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         
         const mdModule = await import('./markdown/page-index-md.js') as any;
         md_to_tree = mdModule.md_to_tree;
       } catch (error) {

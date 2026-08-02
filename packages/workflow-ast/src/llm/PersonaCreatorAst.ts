@@ -47,5 +47,5 @@ export class PersonaCreatorAst extends Ast {
   @Output({ title: '角色名', defaultValue: '' })
   personaName = ``;
 
-  type: 'PersonaCreatorAst' = 'PersonaCreatorAst';
+  type = 'PersonaCreatorAst';
 }

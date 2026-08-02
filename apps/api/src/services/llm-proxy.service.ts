@@ -1,6 +1,5 @@
 import { Injectable, logger } from '@sker/core';
 import { useEntityManager, LlmModelProvider, LlmProvider, LlmChatLog } from '@sker/entities';
-import { Brackets } from 'typeorm';
 import {
   type ClaudeResponse,
   type OpenAIResponse,
@@ -94,7 +93,7 @@ function createJSONParseStream<T = unknown>() {
 
       try {
         controller.enqueue(JSON.parse(jsonStr))
-      } catch (err) {
+      } catch (_err) {
         logger.warn(`SSE JSON 解析失败`, { snippet: jsonStr.slice(0, 100) })
       }
     }
@@ -195,7 +194,7 @@ export class LlmProxyService {
     }
 
     // 查找包含完整响应的事件（通常是最后一个 response.completed 事件）
-    const completedEvent = chunks.find((chunk: unknown) => (chunk as { type?: string }).type === 'response.completed')
+    const _completedEvent = chunks.find((chunk: unknown) => (chunk as { type?: string }).type === 'response.completed')
 
     // 收集所有文本内容
     const textChunks: string[] = []
@@ -643,7 +642,7 @@ export class LlmProxyService {
       }
 
       // Codex 协议特殊处理：非流式模式不稳定，需要强制改为流式
-      let originalStreamMode = proxyBody.stream
+      const originalStreamMode = proxyBody.stream
       let forceStreamForCodex = false
       if (provider.providerProtocol === 'codex' && proxyBody.stream === false) {
         proxyBody.stream = true
@@ -660,7 +659,7 @@ export class LlmProxyService {
       const startTime = Date.now()
 
       try {
-        let baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '')
+        const baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '')
         let path = proxyPath.startsWith('/') ? proxyPath : `/${proxyPath}`
 
         // 检查 baseUrl 是否以 /v1 结尾，避免路径重复
@@ -815,16 +814,16 @@ export class LlmProxyService {
             }
           }
           // 提取并打印文本内容
-          let textContent = ''
+          let _textContent = ''
           if (finalResponse.choices?.[0]?.message?.content) {
             // OpenAI 格式
-            textContent = finalResponse.choices[0].message.content
+            _textContent = finalResponse.choices[0].message.content
           } else if (finalResponse.output?.[0]?.content?.[0]?.text) {
             // Codex 格式
-            textContent = finalResponse.output[0].content[0].text
+            _textContent = finalResponse.output[0].content[0].text
           } else if (finalResponse.content?.[0]?.text) {
             // Claude 格式
-            textContent = finalResponse.content[0].text
+            _textContent = finalResponse.content[0].text
           }
           const responseBody = JSON.stringify(finalResponse)
           return {
@@ -920,7 +919,7 @@ export class LlmProxyService {
 
             // 打印最终响应预览
             const finalResponseStr = JSON.stringify(finalResponse)
-            const finalPreview = finalResponseStr.length > 100
+            const _finalPreview = finalResponseStr.length > 100
               ? `${finalResponseStr.slice(0, 50)}...${finalResponseStr.slice(-50)}`
               : finalResponseStr
 
@@ -986,7 +985,7 @@ export class LlmProxyService {
               // 打印流数据概览（前10 + ... + 后10字符）
               if (data && typeof data === 'object') {
                 const dataStr = JSON.stringify(data)
-                const preview = dataStr.length > 20
+                const _preview = dataStr.length > 20
                   ? `${dataStr.slice(0, 50)}...${dataStr.slice(-50)}`
                   : dataStr
               }

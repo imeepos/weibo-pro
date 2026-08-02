@@ -27,10 +27,9 @@ function getBaseUrl() {
 const baseURL = getBaseUrl();
 
 // 异步初始化 Better Auth（避免打包时的初始化顺序问题）
-let auth: any = null;
 (async () => {
   try {
-    auth = createAuthClient({
+    createAuthClient({
       baseURL,
       plugins: [createSkerClientPlugin()]
     });

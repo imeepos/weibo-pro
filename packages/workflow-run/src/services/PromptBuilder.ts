@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@sker/core';
 import { ChapterData, Clue, StoryWeaverAst } from '@sker/workflow-ast';
-import { QualityCheckResult } from './ChapterQualityService';
 import { StoryContextService } from './StoryContextService';
 
 /**

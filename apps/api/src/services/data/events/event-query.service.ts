@@ -22,7 +22,6 @@ import type {
   SentimentScore,
   EventCategoryStats,
   InfluenceUser,
-  GeographicDistribution,
   GeographicResponse,
   EventSentimentHotness,
   EventSentimentDistribution,
@@ -647,7 +646,7 @@ export class EventQueryService {
 
   private async getStatisticsBatch(
     eventIds: string[],
-    timeRange?: TimeRange
+    _timeRange?: TimeRange
   ): Promise<EventStatistics[]> {
     if (eventIds.length === 0) return [];
 
@@ -1119,8 +1118,8 @@ export class EventQueryService {
               'avgSentiment'
             )
             .where('nlp.event_id = :eventId', { eventId })
-            .andWhere("nlp.event_type->>\'type\' IS NOT NULL")
-            .andWhere("nlp.event_type->>\'type\' != ''")
+            .andWhere("nlp.event_type->>'type' IS NOT NULL")
+            .andWhere("nlp.event_type->>'type' != ''")
             .groupBy('nlp.event_type->>\'type\'')
             .orderBy('count', 'DESC')
             .getRawMany();

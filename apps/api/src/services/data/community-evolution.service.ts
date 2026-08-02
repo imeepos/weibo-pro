@@ -471,7 +471,7 @@ export class CommunityEvolutionService {
 
     // 计算社区数量趋势
     const communityCounts = timeSlices.map((s) => s.communities.length);
-    const avgCommunityCount =
+    const _avgCommunityCount =
       communityCounts.reduce((sum, count) => sum + count, 0) / communityCounts.length;
 
     // 简单线性预测（此处 timeSlices.length >= 2，索引安全）

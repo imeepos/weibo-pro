@@ -5,7 +5,7 @@
  * 移动端 → 服务器 → RabbitMQ → 执行端 → RabbitMQ → 服务器 → 移动端
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, } from 'vitest';
 
 // Mock RabbitMQ
 const mockProducerNext = vi.fn();

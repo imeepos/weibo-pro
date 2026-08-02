@@ -14,7 +14,7 @@ interface PostCountChartProps {
 const logger = createLogger('PostCountChart');
 
 const PostCountChart: React.FC<PostCountChartProps> = ({
-  height = 0,
+  height: _height = 0,
   className = "",
 }) => {
   const { isDark } = useTheme();

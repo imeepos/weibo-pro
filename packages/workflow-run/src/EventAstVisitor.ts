@@ -9,7 +9,7 @@ import { ErrorHandlerOperators } from './utils/error-handler.util';
 @Injectable()
 export class EventAstVisitor {
   @Handler(EventAst)
-  handler(ast: EventAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  handler(ast: EventAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

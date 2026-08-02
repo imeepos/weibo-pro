@@ -1,9 +1,9 @@
+import { lazy, ComponentType, LazyExoticComponent } from 'react';
 /**
  * 懒加载组件定义
  * 实现组件级别的代码分割和按需加载
  */
 
-import React, { lazy, ComponentType, LazyExoticComponent } from 'react';
 
 // 通用懒加载组件类型
 type LazyComponent<T = any> = LazyExoticComponent<ComponentType<T>>;

@@ -15,7 +15,7 @@ More content.
 
 Even more content.`;
 
-    const [nodes, lines] = extractNodesFromMarkdown(markdown);
+    const [nodes, _lines] = extractNodesFromMarkdown(markdown);
     
     expect(nodes).toHaveLength(3);
     expect(nodes[0].node_title).toBe('Chapter 1');

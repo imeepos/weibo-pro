@@ -23,7 +23,6 @@ import {
 import { WorkflowGraphAst, fromJson, getInputMetadata, resolveConstructor } from '@sker/workflow'
 import { CronExpressionParser } from 'cron-parser'
 import { RunConfigDialog } from './RunConfigDialog'
-import { cn } from '@sker/ui/lib/utils'
 
 /**
  * 调度对话框

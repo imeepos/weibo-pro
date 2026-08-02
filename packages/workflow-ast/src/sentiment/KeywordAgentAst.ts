@@ -102,7 +102,7 @@ JSON 结构示例：
         }
     };
 
-    type: 'KeywordAgentAst' = 'KeywordAgentAst';
+    type = 'KeywordAgentAst';
 }
 
 export interface SearchStrategy {

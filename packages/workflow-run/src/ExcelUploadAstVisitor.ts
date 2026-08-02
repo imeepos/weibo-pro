@@ -12,7 +12,7 @@ export class ExcelUploadAstVisitor {
   handler(
     ast: ExcelUploadAst,
     input$: Observable<Record<string, unknown>>,
-    ctx: Record<string, unknown>
+    _ctx: Record<string, unknown>
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       ast.state = 'running';
@@ -57,7 +57,7 @@ export class ExcelUploadAstVisitor {
             }
 
             const data: Record<string, any>[] = [];
-            let columns: string[] = [];
+            const columns: string[] = [];
 
             const startRow = Math.max(1, ast.startRow);
             let headerRow: ExcelJS.Row | undefined;

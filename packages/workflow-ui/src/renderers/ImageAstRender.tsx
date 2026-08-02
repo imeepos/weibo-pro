@@ -358,7 +358,7 @@ const ImageComponent: React.FC<{ ast: ImageAst }> = ({ ast }) => {
 @Injectable()
 export class ImageAstRender {
     @Render(ImageAst)
-    render(ast: ImageAst, ctx: any) {
+    render(ast: ImageAst, _ctx: any) {
         return <ImageComponent ast={ast} />;
     }
 }

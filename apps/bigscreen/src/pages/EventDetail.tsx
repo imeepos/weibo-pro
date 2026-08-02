@@ -12,7 +12,6 @@ import {
   UserStratificationController,
   CommentDepthController,
   PostingTimeController,
-  NetworkCentralityController,
   UserRelationController
 } from '@sker/sdk'
 import type {
@@ -51,7 +50,6 @@ import {
   Network,
   Sprout,
   Clock,
-  Calendar,
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
@@ -66,13 +64,12 @@ import {
   ThumbsUp,
   TrendingUp
 } from 'lucide-react';
-import { cn, formatNumber, formatRelativeTime } from '@/utils';
+import { cn, formatRelativeTime } from '@/utils';
 import { createLogger } from '@sker/core';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import { Button } from '@sker/ui/components/ui/button';
 import { Badge } from '@sker/ui/components/ui/badge';
 import { Skeleton } from '@sker/ui/components/ui/skeleton';
-import { Input } from '@sker/ui/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@sker/ui/components/ui/tabs';
 import {
   Dialog,
@@ -84,7 +81,6 @@ import {
   DialogTrigger,
 } from '@sker/ui/components/ui/dialog';
 
-import MiniTrendChart from '@/components/charts/MiniTrendChart';
 import HotTopicsChart from '@/components/charts/HotTopicsChart';
 import TimeSeriesChart from '@/components/charts/TimeSeriesChart';
 import WordCloudChart from '@/components/charts/WordCloudChart';
@@ -94,29 +90,21 @@ import SentimentIntensityChart from '@/components/charts/SentimentIntensityChart
 import EngagementTrendChart from '@/components/charts/EngagementTrendChart';
 import MultiMetricTrendChart from '@/components/charts/MultiMetricTrendChart';
 import AnomalyTimelineChart from '@/components/charts/AnomalyTimelineChart';
-import GeographicDistributionChart, { type GeographicDataItem } from '@/components/charts/GeographicDistributionChart';
+import GeographicDistributionChart from '@/components/charts/GeographicDistributionChart';
 // P2 组件导入
 import { SpreadBreadthChart } from '@/components/charts/SpreadBreadthChart';
 import MediaTypeDistribution from '@/components/charts/MediaTypeDistribution';
-import CommunityGraph from '@/components/charts/CommunityGraph';
 import { SentimentTransition } from '@/components/charts/SentimentTransition';
 // P2 hooks 导入
-import { useSpreadBreadth } from '@/hooks/useSpreadBreadth';
-import { useMediaTypeDistribution } from '@/hooks/useMediaTypeDistribution';
-import { useCommunityDetection } from '@/hooks/useCommunityDetection';
 // P3 组件导入
 import { PropagationVelocityChart } from '@/components/charts/PropagationVelocityChart';
 import InfluencePredictionCard from '@/components/charts/InfluencePredictionCard';
 import { CommunityEvolutionTimeline } from '@/components/charts/CommunityEvolutionTimeline';
 // P3 hooks 导入
-import { usePropagationVelocity } from '@/hooks/usePropagationVelocity';
-import { useInfluencePrediction } from '@/hooks/useInfluencePrediction';
-import { useCommunityEvolution } from '@/hooks/useCommunityEvolution';
 // P1 组件导入
 import UserEngagementFunnel from '@/components/charts/UserEngagementFunnel';
 import { CommentThreadTree } from '@/components/charts/CommentThreadTree';
 import PostingTimeHeatmap from '@/components/charts/PostingTimeHeatmap';
-import NetworkCentralityGraph from '@/components/charts/NetworkCentralityGraph';
 import { UserRelationWordCloud } from '@/components/charts/UserRelationWordCloud';
 import { EventMilestoneWidget } from '@/components/charts/EventMilestoneWidget';
 import { InstitutionParticipationPanel } from '@/components/charts/InstitutionParticipationPanel';
@@ -127,10 +115,6 @@ import { DetailedSentimentTrendPanel } from '@/components/charts/DetailedSentime
 import { UserRiskProfilePanel } from '@/components/charts/UserRiskProfilePanel';
 import { AbnormalUserPanel } from '@/components/charts/AbnormalUserPanel';
 // P1 hooks 导入
-import { useUserStratification } from '@/hooks/useUserStratification';
-import { useCommentDepth } from '@/hooks/useCommentDepth';
-import { usePostingTimeHeatmap } from '@/hooks/usePostingTimeHeatmap';
-import { useNetworkCentrality } from '@/hooks/useNetworkCentrality';
 import { AnalysisWidgetCard } from '@/components/ui';
 
 interface TimeSeriesDataPoint {
@@ -297,7 +281,7 @@ const EventDetail: React.FC = () => {
   const [userStratificationData, setUserStratificationData] = useState<any>(null);
   const [commentDepthData, setCommentDepthData] = useState<any>(null);
   const [postingTimeData, setPostingTimeData] = useState<any>(null);
-  const [networkCentralityData, setNetworkCentralityData] = useState<any>(null);
+  const [_networkCentralityData, setNetworkCentralityData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -784,7 +768,7 @@ const EventDetail: React.FC = () => {
 
   useEffect(() => { fetchEventData(); }, [eventId]);
 
-  const openEditDialog = () => {
+  const _openEditDialog = () => {
     if (eventData) {
       setEditingKeywords([...eventData.keywords]);
       setKeywordInput('');
@@ -1294,7 +1278,7 @@ const EventDetail: React.FC = () => {
               />
               <MetricCard
                 title="平均热度"
-                value={stats?.avgHotness ?? Number(eventData.hotness) ?? 0}
+                value={stats?.avgHotness ?? Number(eventData.hotness)}
                 icon={Zap}
                 color="red"
                 className="group hover:border-primary/30 transition-all duration-300"

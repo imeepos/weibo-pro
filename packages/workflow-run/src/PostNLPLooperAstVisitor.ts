@@ -16,7 +16,7 @@ export class PostNLPLooperAstVisitor {
   visit(
     ast: PostNLPLooperAst,
     input$: Observable<Record<string, unknown>>,
-    ctx: WorkflowGraphAst
+    _ctx: WorkflowGraphAst
   ): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       ast.state = 'running';

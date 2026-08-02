@@ -17,7 +17,7 @@ const ErrorAnalysisSchema = z.object({
 export class ErrorAnalyzerAstVisitor {
 
   @Handler(ErrorAnalyzerAst)
-  visit(ast: ErrorAnalyzerAst, input$: Observable<Record<string, unknown>>, ctx: WorkflowGraphAst) {
+  visit(ast: ErrorAnalyzerAst, input$: Observable<Record<string, unknown>>, _ctx: WorkflowGraphAst) {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 

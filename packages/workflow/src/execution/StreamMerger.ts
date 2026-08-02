@@ -29,7 +29,7 @@ export class StreamMerger {
             let completedCount = 0;
             const total = sources.length;
 
-            const subscriptions = sources.map((source, index) =>
+            const subscriptions = sources.map((source, _index) =>
                 source.subscribe({
                     next: value => {
                         subscriber.next(value);

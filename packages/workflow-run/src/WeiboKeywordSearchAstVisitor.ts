@@ -1,5 +1,5 @@
 import { Inject, Injectable, NoRetryError, createLogger } from "@sker/core";
-import { Handler, NodeEvent, setAstError } from "@sker/workflow";
+import { Handler, NodeEvent, } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
 import { PlaywrightService } from "./services/PlaywrightService";
@@ -13,7 +13,6 @@ import {
     EntityManager,
     useEntityManager,
     WeiboPostEntity,
-    WeiboPostSnapshotEntity,
     EventEntity,
 } from "@sker/entities";
 import dayjs from "dayjs";

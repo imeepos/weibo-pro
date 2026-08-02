@@ -67,7 +67,7 @@ export class ConnectionPool {
 
         const wasReconnecting = this.reconnectAttempts > 0;
         if (wasReconnecting) {
-          const reconnectDuration = Date.now() - this.reconnectStartedAt;
+          const _reconnectDuration = Date.now() - this.reconnectStartedAt;
           // 触发重连回调
           this.onReconnectedCallback?.();
         }

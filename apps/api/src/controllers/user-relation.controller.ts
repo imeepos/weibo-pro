@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@sker/core';
+import { Controller, Query } from '@sker/core';
 import { root } from '@sker/core';
 import { UserRelationService } from '../services/data/user-relation.service';
 import type { TimeRange } from '@sker/entities';

@@ -3,7 +3,7 @@ import { Render } from "@sker/workflow";
 import { WeiboAjaxStatusesMymblogAst } from "@sker/workflow-ast";
 import React from "react";
 
-const WeiboAjaxStatusesMymblogComponent: React.FC<{ ast: WeiboAjaxStatusesMymblogAst }> = ({ ast }) => (
+const WeiboAjaxStatusesMymblogComponent: React.FC<{ ast: WeiboAjaxStatusesMymblogAst }> = ({ ast: _ast }) => (
     <></>
 );
 

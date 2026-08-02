@@ -2,7 +2,7 @@ import { Ast, Input, Node, Output } from "@sker/workflow";
 
 @Node({ title: '主持人', type: 'sentiment', errorStrategy: 'retry', maxRetries: 3 })
 export class ForumAgentAst extends Ast {
-    type: 'ForumAgentAst' = 'ForumAgentAst';
+    type = 'ForumAgentAst';
     @Output({ title: '温度', defaultValue: 0.6 })
     temperature = 0.6;
     @Output({ title: 'topP', defaultValue: 0.9 })

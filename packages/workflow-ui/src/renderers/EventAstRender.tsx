@@ -15,7 +15,7 @@ const EventRender: React.FC<{ ast: EventAst }> = ({ ast }) => {
     );
   }
 
-  const event = ast.event;
+  const _event = ast.event;
 
   return (
     <div className="space-y-3 p-3 max-w-sm">

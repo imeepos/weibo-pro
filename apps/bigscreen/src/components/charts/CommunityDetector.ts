@@ -106,7 +106,7 @@ export class LouvainCommunityDetector {
    */
   detectCommunities(): Community[] {
     // 初始化：每个节点一个社群
-    let communities = new Map<string, number>();
+    const communities = new Map<string, number>();
     let communityId = 0;
     for (const nodeId of this.nodes.keys()) {
       communities.set(nodeId, communityId++);

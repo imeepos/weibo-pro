@@ -14,7 +14,7 @@ import { ProxyBrowserLauncher } from '../interceptors/browser-launcher'
  * @param options 代理选项（可选）
  * @returns ProxyManager实例
  */
-export function useProxy(options?: ProxyOptions): ProxyManager {
+export function useProxy(_options?: ProxyOptions): ProxyManager {
   // 从DI容器获取实例
   const proxyPool = root.get(ProxyPool)
   const healthChecker = root.get(ProxyHealthChecker)

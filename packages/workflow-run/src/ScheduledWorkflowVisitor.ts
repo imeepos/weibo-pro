@@ -9,7 +9,6 @@ import {
   useEntityManager
 } from '@sker/entities'
 import { CronSchedulerService } from './services/CronSchedulerService'
-import { WorkflowExecutionService } from './services/WorkflowExecutionService'
 import { Observable, from } from 'rxjs'
 import { concatMap, mergeMap } from 'rxjs/operators'
 
@@ -33,7 +32,7 @@ export class ScheduledWorkflowVisitor {
   ) {}
 
   @Handler(ScheduledWorkflowAst)
-  visit(ast: ScheduledWorkflowAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+  visit(ast: ScheduledWorkflowAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>((obs) => {
       const abortController = new AbortController();
 
@@ -112,7 +111,7 @@ export class ScheduledWorkflowVisitor {
               scheduleData.nextRunAt = ast.startTime || new Date()
               break
 
-            case ScheduleType.INTERVAL:
+            case ScheduleType.INTERVAL: {
               if (!ast.intervalSeconds || ast.intervalSeconds <= 0) {
                 throw new Error('间隔调度的 intervalSeconds 必须大于 0')
               }
@@ -120,6 +119,7 @@ export class ScheduledWorkflowVisitor {
               const startTime = ast.startTime || new Date()
               scheduleData.nextRunAt = new Date(startTime.getTime() + ast.intervalSeconds * 1000)
               break
+            }
 
             case ScheduleType.ONCE:
               if (!ast.startTime) {

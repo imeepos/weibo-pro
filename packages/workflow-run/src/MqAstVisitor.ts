@@ -2,7 +2,7 @@ import { Injectable } from '@sker/core';
 import { Handler, NodeEvent, setAstError, MqPushAst, MqPullAst } from '@sker/workflow';
 import { useQueue } from '@sker/mq';
 import { Observable, EMPTY, from } from 'rxjs';
-import { take, timeout, finalize, catchError, map, concatMap, mergeMap } from 'rxjs/operators';
+import { take, finalize, catchError, concatMap, mergeMap } from 'rxjs/operators';
 import { ErrorHandlerOperators } from './utils/error-handler.util';
 
 /**
@@ -14,7 +14,7 @@ import { ErrorHandlerOperators } from './utils/error-handler.util';
 @Injectable()
 export class MqPushAstVisitor {
   @Handler(MqPushAst)
-  visit(ast: MqPushAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+  visit(ast: MqPushAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 
@@ -89,7 +89,7 @@ export class MqPushAstVisitor {
 @Injectable()
 export class MqPullAstVisitor {
   @Handler(MqPullAst)
-  visit(ast: MqPullAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
+  visit(ast: MqPullAst, input$: Observable<Record<string, unknown>>, _ctx: Record<string, unknown>): Observable<NodeEvent> {
     return new Observable<NodeEvent>(obs => {
       const abortController = new AbortController();
 

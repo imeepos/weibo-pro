@@ -11,7 +11,7 @@ interface EventTypePieChartProps {
   className?: string;
 }
 
-const EventTypePieChart: React.FC<EventTypePieChartProps> = ({ height = 0, className = '' }) => {
+const EventTypePieChart: React.FC<EventTypePieChartProps> = ({ height: _height = 0, className = '' }) => {
   const { isDark } = useTheme();
   const { data, loading, error, refetch } = useEventTypes();
 

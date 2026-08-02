@@ -18,7 +18,7 @@ async function fixHotness() {
     console.log('\n正在更新 hotness 值...');
     console.log('公式: hotness = post_count * 1 + comment_count * 2 + repost_count * 3 + like_count * 0.5');
 
-    const result = await ds.query(`
+    const _result = await ds.query(`
       UPDATE event_hourly_statistics
       SET hotness = post_count * 1 + comment_count * 2 + repost_count * 3 + like_count * 0.5
     `);

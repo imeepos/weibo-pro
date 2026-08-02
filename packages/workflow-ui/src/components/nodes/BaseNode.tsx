@@ -25,7 +25,7 @@ import { NodeInfoDialog } from './NodeInfoDialog'
 export const BaseNode = memo(({ id, data, selected }: NodeProps<WorkflowNodeType>) => {
   // 从 execution store 获取节点的流式数据和进度
   // 直接订阅状态值，而不是 getter 函数，这样才能触发重新渲染
-  const streamingData = useExecutionStore((state) => state.streamingData[id])
+  const _streamingData = useExecutionStore((state) => state.streamingData[id])
   const progressData = useExecutionStore((state) => state.nodeProgress[id])
 
   // 节点信息对话框状态

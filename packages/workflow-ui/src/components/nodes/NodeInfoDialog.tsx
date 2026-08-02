@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -9,7 +8,7 @@ import {
 import { Badge } from '@sker/ui/components/ui/badge'
 import { Separator } from '@sker/ui/components/ui/separator'
 import { ScrollArea } from '@sker/ui/components/ui/scroll-area'
-import type { INode, CompiledNodeMetadata, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
+import type { INode, INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 import { Info, Box, ArrowRight, ArrowLeft, Settings, AlertTriangle } from 'lucide-react'
 
 interface NodeInfoDialogProps {

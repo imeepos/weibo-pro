@@ -1,6 +1,6 @@
 import { Controller, Body, BadRequestException, Query, NotFoundException, Param } from '@sker/core';
 import { Observable } from 'rxjs';
-import { Ast, fromJson, generateId, INode, resolveConstructor, type OutputMetadata, type INodeOutputMetadata, getNodeById, executeAstWithWorkflowGraph, executeWorkflowImmediate, NodeEvent, executeAst } from '@sker/workflow';
+import { fromJson, generateId, INode, resolveConstructor, type INodeOutputMetadata, getNodeById, executeAstWithWorkflowGraph, executeWorkflowImmediate, NodeEvent, executeAst } from '@sker/workflow';
 import { WorkflowGraphAst } from '@sker/workflow';
 import { logger, root } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -161,21 +161,21 @@ export class WorkflowController implements sdk.WorkflowController {
       // 明确区分三种执行场景
       let target: INode;
       let parent: WorkflowGraphAst | undefined;
-      let mode: string;
+      let _mode: string;
 
       if (workflowJson && ast) {
         // 场景1：同时提供 workflow 和 ast → 在工作流上下文中执行单个节点
-        mode = 'node-in-workflow';
+        _mode = 'node-in-workflow';
         target = fromJson(ast);
         parent = fromJson(workflowJson) as WorkflowGraphAst;
       } else if (workflowJson) {
         // 场景2：只提供 workflow → 执行整个工作流
-        mode = 'workflow';
+        _mode = 'workflow';
         target = fromJson(workflowJson) as WorkflowGraphAst;
         parent = undefined;
       } else {
         // 场景3：只提供 ast → 独立执行单个节点
-        mode = 'node';
+        _mode = 'node';
         target = fromJson(ast!);
         parent = undefined;
       }
@@ -200,39 +200,35 @@ export class WorkflowController implements sdk.WorkflowController {
   executeNode(
     @Body() body: { workflow: INode, nodeId: string, config?: any }
   ): Observable<NodeEvent> {
-    try {
-      const { workflow, nodeId, config } = body;
+    const { workflow, nodeId, config } = body;
 
-      if (!workflow || !nodeId) {
-        throw new BadRequestException('工作流数据和节点ID不能为空');
-      }
-
-      logger.info('开始执行单个节点', { nodeId, config });
-
-      // 反序列化工作流图
-      const workflowAst = fromJson(workflow) as WorkflowGraphAst;
-
-      // 找到要执行的节点（支持递归查找组节点内部）
-      const targetNode = getNodeById(workflowAst.nodes, nodeId);
-      if (!targetNode) {
-        throw new BadRequestException(`节点不存在: ${nodeId}`);
-      }
-
-      // 如果提供了配置，应用到节点上
-      if (config) {
-        Object.keys(config).forEach(key => {
-          (targetNode as Record<string, unknown>)[key] = config[key];
-        });
-        logger.info('应用节点配置', { nodeId, config });
-      }
-
-      // 设置节点初始状态
-      targetNode.state = 'running';
-      targetNode.error = undefined;
-      return executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
-    } catch (error: unknown) {
-      throw error;
+    if (!workflow || !nodeId) {
+      throw new BadRequestException('工作流数据和节点ID不能为空');
     }
+
+    logger.info('开始执行单个节点', { nodeId, config });
+
+    // 反序列化工作流图
+    const workflowAst = fromJson(workflow) as WorkflowGraphAst;
+
+    // 找到要执行的节点（支持递归查找组节点内部）
+    const targetNode = getNodeById(workflowAst.nodes, nodeId);
+    if (!targetNode) {
+      throw new BadRequestException(`节点不存在: ${nodeId}`);
+    }
+
+    // 如果提供了配置，应用到节点上
+    if (config) {
+      Object.keys(config).forEach(key => {
+        (targetNode as Record<string, unknown>)[key] = config[key];
+      });
+      logger.info('应用节点配置', { nodeId, config });
+    }
+
+    // 设置节点初始状态
+    targetNode.state = 'running';
+    targetNode.error = undefined;
+    return executeAstWithWorkflowGraph(targetNode, {}, workflowAst);
   }
 
   /**
@@ -540,7 +536,7 @@ export class WorkflowController implements sdk.WorkflowController {
 
     try {
       // 获取节点的构造函数
-      const ctor = resolveConstructor(node);
+      const _ctor = resolveConstructor(node);
 
       // ✨使用编译后的 node.metadata.outputs，不再依赖装饰器
       const nodeOutputs = node.metadata?.outputs || [];

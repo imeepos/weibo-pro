@@ -152,7 +152,7 @@ describe('CommunityGraph', () => {
       await waitFor(() => {
         const instance = getMockChartInstance();
         const option = instance.setOption.mock.calls[0][0];
-        const nodes = option.series[0].data;
+        const _nodes = option.series[0].data;
 
         // 应该有 2 个社区
         expect(option.series[0].categories).toHaveLength(2);

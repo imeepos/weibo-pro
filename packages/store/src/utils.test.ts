@@ -204,7 +204,7 @@ describe('utils', () => {
 
     it('保持原对象不变', () => {
       const obj = { a: 1, b: 2, c: 3 }
-      const result = omit(obj, 'b')
+      const _result = omit(obj, 'b')
 
       expect(obj).toEqual({ a: 1, b: 2, c: 3 })
     })
@@ -326,7 +326,7 @@ describe('utils', () => {
 
       const counterReducer: ActionReducer<{ count: number }> = (
         state = { count: 0 },
-        action,
+        _action,
       ) => state
 
       const rootReducer = reducerFactory(

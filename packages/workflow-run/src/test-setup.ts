@@ -1,4 +1,4 @@
-import { root, Injectable, type Provider } from '@sker/core';
+import { root, Injectable, } from '@sker/core';
 import { EntityManager } from 'typeorm';
 import { EDGE_MODE_STRATEGY, EdgeMode } from '@sker/workflow';
 import { Observable, merge, zip, combineLatest } from 'rxjs';

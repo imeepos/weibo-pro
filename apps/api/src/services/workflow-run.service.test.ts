@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkflowRunService } from './workflow-run.service';
-import { WorkflowEntity, WorkflowRunEntity, RunStatus, useEntityManager } from '@sker/entities';
+import { WorkflowEntity, RunStatus, } from '@sker/entities';
 import { mockEntityManager } from '../test-setup';
 
 // Mock dependencies
@@ -71,7 +71,7 @@ describe('WorkflowRunService', () => {
             mockRunRepo.create.mockReturnValue({ id: 'run-1' });
             mockRunRepo.save.mockResolvedValue({ id: 'run-1' });
 
-            const result = await service.createRun('wf-1', { count: 20 });
+            const _result = await service.createRun('wf-1', { count: 20 });
 
             expect(mockRunRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({

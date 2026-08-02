@@ -322,7 +322,7 @@ export class StoryToolsFactory {
   private createMatcher(pattern: string, mode: string): (text: string) => { matched: boolean; matches?: RegExpMatchArray[] } {
     try {
       if (mode === 'regex') {
-        const regex = new RegExp(pattern, 'gi');
+        const _regex = new RegExp(pattern, 'gi');
         return (text: string) => {
           const matches = Array.from(text.matchAll(new RegExp(pattern, 'gi')));
           return { matched: matches.length > 0, matches };

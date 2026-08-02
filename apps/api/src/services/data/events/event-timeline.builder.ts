@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@sker/core';
+import { Injectable, } from '@sker/core';
 import type {
   EventWithCategory,
   EventStatistics,

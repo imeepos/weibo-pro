@@ -55,7 +55,7 @@ export function tapResponse<T, E>(
     typeof observerOrNext === 'function'
       ? {
         next: observerOrNext,
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+         
         error: error!,
         complete,
       }

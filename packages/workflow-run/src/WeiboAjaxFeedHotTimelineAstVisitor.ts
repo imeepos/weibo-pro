@@ -3,7 +3,7 @@ import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
 import { RateLimiterService } from "./services/rate-limiter.service";
 import { WeiboWorkerProxyService } from "./services/weibo-worker-proxy.service";
-import { Handler, NodeEvent, setAstError } from '@sker/workflow'
+import { Handler, NodeEvent, } from '@sker/workflow'
 import { WeiboAjaxFeedHotTimelineAst } from '@sker/workflow-ast'
 import { useEntityManager, WeiboPostEntity, WeiboUserEntity, PostSnapshotHelper } from "@sker/entities";
 import { WeiboApiClient } from "./services/weibo-api-client.base";
