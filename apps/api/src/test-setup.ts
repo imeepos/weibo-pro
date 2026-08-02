@@ -60,7 +60,7 @@ class MockEntityManager {
     }
 
     async save(entity: any) {
-        const repo = this.getRepository(entity.constructor.name);
+        const repo = this.getRepository(entity.constructor.name)!;
         const id = entity.id || `mock-${Date.now()}`;
         repo.set(id, { ...entity, id });
         return entity;

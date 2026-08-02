@@ -38,7 +38,7 @@ describe('KOLAnalysisService', () => {
     // Mock getRepository to return query builder
     vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
       createQueryBuilder: vi.fn(() => mockQueryBuilder),
-    });
+    } as any);
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);

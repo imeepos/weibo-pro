@@ -37,7 +37,7 @@ describe('UserStratificationService', () => {
     // Mock getRepository to return query builder
     vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
       createQueryBuilder: vi.fn(() => mockQueryBuilder),
-    });
+    } as any);
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
@@ -74,8 +74,8 @@ describe('UserStratificationService', () => {
       const result = await service.getUserStratification('event-123');
 
       expect(result.totalUsers).toBe(1);
-      expect(result.layers[0].count).toBe(1); // core layer
-      expect(result.layers[0].name).toBe('core');
+      expect(result.layers[0]!.count).toBe(1); // core layer
+      expect(result.layers[0]!.name).toBe('core');
     });
 
     it('应该按权重正确分层多个用户', async () => {

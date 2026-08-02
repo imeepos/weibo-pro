@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { EntityManager } from 'typeorm';
 import { SentimentTransitionService } from './sentiment-transition.service';
 import { CacheService } from '../cache.service';
 import { useEntityManager, PostNLPResultEntity } from '@sker/entities';
@@ -55,11 +56,11 @@ describe('SentimentTransitionService', () => {
               getRawMany: vi.fn().mockResolvedValue([]),
             }),
           }),
-        });
+        } as unknown as EntityManager);
       });
 
       // 让缓存调用回调函数
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -111,10 +112,10 @@ describe('SentimentTransitionService', () => {
               getRawMany: vi.fn().mockResolvedValue(mockData),
             }),
           }),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -153,10 +154,10 @@ describe('SentimentTransitionService', () => {
               getRawMany: vi.fn().mockResolvedValue(mockData),
             }),
           }),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 

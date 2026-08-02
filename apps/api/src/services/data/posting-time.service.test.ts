@@ -37,7 +37,7 @@ describe('PostingTimeService', () => {
     // Mock getRepository to return query builder
     vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
       createQueryBuilder: vi.fn(() => mockQueryBuilder),
-    });
+    } as any);
 
     // 创建 mock cache service
     cacheService = new CacheService(mockRedis as any);
@@ -131,11 +131,11 @@ describe('PostingTimeService', () => {
       expect(result.heatmapMatrix).toHaveLength(7);
       expect(result.heatmapMatrix[0]).toHaveLength(24);
       // 周一(1) 9点有1条
-      expect(result.heatmapMatrix[1][9]).toBe(1);
+      expect(result.heatmapMatrix[1]![9]).toBe(1);
       // 周一(1) 14点有1条
-      expect(result.heatmapMatrix[1][14]).toBe(1);
+      expect(result.heatmapMatrix[1]![14]).toBe(1);
       // 周二(2) 9点有1条
-      expect(result.heatmapMatrix[2][9]).toBe(1);
+      expect(result.heatmapMatrix[2]![9]).toBe(1);
     });
 
     it('应该正确归一化热力矩阵', async () => {
@@ -151,8 +151,8 @@ describe('PostingTimeService', () => {
       const result = await service.getPostingTimeHeatmap('event-123');
 
       // 最大值是3，所以归一化后应该是 1.0
-      const max9 = result.heatmapMatrix[1][9];
-      const max14 = result.heatmapMatrix[1][14];
+      const max9 = result.heatmapMatrix[1]![9];
+      const max14 = result.heatmapMatrix[1]![14];
       expect(max9).toBe(1.0);
       expect(max14).toBeCloseTo(0.333, 2);
     });

@@ -311,12 +311,12 @@ describe('PersonaProjectionService', () => {
       ...baseInput,
       memoryDrafts: [
         {
-          ...baseInput.memoryDrafts[0],
+          ...baseInput.memoryDrafts[0]!,
           section: 'behavior',
           stability: 'stable',
         },
         {
-          ...baseInput.memoryDrafts[1],
+          ...baseInput.memoryDrafts[1]!,
           section: 'content',
           stability: 'tentative',
         },
@@ -382,7 +382,7 @@ describe('PersonaProjectionService', () => {
     await service.publishProfile({
       ...baseInput,
       memoryDrafts: [{
-        ...baseInput.memoryDrafts[0],
+        ...baseInput.memoryDrafts[0]!,
         name: '认证账号画像',
         content: '账号为认证媒体账号',
         section: undefined,

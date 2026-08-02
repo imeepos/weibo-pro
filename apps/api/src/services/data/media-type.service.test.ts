@@ -483,7 +483,7 @@ describe('MediaTypeService', () => {
 });
 
 // Helper function to create mock WeiboPostEntity
-function createMockPost(overrides: Partial<WeiboPostEntity>): WeiboPostEntity {
+function createMockPost(overrides: any): WeiboPostEntity {
   const base: any = {
     id: '1',
     event_id: 'event-123',

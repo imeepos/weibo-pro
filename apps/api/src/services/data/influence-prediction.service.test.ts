@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { EntityManager } from 'typeorm';
 import { InfluencePredictionService } from './influence-prediction.service';
 import { CacheService } from '../cache.service';
 import { useEntityManager } from '@sker/entities';
@@ -58,10 +59,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -112,10 +113,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -126,7 +127,7 @@ describe('InfluencePredictionService', () => {
       expect(result.predictedEngagement).toBeGreaterThan(0);
       expect(result.confidence).toBeGreaterThan(0);
       expect(result.factors).toHaveLength(7);
-      expect(result.factors[0].name).toBe('用户粉丝数');
+      expect(result.factors[0]!.name).toBe('用户粉丝数');
       expect(result.similarCases.length).toBeGreaterThan(0);
     });
 
@@ -164,10 +165,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -202,10 +203,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -271,10 +272,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -316,10 +317,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 
@@ -376,10 +377,10 @@ describe('InfluencePredictionService', () => {
             createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
           }),
           createQueryBuilder: vi.fn().mockReturnValue(mockQueryBuilder),
-        });
+        } as unknown as EntityManager);
       });
 
-      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+      mockCacheService.getOrSet.mockImplementation(async (key: string, factory: () => Promise<unknown>) => {
         return factory();
       });
 

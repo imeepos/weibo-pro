@@ -29,7 +29,7 @@ describe('WorkflowScheduleService - toDate 方法', () => {
     let service: WorkflowScheduleService;
 
     beforeEach(() => {
-        service = new WorkflowScheduleService();
+        service = new WorkflowScheduleService(undefined as any);
         vi.clearAllMocks();
     });
 
@@ -54,7 +54,7 @@ describe('WorkflowScheduleService - toDate 方法', () => {
         });
 
         it('应该对 null 返回 undefined', () => {
-            const result = service['toDate'](null);
+            const result = service['toDate'](null as any);
             expect(result).toBeUndefined();
         });
 
@@ -98,7 +98,7 @@ describe('WorkflowScheduleService - updateSchedule', () => {
     let mockWorkflowRepo: any;
 
     beforeEach(() => {
-        service = new WorkflowScheduleService();
+        service = new WorkflowScheduleService(undefined as any);
 
         // 创建 mock repository
         mockScheduleRepo = {
@@ -188,7 +188,7 @@ describe('WorkflowScheduleService - calculateNextRunTime', () => {
     let service: WorkflowScheduleService;
 
     beforeEach(() => {
-        service = new WorkflowScheduleService();
+        service = new WorkflowScheduleService(undefined as any);
         vi.clearAllMocks();
     });
 

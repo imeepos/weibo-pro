@@ -222,8 +222,8 @@ describe('CommentDepthService', () => {
       const result = await service.getCommentDepth('event-123');
 
       expect(result.discussionHotspots).toHaveLength(1);
-      expect(result.discussionHotspots[0].rootCommentId).toBe('1');
-      expect(result.discussionHotspots[0].replyCount).toBe(3);
+      expect(result.discussionHotspots[0]!.rootCommentId).toBe('1');
+      expect(result.discussionHotspots[0]!.replyCount).toBe(3);
     });
 
     it('10. 参与者数量统计正确', async () => {
@@ -238,7 +238,7 @@ describe('CommentDepthService', () => {
 
       const result = await service.getCommentDepth('event-123');
 
-      expect(result.discussionHotspots[0].participants).toBe(4);
+      expect(result.discussionHotspots[0]!.participants).toBe(4);
     });
   });
 

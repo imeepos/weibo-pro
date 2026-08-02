@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WorkflowService } from './workflow.service';
 import { WorkflowEntity, WorkflowShareEntity, WorkflowStatus, useEntityManager } from '@sker/entities';
+import type { WorkflowGraphAst } from '@sker/workflow';
 import { mockEntityManager } from '../test-setup';
 
 // Mock dependencies
@@ -73,7 +74,7 @@ describe('WorkflowService', () => {
             mockWorkflowRepo.create.mockReturnValue({ id: 'wf-1', ...params });
             mockWorkflowRepo.save.mockResolvedValue({ id: 'wf-1' });
 
-            const result = await service.saveWorkflow(params);
+            const result = await service.saveWorkflow(params as unknown as WorkflowGraphAst);
 
             expect(mockWorkflowRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -95,7 +96,7 @@ describe('WorkflowService', () => {
             mockWorkflowRepo.findOne.mockResolvedValue(existing);
             mockWorkflowRepo.save.mockResolvedValue({ ...existing, ...params });
 
-            await service.saveWorkflow(params);
+            await service.saveWorkflow(params as unknown as WorkflowGraphAst);
 
             expect(mockWorkflowRepo.save).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -117,7 +118,7 @@ describe('WorkflowService', () => {
             mockWorkflowRepo.create.mockReturnValue({ id: 'wf-1' });
             mockWorkflowRepo.save.mockResolvedValue({ id: 'wf-1' });
 
-            await service.saveWorkflow(params);
+            await service.saveWorkflow(params as unknown as WorkflowGraphAst);
 
             expect(mockWorkflowRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -147,7 +148,7 @@ describe('WorkflowService', () => {
             mockWorkflowRepo.create.mockReturnValue({ id: 'wf-1' });
             mockWorkflowRepo.save.mockResolvedValue({ id: 'wf-1' });
 
-            await service.saveWorkflow(params);
+            await service.saveWorkflow(params as unknown as WorkflowGraphAst);
 
             expect(mockWorkflowRepo.create).toHaveBeenCalledWith(
                 expect.objectContaining({

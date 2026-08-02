@@ -104,7 +104,7 @@ describe('SentimentPolarizationUtils', () => {
     });
 
     it('极化指数应该在0-1范围内', () => {
-      const testCases = [
+      const testCases: [number, number, number][] = [
         [0, 0, 1],
         [1, 0, 0],
         [0, 1, 0],

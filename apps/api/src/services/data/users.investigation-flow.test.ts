@@ -559,7 +559,7 @@ describe('UsersService distillation flow', () => {
     expect(savedTasks.find((item) => item.id === result.id)?.distilled_summary).toContain('正在生成画像');
     expect(savedTasks.find((item) => item.id === result.id)?.distilled_summary).toContain('已等待');
 
-    resolveDistill?.({
+    (resolveDistill as ((value: any) => void) | null)?.({
       summary: { short: '短摘要', long: '长摘要', confidence: 0.9 },
       identity: { inferredRole: '热点自媒体', roleConfidence: 0.8, accountNature: ['media'], stableTraits: ['热点追逐'] },
       behavior: { activityPattern: ['夜间活跃'], postingRhythm: 'bursty', escalationPattern: ['突发追热点'], historicalStability: 'medium' },
@@ -666,7 +666,7 @@ describe('UsersService distillation flow', () => {
       expect(resolveCollection).not.toBeNull();
     });
 
-    resolveCollection?.();
+    (resolveCollection as (() => void) | null)?.();
 
     await vi.waitFor(() => {
       expect(savedTasks.find((item) => item.id === raced.task.id)?.status).toBe('published');
@@ -755,7 +755,7 @@ describe('UsersService distillation flow', () => {
       expect(resolveCollection).not.toBeNull();
     });
 
-    resolveCollection?.();
+    (resolveCollection as (() => void) | null)?.();
   });
 
   it('marks active tasks from a previous api process as failed during startup', async () => {

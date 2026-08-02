@@ -1,6 +1,5 @@
-import { Controller, root } from '@sker/core'
+import { Controller, root, logger } from '@sker/core'
 import * as sdk from '@sker/sdk'
-import { logger } from '@sker/core'
 import { PropagationVelocityService } from '../services/data/propagation-velocity.service'
 
 @Controller(sdk.PropagationVelocityController)

@@ -18,7 +18,7 @@ describe('LlmProviderService', () => {
     beforeEach(() => {
         service = new LlmProviderService();
         // 清空 mock 数据
-        mockEntityManager.getRepository = vi.fn((entityName: string) => mockEntityManager);
+        mockEntityManager.getRepository = vi.fn((entityName: string) => mockEntityManager) as any;
     });
 
     describe('findAll', () => {
@@ -45,7 +45,7 @@ describe('LlmProviderService', () => {
 
             const result = await service.findAll();
             expect(result).toHaveLength(3);
-            expect(result[0].score).toBeGreaterThanOrEqual(result[1].score);
+            expect(result[0]!.score).toBeGreaterThanOrEqual(result[1]!.score);
         });
     });
 
@@ -101,7 +101,7 @@ describe('LlmProviderService', () => {
 
     describe('remove', () => {
         it('should remove provider', async () => {
-            mockEntityManager.delete = vi.fn(() => Promise.resolve());
+            mockEntityManager.delete = vi.fn(() => Promise.resolve()) as any;
             await expect(service.remove('1')).resolves.not.toThrow();
         });
     });

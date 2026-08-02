@@ -30,7 +30,7 @@ describe('KeywordsService', () => {
         // Mock getRepository to return query builder
         vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
             createQueryBuilder: vi.fn(() => mockQueryBuilder),
-        });
+        } as any);
 
         // 创建 mock cache service 并 spy getOrSet
         cacheService = new CacheService(mockRedis as any);
@@ -89,7 +89,7 @@ describe('KeywordsService', () => {
 
             const result = await service.getWordCloud(100, 'positive');
             expect(result).toHaveLength(1);
-            expect(result[0].sentiment).toBe('positive');
+            expect(result[0]!.sentiment).toBe('positive');
         });
 
         it('should limit results to maxWords', async () => {
