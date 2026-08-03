@@ -15,7 +15,7 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
 
       {!dossier ? (
         <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          选择一个高危候选后查看 dossier。
+          选择一个重点用户后查看用户档案。
         </div>
       ) : (
         <div className="space-y-4">

@@ -165,7 +165,7 @@ const UserDetection: React.FC = () => {
 
       {queueError && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          高危候选队列加载失败：{queueError.message}
+          重点用户队列加载失败：{queueError.message}
         </div>
       )}
 
