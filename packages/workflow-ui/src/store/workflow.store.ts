@@ -5,19 +5,32 @@
  * 1. 使用 Immer 中间件确保不可变性
  * 2. 将 workflowAst 整合到 store（单一数据源）
  * 3. 类型安全的 actions
+ * 4. Actions 拆分至 workflow-store-actions.ts
  */
 
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import type { WorkflowGraphAst, INode } from '@sker/workflow'
-import { getNodeById } from '@sker/workflow'
 import type { WorkflowNode, WorkflowEdge } from '../types'
 import { flowToAst } from '../adapters'
-import { astToFlowNodes, astToFlowEdges } from '../adapters/ast-to-flow'
-import { historyManager } from './history.store'
-// import { NodeExecutionManager } from '../services/node-execution-manager'
+import {
+  initWorkflowAction,
+  setNodesAction,
+  setEdgesAction,
+  updateNodeAction,
+  addNodeAction,
+  removeNodeAction,
+  addEdgeAction,
+  removeEdgeAction,
+  syncFromAstAction,
+  undoAction,
+  redoAction,
+  clearAction,
+  markAsSavedAction,
+  toAstAction,
+} from './workflow-store-actions'
 
-interface IWorkflowState {
+export interface IWorkflowState {
   /** ✨ 工作流 AST（单一数据源） */
   workflowAst: WorkflowGraphAst | null
 
@@ -78,63 +91,11 @@ interface IWorkflowState {
  * - 在 set 函数中可以直接"修改" draft state
  * - Immer 会自动创建新对象，确保不可变性
  */
-const recordHistory = (get: () => IWorkflowState) => {
-  const { nodes, edges } = get()
-  historyManager.push(nodes, edges)
-}
-
 export const useWorkflowStore: {
   (): IWorkflowState
   <T>(selector: (state: IWorkflowState) => T): T
 } = create<IWorkflowState>()(
   immer((set, get) => ({
-
-    // 🔧 监听节点执行完成事件，同步节点状态到前端 store
-    // eventBus.ofType(
-    //   WorkflowEventType.NODE_SUCCESS,
-    //   WorkflowEventType.NODE_FAIL
-    // ).subscribe(event => {
-    //     if (!event.nodeId || !event.payload) {
-    //       return
-    //     }
-
-    //     const { workflowAst } = get()
-    //     if (!workflowAst) {
-    //       return
-    //     }
-
-    //     // ✨ 确保 event.nodeId 是 string 类型（TypeScript 类型守卫）
-    //     const nodeId: string = event.nodeId
-
-    //     // 提取完整的节点数据（包括 input、output 等执行后的状态）
-    //     const updates = event.type === WorkflowEventType.NODE_SUCCESS
-    //       ? (() => {
-    //           // NODE_SUCCESS: payload 是完整的节点对象
-    //           const { state, ...nodeData } = event.payload
-    //           return { ...nodeData, state: 'success' as const }
-    //         })()
-    //       : { state: 'fail' as const, error: event.payload }
-
-    //     // 使用现有的 updateNode 逻辑更新 AST 和 React Flow
-    //     set((draft) => {
-    //       draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
-    //         nodeId,
-    //         updates
-    //       })
-
-    //       // 同步到 React Flow
-    //       const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
-    //       if (flowNodeIndex !== -1) {
-    //         const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
-    //         if (updatedNode && draft.nodes[flowNodeIndex]) {
-    //           draft.nodes[flowNodeIndex].data = updatedNode
-    //         }
-    //       }
-
-    //       draft.hasUnsavedChanges = true
-    //     })
-    //   })
-
     // ==================== Initial State ====================
     workflowAst: null,
     nodes: [],
@@ -142,235 +103,33 @@ export const useWorkflowStore: {
     hasUnsavedChanges: false,
 
     // ==================== Actions ====================
+    initWorkflow: (ast) => initWorkflowAction(set, ast),
 
-    initWorkflow: (ast: WorkflowGraphAst) => {
-        set((draft) => {
-          draft.workflowAst = ast
-          draft.nodes = astToFlowNodes(ast)
-          draft.edges = astToFlowEdges(ast)
-          draft.hasUnsavedChanges = false
-        })
+    setNodes: (nodes, recordHistory = true) => setNodesAction(set, get, nodes, recordHistory),
 
-        // ✨ 初始化 WorkflowState
-        // workflowState.init(ast)
-      },
+    setEdges: (edges, recordHistory = true) => setEdgesAction(set, get, edges, recordHistory),
 
-      setNodes: (nodes, shouldRecordHistory = true) => {
-        if (typeof nodes === 'function') {
-          set((draft) => {
-            draft.nodes = nodes(draft.nodes)
-          })
-        } else {
-          if (!Array.isArray(nodes)) {
-            console.error('[WorkflowStore] Invalid nodes:', nodes)
-            return
-          }
-          set((draft) => {
-            draft.nodes = nodes
-          })
-        }
+    updateNode: (nodeId, updates) => updateNodeAction(set, get, nodeId, updates),
 
-        if (shouldRecordHistory) {
-          setTimeout(() => recordHistory(get), 0)
-        }
-      },
+    addNode: (node) => addNodeAction(set, get, node),
 
-      setEdges: (edges, shouldRecordHistory = true) => {
-        if (typeof edges === 'function') {
-          set((draft) => {
-            draft.edges = edges(draft.edges)
-          })
-        } else {
-          if (!Array.isArray(edges)) {
-            console.error('[WorkflowStore] Invalid edges:', edges)
-            return
-          }
-          set((draft) => {
-            draft.edges = edges
-          })
-        }
+    removeNode: (nodeId) => removeNodeAction(set, get, nodeId),
 
-        if (shouldRecordHistory) {
-          setTimeout(() => recordHistory(get), 0)
-        }
-      },
+    addEdge: (edge) => addEdgeAction(set, get, edge),
 
-      /**
-       * ✨ 更新节点（核心方法 - 细粒度事件驱动）
-       *
-       * 优雅设计：
-       * 1. 获取更新前的节点状态
-       * 2. 使用 updateNodeReducer 更新 AST（前后端共享逻辑）
-       * 3. 发射 NODE_UPDATED 事件（携带状态信息）
-       * 4. 根据节点状态决定行为：
-       *    - running → 取消并重新执行
-       *    - pending → 只更新参数
-       *    - success/fail → 标记为待重执行（手动触发）
-       */
-      updateNode: (nodeId: string, updates: Partial<INode>) => {
-        const { workflowAst } = get()
-        if (!workflowAst) {
-          console.warn('[WorkflowStore] WorkflowAst not initialized')
-          return
-        }
+    removeEdge: (edgeId) => removeEdgeAction(set, get, edgeId),
 
-        // ✨ 1. 获取更新前的节点状态
-        const node = getNodeById(workflowAst.nodes, nodeId)
-        if (!node) {
-          console.warn(`[WorkflowStore] Node ${nodeId} not found in AST`)
-          return
-        }
+    syncFromAst: () => syncFromAstAction(set),
 
-        const _previousState = node.state
+    undo: () => undoAction(set),
 
-        // ✨ 2. 使用 updateNodeReducer 更新 AST
-        set((draft) => {
-          // draft.workflowAst = updateNodeReducer(draft.workflowAst!, {
-          //   nodeId,
-          //   updates
-          // })
+    redo: () => redoAction(set),
 
-          // 同步到 React Flow
-          const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
-          if (flowNodeIndex !== -1) {
-            const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
-            if (updatedNode && draft.nodes[flowNodeIndex]) {
-              Object.assign(updatedNode, updates)
-              draft.nodes[flowNodeIndex].data = updatedNode
-            }
-          }
+    clear: () => clearAction(set),
 
-          draft.hasUnsavedChanges = true
-        })
+    markAsSaved: () => markAsSavedAction(set),
 
-        // const updatedNode = getNodeById(get().workflowAst!.nodes, nodeId)!
-        // const currentState = updatedNode.state
-
-        // // ✨ 3. 发射细粒度事件
-        // eventBus.next({
-        //   type: WorkflowEventType.NODE_UPDATED,
-        //   nodeId,
-        //   workflowId: workflowAst.id,
-        //   payload: {
-        //     updates,
-        //     previousState,
-        //     currentState
-        //   },
-        //   timestamp: Date.now()
-        // })
-
-        // // ✨ 4. 根据节点状态决定行为
-        // const isRunning = nodeExecutionManager.isNodeRunning(nodeId)
-
-        // if (previousState === 'running' || isRunning) {
-        //   // 节点正在执行 → 取消并重新执行
-        //   nodeExecutionManager.cancelNode(nodeId)
-
-        //   // 延迟重新执行，确保取消完成
-        //   setTimeout(() => {
-        //     nodeExecutionManager.executeNode(get().workflowAst!, nodeId)
-        //   }, 100)
-        // } else if (previousState === 'pending') {
-        //   // 节点尚未执行 → 只更新参数，不执行
-        // } else if (previousState === 'success' || previousState === 'fail') {
-        //   // 节点已完成 → 标记为待重执行（不自动执行）
-        //   // 可以在UI显示一个"重新执行"按钮
-        // }
-
-        recordHistory(get)
-      },
-
-      addNode: (node) => {
-        set((draft) => {
-          draft.nodes.push(node)
-          draft.hasUnsavedChanges = true
-        })
-        recordHistory(get)
-      },
-
-      removeNode: (nodeId) => {
-        set((draft) => {
-          draft.nodes = draft.nodes.filter((n) => n.id !== nodeId)
-          draft.edges = draft.edges.filter(
-            (e) => e.source !== nodeId && e.target !== nodeId
-          )
-          draft.hasUnsavedChanges = true
-        })
-        recordHistory(get)
-      },
-
-      addEdge: (edge) => {
-        set((draft) => {
-          draft.edges.push(edge)
-          draft.hasUnsavedChanges = true
-        })
-        recordHistory(get)
-      },
-
-      removeEdge: (edgeId) => {
-        set((draft) => {
-          draft.edges = draft.edges.filter((e) => e.id !== edgeId)
-          draft.hasUnsavedChanges = true
-        })
-        recordHistory(get)
-      },
-
-      syncFromAst: () => {
-        set((draft) => {
-          if (!draft.workflowAst) return
-          draft.nodes = astToFlowNodes(draft.workflowAst)
-          draft.edges = astToFlowEdges(draft.workflowAst)
-        })
-      },
-
-      undo: () => {
-        const snapshot = historyManager.undo()
-        if (snapshot) {
-          set((draft) => {
-            draft.nodes = snapshot.nodes
-            draft.edges = snapshot.edges
-          })
-        }
-      },
-
-      redo: () => {
-        const snapshot = historyManager.redo()
-        if (snapshot) {
-          set((draft) => {
-            draft.nodes = snapshot.nodes
-            draft.edges = snapshot.edges
-          })
-        }
-      },
-
-      clear: () => {
-        set((draft) => {
-          draft.nodes = []
-          draft.edges = []
-          draft.workflowAst = null
-          draft.hasUnsavedChanges = false
-        })
-        historyManager.clear()
-      },
-
-      markAsSaved: () => {
-        set((draft) => {
-          draft.hasUnsavedChanges = false
-        })
-      },
-
-      toAst: () => {
-        const { workflowAst } = get()
-        // ✨ 直接返回 workflowAst（单一数据源）
-        // workflowAst 已经通过事件监听自动同步了执行后的节点状态
-        if (workflowAst) {
-          return workflowAst
-        }
-
-        // 回退：如果 workflowAst 不存在，从 React Flow 数据重新构建
-        const { nodes, edges } = get()
-        return flowToAst(nodes, edges)
-      }
+    toAst: () => toAstAction(get),
   }))
 )
 
@@ -384,4 +143,3 @@ export const useWorkflowAst = () => useWorkflowStore((state) => state.workflowAs
 
 /** 获取是否有未保存的更改 */
 export const useHasUnsavedChanges = () => useWorkflowStore((state) => state.hasUnsavedChanges)
-

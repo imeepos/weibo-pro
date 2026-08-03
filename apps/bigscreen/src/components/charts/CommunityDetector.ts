@@ -4,7 +4,6 @@ import type { InterCommunityRelation } from './CommunityDetector.inter';
 import { analyzeInterCommunityRelations } from './CommunityDetector.inter';
 
 export { analyzeInterCommunityRelations, type InterCommunityRelation };
-
 export interface Community {
   id: number;
   nodes: Set<string>;
