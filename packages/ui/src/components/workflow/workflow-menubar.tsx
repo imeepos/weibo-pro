@@ -1,77 +1,15 @@
 'use client'
 
 import React from 'react'
-import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Minimize2,
-  PlayIcon,
-  SaveIcon,
-  SettingsIcon,
-  Download,
-  UploadIcon,
-  LayoutGrid,
-  Clock,
-  XCircle,
-  History,
-  Undo,
-  Redo,
-  FileText,
-  Edit3,
-  Eye,
-  Zap,
-  FileCode,
-  Bug,
-} from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarTrigger,
-} from '@sker/ui/components/ui/menubar'
+import { Menubar } from '@sker/ui/components/ui/menubar'
+import { FileMenu } from './workflow-menubar-file-menu'
+import { EditMenu } from './workflow-menubar-edit-menu'
+import { ViewMenu } from './workflow-menubar-view-menu'
+import { LayoutMenu } from './workflow-menubar-layout-menu'
+import { RunMenu } from './workflow-menubar-run-menu'
 
-export interface WorkflowMenubarProps {
-  // 工作流操作
-  onRun?: () => void
-  onDebugRun?: () => void
-  onCancel?: () => void
-  onSave?: () => void
-  onExport?: () => void
-  onAiExport?: () => void
-  onImport?: () => void
-  onSettings?: () => void
-  onSchedule?: () => void
-  onScheduleList?: () => void
-  onRunHistory?: () => void
-
-  // 视图控制
-  onZoomIn?: () => void
-  onZoomOut?: () => void
-  onFitView?: () => void
-
-  // 节点操作
-  onCollapseNodes?: () => void
-  onExpandNodes?: () => void
-  onAutoLayout?: () => void
-
-  // 历史操作
-  onUndo?: () => void
-  onRedo?: () => void
-  canUndo?: boolean
-  canRedo?: boolean
-
-  // 状态
-  isRunning?: boolean
-  isSaving?: boolean
-
-  // 样式
-  className?: string
-}
+export type { WorkflowMenubarProps } from './workflow-menubar-types'
 
 /**
  * 工作流菜单栏（水平布局）
@@ -111,196 +49,32 @@ export const WorkflowMenubar: React.FC<WorkflowMenubarProps> = ({
 }) => {
   return (
     <Menubar className={cn('shadow-lg shadow-black/20 dark:shadow-black/40', className)}>
-      {/* 文件菜单 */}
-      {(onSave || onImport || onExport || onAiExport || onSettings) && (
-        <MenubarMenu>
-          <MenubarTrigger>
-            <FileText className="mr-1.5 h-3.5 w-3.5" />
-            文件
-          </MenubarTrigger>
-          <MenubarContent>
-            {onSave && (
-              <MenubarItem onSelect={onSave} disabled={isSaving}>
-                <SaveIcon className="mr-2 h-4 w-4" />
-                {isSaving ? '保存中...' : '保存工作流'}
-                <MenubarShortcut>⌘S</MenubarShortcut>
-              </MenubarItem>
-            )}
-            {onImport && (
-              <MenubarItem onSelect={onImport}>
-                <UploadIcon className="mr-2 h-4 w-4" />
-                导入工作流
-              </MenubarItem>
-            )}
-            {onExport && (
-              <MenubarItem onSelect={onExport}>
-                <Download className="mr-2 h-4 w-4" />
-                导出工作流
-              </MenubarItem>
-            )}
-            {onAiExport && (
-              <MenubarItem onSelect={onAiExport}>
-                <FileCode className="mr-2 h-4 w-4" />
-                导出AI分析格式
-              </MenubarItem>
-            )}
-            {onSettings && (onSave || onImport || onExport || onAiExport) && <MenubarSeparator />}
-            {onSettings && (
-              <MenubarItem onSelect={onSettings}>
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                工作流设置
-              </MenubarItem>
-            )}
-          </MenubarContent>
-        </MenubarMenu>
-      )}
-
-      {/* 编辑菜单 */}
-      {(onUndo || onRedo) && (
-        <MenubarMenu>
-          <MenubarTrigger>
-            <Edit3 className="mr-1.5 h-3.5 w-3.5" />
-            编辑
-          </MenubarTrigger>
-          <MenubarContent>
-            {onUndo && (
-              <MenubarItem onSelect={onUndo} disabled={!canUndo}>
-                <Undo className="mr-2 h-4 w-4" />
-                撤销
-                <MenubarShortcut>⌘Z</MenubarShortcut>
-              </MenubarItem>
-            )}
-            {onRedo && (
-              <MenubarItem onSelect={onRedo} disabled={!canRedo}>
-                <Redo className="mr-2 h-4 w-4" />
-                重做
-                <MenubarShortcut>⌘⇧Z</MenubarShortcut>
-              </MenubarItem>
-            )}
-          </MenubarContent>
-        </MenubarMenu>
-      )}
-
-      {/* 视图菜单 */}
-      {(onZoomIn || onZoomOut || onFitView || onCollapseNodes || onExpandNodes) && (
-        <MenubarMenu>
-          <MenubarTrigger>
-            <Eye className="mr-1.5 h-3.5 w-3.5" />
-            视图
-          </MenubarTrigger>
-          <MenubarContent>
-            {onZoomIn && (
-              <MenubarItem onSelect={onZoomIn}>
-                <ZoomIn className="mr-2 h-4 w-4" />
-                放大
-              </MenubarItem>
-            )}
-            {onZoomOut && (
-              <MenubarItem onSelect={onZoomOut}>
-                <ZoomOut className="mr-2 h-4 w-4" />
-                缩小
-              </MenubarItem>
-            )}
-            {onFitView && (
-              <MenubarItem onSelect={onFitView}>
-                <Maximize2 className="mr-2 h-4 w-4" />
-                适应视图
-              </MenubarItem>
-            )}
-            {(onCollapseNodes || onExpandNodes) && (onZoomIn || onZoomOut || onFitView) && (
-              <MenubarSeparator />
-            )}
-            {onCollapseNodes && (
-              <MenubarItem onSelect={onCollapseNodes}>
-                <Minimize2 className="mr-2 h-4 w-4" />
-                折叠节点
-                <MenubarShortcut>⌘⇧C</MenubarShortcut>
-              </MenubarItem>
-            )}
-            {onExpandNodes && (
-              <MenubarItem onSelect={onExpandNodes}>
-                <Maximize2 className="mr-2 h-4 w-4" />
-                展开节点
-                <MenubarShortcut>⌘⇧E</MenubarShortcut>
-              </MenubarItem>
-            )}
-          </MenubarContent>
-        </MenubarMenu>
-      )}
-
-      {/* 布局菜单 */}
-      {onAutoLayout && (
-        <MenubarMenu>
-          <MenubarTrigger>
-            <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
-            布局
-          </MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem onSelect={onAutoLayout}>
-              <LayoutGrid className="mr-2 h-4 w-4" />
-              自动布局
-              <MenubarShortcut>⌘⇧L</MenubarShortcut>
-            </MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
-      )}
-
-      {/* 运行菜单 */}
-      {(onRun || onDebugRun || onCancel || onSchedule || onScheduleList || onRunHistory) && (
-        <MenubarMenu>
-          <MenubarTrigger>
-            <Zap className="mr-1.5 h-3.5 w-3.5" />
-            运行
-          </MenubarTrigger>
-          <MenubarContent>
-            {(onRun || onCancel) && (
-              <MenubarItem
-                onSelect={isRunning ? onCancel : onRun}
-                variant={isRunning ? 'destructive' : 'default'}
-              >
-                {isRunning ? (
-                  <>
-                    <XCircle className="mr-2 h-4 w-4" />
-                    取消运行
-                  </>
-                ) : (
-                  <>
-                    <PlayIcon className="mr-2 h-4 w-4" />
-                    运行工作流
-                  </>
-                )}
-              </MenubarItem>
-            )}
-            {onDebugRun && !isRunning && (
-              <MenubarItem onSelect={onDebugRun}>
-                <Bug className="mr-2 h-4 w-4" />
-                调试运行工作流
-              </MenubarItem>
-            )}
-            {(onSchedule || onScheduleList || onRunHistory) && (onRun || onDebugRun || onCancel) && (
-              <MenubarSeparator />
-            )}
-            {onSchedule && (
-              <MenubarItem onSelect={onSchedule}>
-                <Clock className="mr-2 h-4 w-4" />
-                创建调度
-              </MenubarItem>
-            )}
-            {onScheduleList && (
-              <MenubarItem onSelect={onScheduleList}>
-                <Clock className="mr-2 h-4 w-4" />
-                调度管理
-              </MenubarItem>
-            )}
-            {onRunHistory && (
-              <MenubarItem onSelect={onRunHistory}>
-                <History className="mr-2 h-4 w-4" />
-                运行历史
-              </MenubarItem>
-            )}
-          </MenubarContent>
-        </MenubarMenu>
-      )}
+      <FileMenu
+        onSave={onSave}
+        isSaving={isSaving}
+        onImport={onImport}
+        onExport={onExport}
+        onAiExport={onAiExport}
+        onSettings={onSettings}
+      />
+      <EditMenu onUndo={onUndo} onRedo={onRedo} canUndo={canUndo} canRedo={canRedo} />
+      <ViewMenu
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+        onFitView={onFitView}
+        onCollapseNodes={onCollapseNodes}
+        onExpandNodes={onExpandNodes}
+      />
+      <LayoutMenu onAutoLayout={onAutoLayout} />
+      <RunMenu
+        onRun={onRun}
+        onDebugRun={onDebugRun}
+        onCancel={onCancel}
+        onSchedule={onSchedule}
+        onScheduleList={onScheduleList}
+        onRunHistory={onRunHistory}
+        isRunning={isRunning}
+      />
     </Menubar>
   )
 }

@@ -1,3 +1,4 @@
+import React from 'react';
 import type { CommunityAnalysis } from '@sker/sdk';
 
 interface CommunityStatsOverlayProps {

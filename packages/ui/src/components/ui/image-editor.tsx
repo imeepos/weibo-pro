@@ -10,6 +10,7 @@ import { drawImageWithAnnotations, getCanvasCoords } from "./image-editor-canvas
 import type {
   Annotation,
   CropArea,
+  CropShape,
   ImageEditorProps,
   ToolType,
 } from "./image-editor-types.js"

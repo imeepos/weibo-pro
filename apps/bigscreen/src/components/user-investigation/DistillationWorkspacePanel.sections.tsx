@@ -1,3 +1,4 @@
+import React from 'react';
 import type { PersonaEvidenceItem, PersonaListItem, PersonaMemoryGraph } from '@sker/sdk';
 import type { DistillationTaskSummary } from '@sker/sdk';
 import { Button } from '@sker/ui/components/ui/button';

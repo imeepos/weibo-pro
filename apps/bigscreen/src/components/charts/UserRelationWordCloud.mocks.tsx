@@ -7,7 +7,7 @@
  * 因此各测试文件负责声明 vi.mock 调用，此处导出可供复用的 Mock 实现。
  */
 
-import { Children, cloneElement, isValidElement } from 'react';
+import React, { cloneElement, isValidElement } from 'react';
 
 // Mock WordCloud 组件实现
 export const MockWordCloud = ({ data, onWordClick }: any) => (
@@ -37,7 +37,7 @@ export const MockChartState = ({ loading, error, empty, children }: any) => {
 // Mock ToggleGroup 组件实现
 export const MockToggleGroup = ({ value, onValueChange, children }: any) => {
   // Clone children and inject onClick handler
-  const childrenWithProps = Children.map(children, (child: any) => {
+  const childrenWithProps = React.Children.map(children, (child: any) => {
     if (isValidElement(child)) {
       return cloneElement(child as any, { onValueChange });
     }

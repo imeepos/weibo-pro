@@ -1,3 +1,4 @@
+import React from 'react';
 import type { LevelStats, SpreadBreadthAnalysis } from '@sker/sdk';
 
 // 格式化数字（添加千分位分隔符）

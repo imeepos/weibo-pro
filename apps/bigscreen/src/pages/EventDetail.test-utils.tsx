@@ -9,6 +9,7 @@
  * 所有 vi.mock 块集中在 EventDetail.test-mocks 中,此处先导入以触发注册。
  */
 import './EventDetail.test-mocks';
+import React from 'react';
 import { vi, type Mock } from 'vitest';
 import { render, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';

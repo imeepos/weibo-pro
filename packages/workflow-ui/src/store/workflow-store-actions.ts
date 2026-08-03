@@ -97,7 +97,7 @@ export const updateNodeAction = (set: StoreSet, get: StoreGet, nodeId: string, u
 
   set((draft) => {
     // 同步到 React Flow
-    const flowNodeIndex = draft.nodes.findIndex(n => n.id === nodeId)
+    const flowNodeIndex = draft.nodes.findIndex((n: WorkflowNode) => n.id === nodeId)
     if (flowNodeIndex !== -1) {
       const updatedNode = getNodeById(draft.workflowAst!.nodes, nodeId)
       if (updatedNode && draft.nodes[flowNodeIndex]) {

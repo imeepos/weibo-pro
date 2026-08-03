@@ -1,24 +1,22 @@
 import { useCallback, useEffect } from 'react'
 import { useReactFlow, type Connection, } from '@xyflow/react'
 import { useSelectionStore } from '../../store'
-import { getAllNodeTypes } from '../../adapters'
 import { generateId } from '@sker/workflow'
-import { createCompiledNode } from '../../utils/createCompiledNode'
-import type { WorkflowEdge, WorkflowNode, UINodeMetadata } from '../../types'
+import type { WorkflowEdge } from '../../types'
 import { useContextMenu } from './useContextMenu'
+import { useCanvasViewControls } from './useCanvasViewControls'
+import { useCanvasNodeAdder } from './useCanvasNodeAdder'
 
 /**
  * 画布交互控制 Hook
+ *
+ * 职责拆分：
+ * - 视图控制：useCanvasViewControls
+ * - 添加节点：useCanvasNodeAdder
  */
 export function useCanvasControls() {
   const {
-    getNode,
     screenToFlowPosition,
-    fitView,
-    setCenter,
-    zoomTo,
-    zoomIn,
-    zoomOut,
     getNodes,
     setNodes,
     setEdges,
@@ -26,6 +24,8 @@ export function useCanvasControls() {
   } = useReactFlow()
   const { selectNode, clearSelection } = useSelectionStore()
   const { menu, openNodeMenu, openEdgeMenu, closeMenu, nodeSelector, openNodeSelector, closeNodeSelector } = useContextMenu()
+  const viewControls = useCanvasViewControls()
+  const nodeAdder = useCanvasNodeAdder()
 
   /**
    * 监听节点右键菜单事件
@@ -183,167 +183,6 @@ export function useCanvasControls() {
     [openNodeSelector, screenToFlowPosition]
   )
 
-  /**
-   * 从上下文菜单添加节点
-   */
-  const handleAddNodeFromMenu = useCallback(
-    (metadata: UINodeMetadata) => {
-      const nodeTypes = getAllNodeTypes()
-      const NodeClass = nodeTypes.find((type) => type.name === metadata.type)
-
-      if (!NodeClass) {
-        console.error(`Node class not found for type: ${metadata.type}`)
-        return
-      }
-
-      // 使用工具函数创建并编译节点
-      const compiledNode = createCompiledNode(NodeClass, {
-        position: menu.flowPosition
-      })
-
-      const node: WorkflowNode = {
-        id: compiledNode.id,
-        type: compiledNode.metadata.type,
-        position: menu.flowPosition,
-        data: compiledNode,  // ✅ 使用编译后的节点
-      }
-
-      setNodes((nodes) => [...nodes, node])
-    },
-    [setNodes, menu.flowPosition]
-  )
-
-  /**
-   * 从节点选择器添加节点
-   */
-  const handleAddNodeFromSelector = useCallback(
-    (metadata: UINodeMetadata) => {
-      const nodeTypes = getAllNodeTypes()
-      const NodeClass = nodeTypes.find((type) => type.name === metadata.type)
-
-      if (!NodeClass) {
-        console.error(`Node class not found for type: ${metadata.type}`)
-        return
-      }
-
-      // 使用工具函数创建并编译节点
-      const compiledNode = createCompiledNode(NodeClass, {
-        position: nodeSelector.flowPosition
-      })
-
-      const node: WorkflowNode = {
-        id: compiledNode.id,
-        type: metadata.type,
-        position: nodeSelector.flowPosition,
-        data: compiledNode,  // ✅ 使用编译后的节点
-      }
-
-      setNodes((nodes) => [...nodes, node])
-    },
-    [setNodes, nodeSelector.flowPosition]
-  )
-
-  /**
-   * 适应窗口
-   */
-  const handleFitView = useCallback(() => {
-    fitView({ padding: 0.2, duration: 300 })
-  }, [fitView])
-
-  /**
-   * 居中显示
-   */
-  const handleCenterView = useCallback(() => {
-    const nodes = getNodes()
-    if (nodes.length === 0) return
-
-    const sumX = nodes.reduce((sum, node) => sum + node.position.x, 0)
-    const sumY = nodes.reduce((sum, node) => sum + node.position.y, 0)
-    const centerX = sumX / nodes.length
-    const centerY = sumY / nodes.length
-
-    setCenter(centerX, centerY, { zoom: 1, duration: 300 })
-  }, [getNodes, setCenter])
-
-  /**
-   * 重置缩放
-   */
-  const handleResetZoom = useCallback(() => {
-    zoomTo(1, { duration: 300 })
-  }, [zoomTo])
-
-  /**
-   * 放大
-   */
-  const handleZoomIn = useCallback(() => {
-    zoomIn({ duration: 200 })
-  }, [zoomIn])
-
-  /**
-   * 缩小
-   */
-  const handleZoomOut = useCallback(() => {
-    zoomOut({ duration: 200 })
-  }, [zoomOut])
-
-  /**
-   * 全选节点
-   */
-  const handleSelectAll = useCallback(() => {
-    const nodes = getNodes()
-    const updatedNodes = nodes.map((node) => ({
-      ...node,
-      selected: true,
-    }))
-    setNodes(updatedNodes)
-  }, [getNodes, setNodes])
-
-  /**
-   * 清空画布
-   */
-  const handleClearCanvas = useCallback(() => {
-    const nodes = getNodes()
-    if (
-      nodes.length === 0 ||
-      confirm('确定要清空画布吗？此操作无法撤销。')
-    ) {
-      setNodes([])
-      setEdges([])
-    }
-  }, [getNodes, setNodes, setEdges])
-
-
-  /**
-   * 运行节点（暂时留空，后续实现）
-   */
-  const handleRunNode = useCallback((_nodeId: string) => {
-    // TODO: 实现节点运行逻辑
-  }, [])
-
-  /**
-   * 定位到指定节点
-   */
-  const handleLocateNode = useCallback((nodeId: string) => {
-    const node = getNode(nodeId)
-
-    if (!node) {
-      console.warn(`Node not found: ${nodeId}`)
-      return
-    }
-
-    const centerX = node.position.x + (node.width || 0) / 2
-    const centerY = node.position.y + (node.height || 0) / 2
-
-    setCenter(centerX, centerY, { zoom: 1.2, duration: 300 })
-
-    const updatedNodes = getNodes().map(n => ({
-      ...n,
-      selected: n.id === nodeId,
-    }))
-    setNodes(updatedNodes)
-    selectNode(nodeId)
-  }, [getNode, setCenter, getNodes, setNodes, selectNode])
-
   return {
     onConnect,
     onNodeClick,
@@ -356,17 +195,8 @@ export function useCanvasControls() {
     nodeSelector,
     openNodeSelector,
     closeNodeSelector,
-    handleAddNodeFromMenu,
-    handleAddNodeFromSelector,
-    handleFitView,
-    handleCenterView,
-    handleResetZoom,
-    handleZoomIn,
-    handleZoomOut,
-    handleSelectAll,
-    handleClearCanvas,
-    handleRunNode,
-    handleLocateNode,
+    ...nodeAdder,
+    ...viewControls,
     screenToFlowPosition,
   }
 }
