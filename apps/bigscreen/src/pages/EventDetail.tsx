@@ -169,7 +169,6 @@ const EventDetail: React.FC = () => {
         <SentimentTab
           loadingState={tabsState.sentiment.loadingState}
           sentimentWidgets={sentimentWidgets}
-          timeSeriesData={timeSeriesData}
           eventId={eventId}
           onRetryTab={() => loadTabData('sentiment', true)}
           onRetryWidgets={loadSentimentWidgets}
@@ -187,7 +186,6 @@ const EventDetail: React.FC = () => {
           loadingState={tabsState['user-analysis'].loadingState}
           userAnalysisWidgets={userAnalysisWidgets}
           userStratificationData={userStratificationData}
-          userRelationNetwork={userRelationNetwork}
           onRetryTab={() => loadTabData('user-analysis', true)}
           onRetryWidgets={loadUserAnalysisWidgets}
         />

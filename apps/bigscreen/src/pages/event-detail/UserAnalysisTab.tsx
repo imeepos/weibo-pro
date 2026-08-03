@@ -1,12 +1,10 @@
 import React from 'react';
 import { AlertTriangle, Shield, Users } from 'lucide-react';
 import { TabsContent } from '@sker/ui/components/ui/tabs';
-import type { UserRelationNetwork } from '@sker/sdk';
 import { AnalysisWidgetCard } from '@/components/ui';
 import { UserRiskProfilePanel } from '@/components/charts/UserRiskProfilePanel';
 import { AbnormalUserPanel } from '@/components/charts/AbnormalUserPanel';
 import UserEngagementFunnel from '@/components/charts/UserEngagementFunnel';
-import { UserRelationWordCloud } from '@/components/charts/UserRelationWordCloud';
 import type { LoadingState } from '@/types/tab-loading';
 import type { UserAnalysisWidgets } from './types';
 import { TabContentShell } from './TabContentShell';
@@ -15,7 +13,6 @@ interface UserAnalysisTabProps {
   loadingState: LoadingState;
   userAnalysisWidgets: UserAnalysisWidgets;
   userStratificationData: any;
-  userRelationNetwork: UserRelationNetwork | null;
   onRetryTab: () => void;
   onRetryWidgets: () => void;
 }
@@ -24,7 +21,6 @@ export function UserAnalysisTab({
   loadingState,
   userAnalysisWidgets,
   userStratificationData,
-  userRelationNetwork,
   onRetryTab,
   onRetryWidgets,
 }: UserAnalysisTabProps) {
@@ -65,14 +61,6 @@ export function UserAnalysisTab({
             height={400}
           />
         </div>
-
-        {/* 用户关系词云 */}
-        <UserRelationWordCloud
-          network={userRelationNetwork}
-          isLoading={!userRelationNetwork}
-          height={400}
-          maxWords={1000}
-        />
       </TabContentShell>
     </TabsContent>
   );

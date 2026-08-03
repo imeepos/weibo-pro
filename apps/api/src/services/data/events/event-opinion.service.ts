@@ -37,25 +37,33 @@ export class EventOpinionService {
 
       return Array.from(buckets.entries())
         .filter(([, items]) => items.length > 0)
-        .map(([stance, items]) => ({
-          id: stance,
-          label: this.getLabel(stance),
-          stance,
-          summary: `${items.length} 条代表内容聚合为同一立场观点簇`,
-          postCount: items.length,
-          userCount: items.length,
-          keywords: this.collectKeywords(items),
-          representativePosts: items.slice(0, 3).map((item) => ({
-            postId: item.post?.id ?? item.post_id,
-            author: item.post?.user?.screen_name || '未知作者',
-            excerpt: String(item.post?.text_raw || '').slice(0, 120),
-            sentiment: item.sentiment?.overall || 'neutral',
-            engagement:
-              Number(item.post?.comments_count || 0) +
-              Number(item.post?.reposts_count || 0) +
-              Number(item.post?.attitudes_count || 0),
-          })),
-        }));
+        .map(([stance, items]) => {
+          // userCount 应为去重后的真实用户数，而非帖子数（此前直接取 items.length 误导）
+          const distinctUsers = new Set(
+            items
+              .map((item) => item.post?.user?.id ?? item.post?.user_id)
+              .filter((id): id is number => id != null),
+          );
+          return {
+            id: stance,
+            label: this.getLabel(stance),
+            stance,
+            summary: `${items.length} 条代表内容聚合为同一立场观点簇`,
+            postCount: items.length,
+            userCount: distinctUsers.size > 0 ? distinctUsers.size : items.length,
+            keywords: this.collectKeywords(items),
+            representativePosts: items.slice(0, 3).map((item) => ({
+              postId: item.post?.id ?? item.post_id,
+              author: item.post?.user?.screen_name || '未知作者',
+              excerpt: String(item.post?.text_raw || '').slice(0, 120),
+              sentiment: item.sentiment?.overall || 'neutral',
+              engagement:
+                Number(item.post?.comments_count || 0) +
+                Number(item.post?.reposts_count || 0) +
+                Number(item.post?.attitudes_count || 0),
+            })),
+          };
+        });
     });
   }
 

@@ -1,14 +1,10 @@
 import type {
   EventAbnormalUser,
   EventAnomaly,
-  EventEmotionMapItem,
   EventOpinionCluster,
-  EventSentimentTrendDetailedPoint,
   EventUserRiskProfile,
-  EventUserEmotionInsight,
   MediaTypeAnalysis,
   SpreadBreadthAnalysis,
-  UserRelationNetwork,
 } from '@sker/sdk';
 import type { AnalysisWidgetState } from '@/types/analysis-widget';
 
@@ -49,12 +45,6 @@ export interface EventDetailData {
   keywords: string[];
   createdAt: string;
   lastUpdate: string;
-  timeline: Array<{ time: string; event: string; type: string; impact: number; description: string; metrics: { posts: number; users: number; sentiment: number; } }>;
-  propagationPath: Array<{ userType: string; userCount: number; postCount: number; influence: number; }>;
-  keyNodes: Array<{ time: string; description: string; impact: 'high' | 'medium' | 'low'; metrics: { posts: number; users: number; sentiment: number; }; }>;
-  developmentPhases: Array<{ phase: string; timeRange: string; description: string; keyEvents: string[]; keyTasks: string[]; keyMeasures: string[]; metrics: { hotness: number; posts: number; users: number; sentiment: number; }; status: 'completed' | 'ongoing' | 'planned'; }>;
-  developmentPattern?: { outbreakSpeed: string; propagationScope: string; duration: string; impactDepth: string; };
-  successFactors?: Array<{ title: string; description: string; }>;
 }
 
 export type TrendWidgets = {
@@ -64,12 +54,7 @@ export type TrendWidgets = {
 };
 
 export type SentimentWidgets = {
-  transition: AnalysisWidgetState<{ eventId: string }>;
   scatter: AnalysisWidgetState<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>;
-  intensity: AnalysisWidgetState<Array<{ intensity: number; count: number }>>;
-  emotionMap: AnalysisWidgetState<EventEmotionMapItem[]>;
-  userInsights: AnalysisWidgetState<EventUserEmotionInsight[]>;
-  detailedTrend: AnalysisWidgetState<EventSentimentTrendDetailedPoint[]>;
 };
 
 export type OpinionWidgets = {
@@ -83,7 +68,6 @@ export type UserAnalysisWidgets = {
 
 export type OverviewWidgets = {
   milestones: AnalysisWidgetState<EventMilestone[]>;
-  topicOverview: AnalysisWidgetState<EventTopicOverview>;
   institutions: AnalysisWidgetState<EventInstitutionAccount[]>;
 };
 
@@ -120,33 +104,13 @@ export interface EventInstitutionAccount {
   sentimentTilt: 'positive' | 'negative' | 'neutral';
 }
 
-export interface EventTopicOverview {
-  topTopics: Array<{
-    title: string;
-    count: number;
-    sentiment: string;
-    trend: 'up' | 'down' | 'stable';
-  }>;
-  timeSeries: Array<{
-    keyword: string;
-    timeData: Array<{
-      timestamp: string;
-      weight: number;
-    }>;
-  }>;
-}
-
 export type EventsControllerPhase2 = {
   getEventMilestones: (id: string) => Promise<EventMilestone[]>;
-  getEventTopicOverview: (id: string) => Promise<EventTopicOverview>;
   getEventInstitutions: (id: string) => Promise<EventInstitutionAccount[]>;
 };
 
 export type EventsControllerPhase3 = {
   getEventOpinionClusters: (id: string) => Promise<EventOpinionCluster[]>;
-  getEventEmotionMap: (id: string) => Promise<EventEmotionMapItem[]>;
-  getEventUserEmotionInsights: (id: string) => Promise<EventUserEmotionInsight[]>;
-  getEventSentimentTrendDetailed: (id: string) => Promise<EventSentimentTrendDetailedPoint[]>;
 };
 
 export type EventsControllerPhase4 = {

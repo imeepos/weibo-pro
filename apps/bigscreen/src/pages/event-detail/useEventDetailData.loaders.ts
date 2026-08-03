@@ -1,12 +1,10 @@
 import { root } from '@sker/core';
 import {
   EventsController,
-  CommunityDetectionController,
   PropagationVelocityController,
   InfluencePredictionController,
   CommunityEvolutionController,
   UserStratificationController,
-  UserRelationController,
   PostingTimeController,
   CommentDepthController,
 } from '@sker/sdk';
@@ -17,7 +15,6 @@ import type { GeographicDataPoint } from './types';
 export interface TabLoadContext {
   eventId: string;
   userRelationNetwork: UserRelationNetwork | null;
-  communityData: any;
   geographicData: GeographicDataPoint[];
   propagationVelocityData: any;
   influencePredictionData: any;
@@ -26,7 +23,6 @@ export interface TabLoadContext {
   postingTimeData: any;
   commentDepthData: any;
   setUserRelationNetwork: (data: UserRelationNetwork | null) => void;
-  setCommunityData: (data: any) => void;
   setGeographicData: (data: GeographicDataPoint[]) => void;
   setGeographicStats: (stats: { totalPosts?: number; totalUsers?: number; totalRegions?: number }) => void;
   setPropagationVelocityData: (data: any) => void;
@@ -50,22 +46,11 @@ export async function loadDataForTab(tabId: TabId, ctx: TabLoadContext): Promise
       break;
 
     case 'network':
-      // 加载关系网络和社区发现数据
-      await Promise.all([
-        (async () => {
-          if (!ctx.userRelationNetwork) {
-            const data = await c.getEventUserRelations(ctx.eventId);
-            ctx.setUserRelationNetwork(data);
-          }
-        })(),
-        (async () => {
-          if (!ctx.communityData) {
-            const controller = root.get(CommunityDetectionController);
-            const data = await controller.getAnalysis(ctx.eventId);
-            ctx.setCommunityData(data);
-          }
-        })(),
-      ]);
+      // 加载关系网络数据
+      if (!ctx.userRelationNetwork) {
+        const data = await c.getEventUserRelations(ctx.eventId);
+        ctx.setUserRelationNetwork(data);
+      }
       break;
 
     case 'geographic':
@@ -137,13 +122,6 @@ export async function loadDataForTab(tabId: TabId, ctx: TabLoadContext): Promise
             const controller = root.get(UserStratificationController);
             const data = await controller.getStratification(ctx.eventId);
             ctx.setUserStratificationData(data);
-          }
-        })(),
-        (async () => {
-          if (!ctx.userRelationNetwork) {
-            const controller = root.get(UserRelationController);
-            const data = await controller.getNetwork(undefined, undefined, ctx.eventId);
-            ctx.setUserRelationNetwork(data);
           }
         })(),
       ]);

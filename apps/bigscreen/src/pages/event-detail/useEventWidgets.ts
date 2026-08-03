@@ -8,11 +8,8 @@ import {
 import type {
   EventAbnormalUser,
   EventAnomaly,
-  EventEmotionMapItem,
   EventOpinionCluster,
-  EventSentimentTrendDetailedPoint,
   EventUserRiskProfile,
-  EventUserEmotionInsight,
   MediaTypeAnalysis,
   SpreadBreadthAnalysis,
 } from '@sker/sdk';
@@ -23,7 +20,6 @@ import {
 import type {
   EventInstitutionAccount,
   EventMilestone,
-  EventTopicOverview,
   EventsControllerPhase2,
   EventsControllerPhase3,
   EventsControllerPhase4,
@@ -37,7 +33,6 @@ import type {
 export function useEventWidgets(eventId?: string) {
   const [overviewWidgets, setOverviewWidgets] = useState<OverviewWidgets>({
     milestones: createAnalysisWidgetState(),
-    topicOverview: createAnalysisWidgetState(),
     institutions: createAnalysisWidgetState(),
   });
   const [trendWidgets, setTrendWidgets] = useState<TrendWidgets>({
@@ -53,12 +48,7 @@ export function useEventWidgets(eventId?: string) {
     abnormalUsers: createAnalysisWidgetState(),
   });
   const [sentimentWidgets, setSentimentWidgets] = useState<SentimentWidgets>({
-    transition: createAnalysisWidgetState(),
     scatter: createAnalysisWidgetState(),
-    intensity: createAnalysisWidgetState(),
-    emotionMap: createAnalysisWidgetState(),
-    userInsights: createAnalysisWidgetState(),
-    detailedTrend: createAnalysisWidgetState(),
   });
 
   const loadOverviewPhase2Widgets = useCallback(async () => {
@@ -66,14 +56,12 @@ export function useEventWidgets(eventId?: string) {
 
     setOverviewWidgets({
       milestones: createAnalysisWidgetState({ status: 'loading' }),
-      topicOverview: createAnalysisWidgetState({ status: 'loading' }),
       institutions: createAnalysisWidgetState({ status: 'loading' }),
     });
 
     const controller = root.get(EventsController) as EventsController & EventsControllerPhase2;
     const settled = await Promise.allSettled([
       controller.getEventMilestones(eventId),
-      controller.getEventTopicOverview(eventId),
       controller.getEventInstitutions(eventId),
     ]);
 
@@ -82,12 +70,8 @@ export function useEventWidgets(eventId?: string) {
         settled[0] as PromiseSettledResult<EventMilestone[]>,
         (value) => value.length === 0,
       ),
-      topicOverview: resolveAnalysisWidgetState(
-        settled[1] as PromiseSettledResult<EventTopicOverview>,
-        (value) => value.topTopics.length === 0,
-      ),
       institutions: resolveAnalysisWidgetState(
-        settled[2] as PromiseSettledResult<EventInstitutionAccount[]>,
+        settled[1] as PromiseSettledResult<EventInstitutionAccount[]>,
         (value) => value.length === 0,
       ),
     });
@@ -178,47 +162,17 @@ export function useEventWidgets(eventId?: string) {
     if (!eventId) return;
 
     setSentimentWidgets({
-      transition: createAnalysisWidgetState({ status: 'loading' }),
       scatter: createAnalysisWidgetState({ status: 'loading' }),
-      intensity: createAnalysisWidgetState({ status: 'loading' }),
-      emotionMap: createAnalysisWidgetState({ status: 'loading' }),
-      userInsights: createAnalysisWidgetState({ status: 'loading' }),
-      detailedTrend: createAnalysisWidgetState({ status: 'loading' }),
     });
 
-    const eventsController = root.get(EventsController) as EventsController & EventsControllerPhase3;
+    const eventsController = root.get(EventsController);
     const settled = await Promise.allSettled([
-      Promise.resolve({ eventId }),
       eventsController.getSentimentHotness(eventId),
-      eventsController.getSentimentIntensity(eventId),
-      eventsController.getEventEmotionMap(eventId),
-      eventsController.getEventUserEmotionInsights(eventId),
-      eventsController.getEventSentimentTrendDetailed(eventId),
     ]);
 
     setSentimentWidgets({
-      transition: resolveAnalysisWidgetState(
-        settled[0] as PromiseSettledResult<{ eventId: string }>,
-        () => false,
-      ),
       scatter: resolveAnalysisWidgetState(
-        settled[1] as PromiseSettledResult<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>,
-        (value) => value.length === 0,
-      ),
-      intensity: resolveAnalysisWidgetState(
-        settled[2] as PromiseSettledResult<Array<{ intensity: number; count: number }>>,
-        (value) => value.length === 0,
-      ),
-      emotionMap: resolveAnalysisWidgetState(
-        settled[3] as PromiseSettledResult<EventEmotionMapItem[]>,
-        (value) => value.length === 0,
-      ),
-      userInsights: resolveAnalysisWidgetState(
-        settled[4] as PromiseSettledResult<EventUserEmotionInsight[]>,
-        (value) => value.length === 0,
-      ),
-      detailedTrend: resolveAnalysisWidgetState(
-        settled[5] as PromiseSettledResult<EventSentimentTrendDetailedPoint[]>,
+        settled[0] as PromiseSettledResult<Array<{ postId: string; sentimentScore: number; hotness: number; timestamp: string }>>,
         (value) => value.length === 0,
       ),
     });
@@ -227,7 +181,6 @@ export function useEventWidgets(eventId?: string) {
   const resetAllWidgets = useCallback(() => {
     setOverviewWidgets({
       milestones: createAnalysisWidgetState(),
-      topicOverview: createAnalysisWidgetState(),
       institutions: createAnalysisWidgetState(),
     });
     setTrendWidgets({
@@ -243,12 +196,7 @@ export function useEventWidgets(eventId?: string) {
       abnormalUsers: createAnalysisWidgetState(),
     });
     setSentimentWidgets({
-      transition: createAnalysisWidgetState(),
       scatter: createAnalysisWidgetState(),
-      intensity: createAnalysisWidgetState(),
-      emotionMap: createAnalysisWidgetState(),
-      userInsights: createAnalysisWidgetState(),
-      detailedTrend: createAnalysisWidgetState(),
     });
   }, []);
 

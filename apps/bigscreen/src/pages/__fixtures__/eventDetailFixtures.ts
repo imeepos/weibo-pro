@@ -18,9 +18,6 @@ export const mockEventData = {
   keywords: ['AI', '人工智能', '机器学习'],
   createdAt: '2025-01-01T00:00:00Z',
   lastUpdate: '2025-01-15T12:00:00Z',
-  timeline: [],
-  propagationPath: [],
-  keyNodes: [],
 };
 
 export const eventTimeSeries = {

@@ -73,4 +73,49 @@ describe('EventOpinionService', () => {
     });
     expect(clusters[0]?.keywords).toEqual(expect.arrayContaining(['追责', '透明']));
   });
+
+  it('counts distinct users per cluster, not posts', async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      addSelect: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      leftJoinAndSelect: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      andWhere: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      addOrderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      getMany: vi.fn().mockResolvedValue([
+        {
+          post_id: 'post-1',
+          sentiment: { overall: 'negative' },
+          keywords: [],
+          post: { id: 'post-1', text_raw: 'a', user: { id: 'user-1', screen_name: '用户A' } },
+        },
+        {
+          post_id: 'post-2',
+          sentiment: { overall: 'negative' },
+          keywords: [],
+          post: { id: 'post-2', text_raw: 'b', user: { id: 'user-1', screen_name: '用户A' } },
+        },
+        {
+          post_id: 'post-3',
+          sentiment: { overall: 'negative' },
+          keywords: [],
+          post: { id: 'post-3', text_raw: 'c', user: { id: 'user-2', screen_name: '用户B' } },
+        },
+      ]),
+    };
+
+    vi.spyOn(mockEntityManager, 'getRepository').mockReturnValue({
+      createQueryBuilder: vi.fn(() => query),
+    } as any);
+
+    const service = new EventOpinionService();
+    const clusters = await service.getEventOpinionClusters('event-1');
+
+    expect(clusters).toHaveLength(1);
+    // 3 条帖子但仅 2 个去重用户：userCount 必须是用户数而非帖子数
+    expect(clusters[0]).toMatchObject({ stance: 'critical', postCount: 3, userCount: 2 });
+  });
 });

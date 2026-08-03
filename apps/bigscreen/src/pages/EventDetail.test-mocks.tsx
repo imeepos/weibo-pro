@@ -63,14 +63,6 @@ vi.mock('@/components/charts/WordCloudChart', () => ({
   ),
 }));
 
-vi.mock('@/components/charts/HotTopicsChart', () => ({
-  default: ({ data }: { data: Array<{ title: string }> }) => (
-    <div data-testid="hot-topics-chart">
-      {data.map((item) => item.title).join(',')}
-    </div>
-  ),
-}));
-
 vi.mock('@/components/charts/EventMilestoneWidget', () => ({
   EventMilestoneWidget: ({ data }: { data: Array<{ title: string }> }) => (
     <div data-testid="event-milestone-widget">
@@ -159,10 +151,6 @@ vi.mock('@/components/charts/CommentThreadTree', () => ({
 
 vi.mock('@/components/charts/PostingTimeHeatmap', () => ({
   default: () => <div data-testid="posting-time-heatmap">PostingTimeHeatmap</div>,
-}));
-
-vi.mock('@/components/charts/UserRelationWordCloud', () => ({
-  UserRelationWordCloud: () => <div data-testid="user-relation-wordcloud">UserRelationWordCloud</div>,
 }));
 
 vi.mock('@/components/charts/GeographicDistributionChart', () => ({

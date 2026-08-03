@@ -4,14 +4,10 @@ import type { EventUserRiskProfile } from '@sker/sdk';
 export function UserRiskProfilePanel({ data }: { data: EventUserRiskProfile }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <div className="rounded-xl border border-border/50 bg-background/40 p-4">
-          <div className="text-xs text-muted-foreground">总用户</div>
+          <div className="text-xs text-muted-foreground">参与用户</div>
           <div className="mt-2 text-2xl font-semibold text-foreground">{data.totalUsers}</div>
-        </div>
-        <div className="rounded-xl border border-border/50 bg-background/40 p-4">
-          <div className="text-xs text-muted-foreground">活跃用户</div>
-          <div className="mt-2 text-2xl font-semibold text-foreground">{data.activeUsers}</div>
         </div>
         <div className="rounded-xl border border-border/50 bg-background/40 p-4">
           <div className="text-xs text-muted-foreground">异常用户</div>

@@ -50,15 +50,15 @@ describe('EventDetail - Tab 懒加载', () => {
     fireEvent.click(screen.getByRole('tab', { name: /情感分析/ }));
     expect(await screen.findByTestId('sentiment-transition')).toBeInTheDocument();
     expect(screen.getByTestId('sentiment-hotness-chart')).toBeInTheDocument();
-    expect(screen.getByTestId('sentiment-intensity-chart')).toBeInTheDocument();
     expect(mockEventsController.getSentimentHotness).toHaveBeenCalledWith(mockEventId);
-    expect(mockEventsController.getSentimentIntensity).toHaveBeenCalledWith(mockEventId);
-    expect(mockEventsController.getEventEmotionMap).toHaveBeenCalledWith(mockEventId);
-    expect(mockEventsController.getEventUserEmotionInsights).toHaveBeenCalledWith(mockEventId);
-    expect(mockEventsController.getEventSentimentTrendDetailed).toHaveBeenCalledWith(mockEventId);
-    expect(screen.getByText('情绪地图')).toBeInTheDocument();
-    expect(screen.getByText('用户情绪洞察')).toBeInTheDocument();
-    expect(screen.getByText('详细情感趋势')).toBeInTheDocument();
+    // 已移除的重复/低价值情感模块不应再请求或渲染
+    expect(mockEventsController.getSentimentIntensity).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventEmotionMap).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventUserEmotionInsights).not.toHaveBeenCalled();
+    expect(mockEventsController.getEventSentimentTrendDetailed).not.toHaveBeenCalled();
+    expect(screen.queryByText('情绪地图')).not.toBeInTheDocument();
+    expect(screen.queryByText('用户情绪洞察')).not.toBeInTheDocument();
+    expect(screen.queryByText('详细情感趋势')).not.toBeInTheDocument();
   });
 
   it('切换到观点汇集 tab 时才加载观点簇数据', async () => {

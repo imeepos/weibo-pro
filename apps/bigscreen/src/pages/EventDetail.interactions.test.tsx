@@ -41,11 +41,11 @@ describe('EventDetail - 交互与容错', () => {
     );
 
     expect(await screen.findByText('事件里程碑')).toBeInTheDocument();
-    expect(screen.getByText('高频话题分布')).toBeInTheDocument();
     expect(screen.getByText('机构账号参与')).toBeInTheDocument();
     expect(screen.getByTestId('event-milestone-widget')).toHaveTextContent('热度峰值');
-    expect(screen.getByTestId('hot-topics-chart')).toHaveTextContent('外交部');
     expect(screen.getByTestId('institution-participation-panel')).toHaveTextContent('新华社');
+    // 高频话题分布已移除：与关键词云重复展示同一关键词权重数据
+    expect(screen.queryByText('高频话题分布')).not.toBeInTheDocument();
   });
 
   it('keeps successful trend widgets visible when one trend request fails', async () => {

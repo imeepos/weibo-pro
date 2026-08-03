@@ -26,15 +26,12 @@ export interface EngagementStats {
   totalComments: number;
   totalReposts: number;
   totalLikes: number;
-  totalEngagement: number;
-  avgEngagementRate: number;
 }
 
 export interface TrendStats {
   totalPosts: number;
   totalUsers: number;
   avgHotness: number | null;
-  avgSentiment: number | null;
 }
 
 export interface TrendConfig {
@@ -65,12 +62,6 @@ export function convertEventData(eventData: any): EventDetailData {
     keywords: eventData.keywords,
     createdAt: eventData.createdAt,
     lastUpdate: eventData.lastUpdate,
-    timeline: eventData.timeline || [],
-    propagationPath: eventData.propagationPath || [],
-    keyNodes: eventData.keyNodes || [],
-    developmentPhases: (eventData as any).developmentPhases || [],
-    developmentPattern: (eventData as any).developmentPattern,
-    successFactors: (eventData as any).successFactors,
   };
 }
 
@@ -145,11 +136,8 @@ export function computeStats(trendData: TrendChartData | null): TrendStats | nul
   const avgHotness = hasData && trendData.hotnessData.length > 0
     ? Math.round(trendData.hotnessData.reduce((a, b) => a + b, 0) / trendData.hotnessData.length)
     : null;
-  const avgSentiment = hasData && trendData.sentimentData.length > 0
-    ? Math.round(trendData.sentimentData.reduce((a, b) => a + b, 0) / trendData.sentimentData.length)
-    : null;
 
-  return { totalPosts, totalUsers, avgHotness, avgSentiment };
+  return { totalPosts, totalUsers, avgHotness };
 }
 
 /** 计算互动指标统计 */
@@ -160,10 +148,8 @@ export function computeEngagementStats(engagementTrendData: EngagementTrendItem[
   const totalComments = engagementTrendData.reduce((sum, d) => sum + d.comment_count, 0);
   const totalReposts = engagementTrendData.reduce((sum, d) => sum + d.repost_count, 0);
   const totalLikes = engagementTrendData.reduce((sum, d) => sum + d.like_count, 0);
-  const totalEngagement = totalComments + totalReposts + totalLikes;
-  const avgEngagementRate = engagementTrendData.reduce((sum, d) => sum + (d.engagement_rate || 0), 0) / engagementTrendData.length;
 
-  return { totalComments, totalReposts, totalLikes, totalEngagement, avgEngagementRate };
+  return { totalComments, totalReposts, totalLikes };
 }
 
 /** 趋势配置 */

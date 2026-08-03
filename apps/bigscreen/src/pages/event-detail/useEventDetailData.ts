@@ -28,7 +28,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
   const [geographicStats, setGeographicStats] = useState<{ totalPosts?: number; totalUsers?: number; totalRegions?: number }>({});
   const [keywordData, setKeywordData] = useState<KeywordItem[]>([]);
   const [engagementTrendData, setEngagementTrendData] = useState<EngagementTrendItem[]>([]);
-  const [communityData, setCommunityData] = useState<any>(null);
   // P3 组件数据 state
   const [propagationVelocityData, setPropagationVelocityData] = useState<any>(null);
   const [influencePredictionData, setInfluencePredictionData] = useState<any>(null);
@@ -37,7 +36,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
   const [userStratificationData, setUserStratificationData] = useState<any>(null);
   const [commentDepthData, setCommentDepthData] = useState<any>(null);
   const [postingTimeData, setPostingTimeData] = useState<any>(null);
-  const [_networkCentralityData, setNetworkCentralityData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshingCache, setIsRefreshingCache] = useState(false);
@@ -68,7 +66,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
     await loadDataForTabImpl(tabId, {
       eventId,
       userRelationNetwork,
-      communityData,
       geographicData,
       propagationVelocityData,
       influencePredictionData,
@@ -77,7 +74,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
       postingTimeData,
       commentDepthData,
       setUserRelationNetwork,
-      setCommunityData,
       setGeographicData,
       setGeographicStats,
       setPropagationVelocityData,
@@ -91,7 +87,7 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
       loadUserAnalysisWidgets,
       loadSentimentWidgets,
     });
-  }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadOpinionWidgets, loadUserAnalysisWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
+  }, [eventId, userRelationNetwork, geographicData, loadTrendWidgets, loadOpinionWidgets, loadUserAnalysisWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
 
   // Tab 懒加载核心逻辑
   const loadTabData = useCallback(async (tabId: TabId, force = false) => {
@@ -226,7 +222,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
       // 清除所有数据状态
       setUserRelationNetwork(null);
       setGeographicData([]);
-      setCommunityData(null);
       resetAllWidgets();
       setPropagationVelocityData(null);
       setInfluencePredictionData(null);
@@ -234,7 +229,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
       setUserStratificationData(null);
       setCommentDepthData(null);
       setPostingTimeData(null);
-      setNetworkCentralityData(null);
 
       // 清除所有 Tab 的加载状态
       setTabsState(createInitialTabsState());
@@ -269,7 +263,6 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
     geographicStats,
     keywordData,
     engagementTrendData,
-    communityData,
     propagationVelocityData,
     influencePredictionData,
     communityEvolutionData,

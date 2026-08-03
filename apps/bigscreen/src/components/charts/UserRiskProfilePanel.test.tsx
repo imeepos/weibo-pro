@@ -19,9 +19,10 @@ describe('UserRiskProfilePanel', () => {
     );
 
     expect(screen.getByText('120')).toBeInTheDocument();
-    expect(screen.getByText('67')).toBeInTheDocument();
     expect(screen.getByText('8')).toBeInTheDocument();
     expect(screen.getByText('36.5')).toBeInTheDocument();
     expect(screen.getByText('夜间活跃 6')).toBeInTheDocument();
+    // 活跃用户恒等于参与用户（数据源即发帖用户），已移除无信息量卡片
+    expect(screen.queryByText('67')).not.toBeInTheDocument();
   });
 });

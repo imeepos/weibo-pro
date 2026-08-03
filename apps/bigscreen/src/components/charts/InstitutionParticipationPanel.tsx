@@ -38,7 +38,7 @@ export function InstitutionParticipationPanel({
             </div>
             <div className="text-right">
               <div className="text-sm font-semibold text-foreground">{item.influenceScore}</div>
-              <div className="text-xs text-muted-foreground">影响力</div>
+              <div className="text-xs text-muted-foreground">粉丝数</div>
             </div>
           </div>
         </div>
