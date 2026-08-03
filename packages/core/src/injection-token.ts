@@ -28,17 +28,6 @@ export class InjectionToken<T> {
 }
 
 /**
- * Record 类型的注入令牌
- * 用于多值 Record 注入，返回 Record<string, T> 类型
- * @template T Record 中值的类型
- */
-export class RecordInjectionToken<T> extends InjectionToken<Record<string, T>> {
-  constructor(description: string, options?: InjectionTokenOptions<Record<string, T>>) {
-    super(description, options);
-  }
-}
-
-/**
  * Map 类型的注入令牌
  * 用于多值 Map 注入，返回 Map<K, V> 类型
  * @template K Map 中键的类型
@@ -46,17 +35,6 @@ export class RecordInjectionToken<T> extends InjectionToken<Record<string, T>> {
  */
 export class MapInjectionToken<K, V> extends InjectionToken<Map<K, V>> {
   constructor(description: string, options?: InjectionTokenOptions<Map<K, V>>) {
-    super(description, options);
-  }
-}
-
-/**
- * Set 类型的注入令牌
- * 用于多值 Set 注入，返回 Set<T> 类型
- * @template T Set 中值的类型
- */
-export class SetInjectionToken<T> extends InjectionToken<Set<T>> {
-  constructor(description: string, options?: InjectionTokenOptions<Set<T>>) {
     super(description, options);
   }
 }

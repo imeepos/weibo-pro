@@ -59,12 +59,6 @@ export class EnvironmentInjectorUtils {
     if ('useExisting' in provider) {
       return 'ExistingProvider';
     }
-    if ('useLazyClass' in provider) {
-      return 'LazyClassProvider';
-    }
-    if ('useLazyFactory' in provider) {
-      return 'LazyFactoryProvider';
-    }
     return 'ConstructorProvider';
   }
 

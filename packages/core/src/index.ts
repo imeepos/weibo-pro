@@ -1,10 +1,5 @@
 import 'reflect-metadata';
-export { InjectionToken, RecordInjectionToken, MapInjectionToken, SetInjectionToken, type InjectionTokenOptions } from './injection-token';
-export {
-  HostAttributeToken,
-  isHostAttributeToken,
-  createHostAttributeToken,
-} from './host-attribute-token';
+export { InjectionToken, MapInjectionToken, type InjectionTokenOptions } from './injection-token';
 export {
   Injector,
   type InjectionTokenType,
@@ -24,8 +19,6 @@ export {
   type FactoryProvider,
   type ExistingProvider,
   type ConstructorProvider,
-  type LazyClassProvider,
-  type LazyFactoryProvider,
   type MultiType,
 } from './provider';
 export {
@@ -44,7 +37,6 @@ export {
   getUnifiedInjectMetadata,
   hasInjectMetadata,
 } from './inject';
-export { Optional, Self, SkipSelf, Host } from './parameter-decorators';
 export { type InjectOptions } from './inject-options';
 export {
   InternalInjectFlags,

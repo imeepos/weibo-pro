@@ -1,6 +1,5 @@
 import { InjectionToken } from './injection-token';
 import { ForwardRef } from './forward-ref';
-import { HostAttributeToken } from './host-attribute-token';
 import { Provider } from './provider';
 
 /**
@@ -24,7 +23,6 @@ export type SymbolToken<T> = symbol & { __type?: T };
  */
 export type InjectionTokenType<T> =
   | InjectionToken<T>
-  | HostAttributeToken<T>
   | Type<T>
   | AbstractType<T>
   | StringToken<T>

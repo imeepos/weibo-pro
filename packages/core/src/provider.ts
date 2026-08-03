@@ -63,23 +63,6 @@ export interface ConstructorProvider<T> extends BaseProvider<T> {
 }
 
 /**
- * 延迟类提供者，延迟到首次获取时才实例化类
- * @template T 提供的实例类型
- */
-export interface LazyClassProvider<T> extends BaseProvider<T> {
-  useLazyClass: new (...args: any[]) => T;
-}
-
-/**
- * 延迟工厂提供者，延迟到首次获取时才调用工厂函数
- * @template T 提供的实例类型
- */
-export interface LazyFactoryProvider<T> extends BaseProvider<T> {
-  useLazyFactory: (...deps: any[]) => T;
-  deps?: InjectionTokenType<any>[];
-}
-
-/**
  * 提供者联合类型，包含所有可能的提供者类型
  * @template T 提供的值的类型，默认为 any
  */
@@ -88,6 +71,4 @@ export type Provider<T = any> =
   | ClassProvider<T>
   | FactoryProvider<T>
   | ExistingProvider<T>
-  | ConstructorProvider<T>
-  | LazyClassProvider<T>
-  | LazyFactoryProvider<T>;
+  | ConstructorProvider<T>;
