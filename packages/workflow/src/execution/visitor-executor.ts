@@ -6,8 +6,6 @@ import { catchError, switchMap, tap } from 'rxjs/operators';
 import { INode } from '../types';
 import { IDefaultVisitor, DEFAULT_VISITOR, DefaultVisitor } from '../defaultVisitor';
 import { NodeEvent } from './events';
-import type { IEventStore } from '../event-store';
-import { EVENT_STORE, MemoryEventStore } from '../event-store';
 import { globalRuntime } from '../runtime';
 
 /**
@@ -24,11 +22,9 @@ import { globalRuntime } from '../runtime';
  */
 @Injectable()
 export class VisitorExecutor implements Visitor {
-    private eventStore: IEventStore
     private defaultVisitor: IDefaultVisitor
 
     constructor() {
-        this.eventStore = root.get(EVENT_STORE, new MemoryEventStore())
         // 从 DI 容器获取 DefaultVisitor，如果未注册则使用本地的 DefaultVisitor
         this.defaultVisitor = root.get(DEFAULT_VISITOR, new DefaultVisitor())
     }

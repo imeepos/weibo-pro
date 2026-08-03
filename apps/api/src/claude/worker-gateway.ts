@@ -33,9 +33,6 @@ export class WorkerGateway {
   /** 响应回调映射: taskId → callback */
   private responseCallbacks = new Map<string, (response: ClaudeResponse) => void>();
 
-  /** 批准响应回调映射: clientId → callback */
-  private approvalCallbacks = new Map<string, (data: { requestId: string; approved: boolean }) => void>();
-
   /**
    * 初始化 Worker Gateway
    */
@@ -186,7 +183,6 @@ export class WorkerGateway {
    */
   shutdown(): void {
     this.responseCallbacks.clear();
-    this.approvalCallbacks.clear();
     this.workerConnections.forEach(connection => {
       connection.socket.disconnect();
     });

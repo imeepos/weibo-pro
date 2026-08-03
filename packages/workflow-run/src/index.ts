@@ -159,6 +159,3 @@ export { CronSchedulerService } from './services/CronSchedulerService'
 export { WorkflowExecutionService } from './services/WorkflowExecutionService'
 export { ChapterQualityService } from './services/ChapterQualityService'
 export { StreamingLlmInvoker } from './services/StreamingLlmInvoker'
-
-// EventStore - 导出 providers 供应用层注册
-export { DatabaseEventStore } from './event-store/database'

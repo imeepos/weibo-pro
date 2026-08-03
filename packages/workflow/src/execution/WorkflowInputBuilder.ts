@@ -6,7 +6,7 @@ import { NodeEvent } from './events';
 import { EdgeMode, IEdge, EDGE_MODE_PRIORITY } from '../types';
 import { NodeInputBuilder } from './NodeInputBuilder';
 import { EdgeStreamBuilder } from './EdgeStreamBuilder';
-import { EdgeCombiner } from './EdgeCombiner';
+import { groupEdgesByMode } from './EdgeCombiner';
 import { StreamMerger } from './StreamMerger';
 import { EDGE_MODE_STRATEGY, IEdgeModeStrategy } from './EdgeModeStrategy';
 
@@ -23,7 +23,6 @@ export class WorkflowInputBuilder {
     constructor(
         @Inject(NodeInputBuilder) private nodeInputBuilder: NodeInputBuilder,
         @Inject(EdgeStreamBuilder) private edgeStreamBuilder: EdgeStreamBuilder,
-        @Inject(EdgeCombiner) private edgeCombiner: EdgeCombiner,
         @Inject(StreamMerger) private streamMerger: StreamMerger,
         @Inject(EDGE_MODE_STRATEGY) private strategies: Map<EdgeMode, IEdgeModeStrategy>,
     ) { }
@@ -115,7 +114,7 @@ export class WorkflowInputBuilder {
         this.nodeInputBuilder.validatePortEdges(targetNode, edges);
 
         // 按 EdgeMode 分组
-        const modeGroups = this.edgeCombiner.groupEdgesByMode(edges);
+        const modeGroups = groupEdgesByMode(edges);
 
         // 为每个模式组构建流
         const groupStreams: Array<{ mode: EdgeMode; priority: number; stream$: Observable<any> }> = [];

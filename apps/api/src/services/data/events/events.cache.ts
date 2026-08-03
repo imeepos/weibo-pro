@@ -2,6 +2,13 @@
  * 构建与某个事件相关的所有缓存键。
  * 包括事件详情、趋势、影响力、地理位置、关键词、情感、列表等缓存。
  */
+/** 事件列表缓存统一前缀，清除时按此模式匹配全部组合（分页/搜索/分类/时间窗等） */
+export const EVENT_LIST_CACHE_PATTERN = 'events:detail:list:*';
+
+/**
+ * 构建与某个事件相关的精确缓存键。
+ * 事件列表缓存不在此枚举（组合无限），统一走 EVENT_LIST_CACHE_PATTERN 模式清除。
+ */
 export function buildEventCacheKeys(eventId: string): string[] {
   return [
     // 事件详情相关缓存
@@ -21,27 +28,5 @@ export function buildEventCacheKeys(eventId: string): string[] {
     `event:anomalies:${eventId}`,
     `event:peaks:${eventId}`,
     `event:user-relations:${eventId}`,
-    // 事件列表缓存（需要清除所有可能的列表缓存）
-    `events:detail:list:all:1:10::::0.05`,
-    `events:detail:list:all:1:10:::all::0.05`,
-    `events:detail:list:24h:1:10::::0.05`,
-    `events:detail:list:24h:1:10:::all::0.05`,
-    `events:detail:list:7d:1:10::::0.05`,
-    `events:detail:list:7d:1:10:::all::0.05`,
-    `events:detail:list:30d:1:10::::0.05`,
-    `events:detail:list:30d:1:10:::all::0.05`,
-    // 更多可能的列表缓存组合
-    `events:detail:list:all:1:10::test::0.05`,
-    `events:detail:list:24h:1:10::test::0.05`,
-    `events:detail:list:7d:1:10::test::0.05`,
-    `events:detail:list:30d:1:10::test::0.05`,
-    `events:detail:list:all:1:20::::0.05`,
-    `events:detail:list:24h:1:20::::0.05`,
-    `events:detail:list:7d:1:20::::0.05`,
-    `events:detail:list:30d:1:20::::0.05`,
-    `events:detail:list:all:1:20:::all::0.05`,
-    `events:detail:list:24h:1:20:::all::0.05`,
-    `events:detail:list:7d:1:20:::all::0.05`,
-    `events:detail:list:30d:1:20:::all::0.05`,
   ];
 }

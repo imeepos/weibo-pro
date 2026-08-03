@@ -22,12 +22,11 @@ export function getTimeGranularity(timeRange: TimeRange): string {
   const unit = match[2];
 
   if (unit === 'h') {
-    // 小时级别：按小时或分钟
-    return value <= 6 ? 'hour' : 'hour';
+    // 小时级别：统一按小时
+    return 'hour';
   } else {
     // 天级别
     if (value <= 7) return 'hour';      // 7天内按小时
-    if (value <= 30) return 'day';      // 30天内按天
     if (value <= 90) return 'day';      // 90天内按天
     return 'week';                       // 更长时间按周
   }

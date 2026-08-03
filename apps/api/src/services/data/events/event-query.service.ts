@@ -45,10 +45,10 @@ export class EventQueryService {
   }
 
   /**
-   * 根据模式清空缓存
+   * 根据模式清空缓存（支持 Redis 通配符，如 `events:detail:list:*`）
    */
   async clearCacheByPattern(pattern: string): Promise<void> {
-    await this.cacheService.del(pattern);
+    await this.cacheService.delPattern(pattern);
   }
 
   async getEventList(

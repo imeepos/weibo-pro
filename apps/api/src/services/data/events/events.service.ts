@@ -44,7 +44,7 @@ import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
 import { buildEventDetail } from './events.detail';
-import { buildEventCacheKeys } from './events.cache';
+import { buildEventCacheKeys, EVENT_LIST_CACHE_PATTERN } from './events.cache';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
@@ -240,7 +240,7 @@ export class EventsService {
   async refreshCache(eventId: string): Promise<{ success: boolean; clearedKeys: string[] }> {
     const clearedKeys: string[] = [];
 
-    // 逐个清除缓存
+    // 逐个清除详情缓存
     for (const key of buildEventCacheKeys(eventId)) {
       try {
         await this.queryService.clearCacheByPattern(key);
@@ -249,6 +249,14 @@ export class EventsService {
         // 忽略清除失败的单键错误
         this.logger.warn(`Failed to clear cache key: ${key}`, error);
       }
+    }
+
+    // 事件列表缓存按前缀模式清除（覆盖任意分页/搜索组合）
+    try {
+      await this.queryService.clearCacheByPattern(EVENT_LIST_CACHE_PATTERN);
+      clearedKeys.push(EVENT_LIST_CACHE_PATTERN);
+    } catch (error) {
+      this.logger.warn(`Failed to clear cache pattern: ${EVENT_LIST_CACHE_PATTERN}`, error);
     }
 
     this.logger.info(`Cache cleared for event ${eventId}, cleared ${clearedKeys.length} keys`);
