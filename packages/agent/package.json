@@ -18,7 +18,7 @@
     "dev": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "check-types": "tsc --noEmit",
-    "test": "echo \"No tests configured for @sker/agent\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@langchain/core": "^1.0.4",
@@ -41,6 +41,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "tsup": "^8.4.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.0.16"
   }
 }

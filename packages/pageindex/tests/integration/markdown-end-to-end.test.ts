@@ -1,8 +1,47 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import { md_to_tree } from '../../src/markdown/page-index-md.js';
 import { join } from 'path';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
+
+const multiLevelMd = `# 多级标题测试文档
+
+这是多级标题测试文档的简介内容。
+
+## 第一级标题
+
+### 第二级标题
+
+#### 第三级标题
+
+这是第三级标题下的内容。
+
+### 另一个第二级标题
+
+这是另一个第二级标题下的内容。
+
+## 总结
+
+文档总结。
+`;
 
 describe('Markdown处理端到端测试', () => {
+  beforeAll(() => {
+    // fixtures 目录中的 .md 文件被根 .gitignore 的 *.md 规则忽略，不会随仓库提交，
+    // 因此测试在缺失时自动创建（与 cli-md.test.ts 对 sample.md 的处理方式一致）。
+    const fixturesDir = join(process.cwd(), 'tests/fixtures');
+    if (!existsSync(fixturesDir)) {
+      mkdirSync(fixturesDir, { recursive: true });
+    }
+    const multiLevelPath = join(fixturesDir, 'multi-level.md');
+    if (!existsSync(multiLevelPath)) {
+      writeFileSync(multiLevelPath, multiLevelMd);
+    }
+    const emptyPath = join(fixturesDir, 'empty.md');
+    if (!existsSync(emptyPath)) {
+      writeFileSync(emptyPath, '');
+    }
+  });
+
   const mockOptions = {
     ifThinning: false,
     minTokenThreshold: 5000,

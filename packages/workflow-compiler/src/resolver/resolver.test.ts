@@ -21,30 +21,30 @@ describe('Module System - Phase 5', () => {
     it('should tokenize import keyword', () => {
       const lexer = new Lexer('import')
       const tokens = lexer.tokenize()
-      expect(tokens[0].type).toBe(TokenType.IMPORT)
+      expect(tokens[0]!.type).toBe(TokenType.IMPORT)
     })
 
     it('should tokenize use keyword', () => {
       const lexer = new Lexer('use')
       const tokens = lexer.tokenize()
-      expect(tokens[0].type).toBe(TokenType.USE)
+      expect(tokens[0]!.type).toBe(TokenType.USE)
     })
 
     it('should tokenize as keyword', () => {
       const lexer = new Lexer('as')
       const tokens = lexer.tokenize()
-      expect(tokens[0].type).toBe(TokenType.AS)
+      expect(tokens[0]!.type).toBe(TokenType.AS)
     })
 
     it('should tokenize full import statement', () => {
       const lexer = new Lexer('import "./common.wf" as common')
       const tokens = lexer.tokenize()
-      expect(tokens[0].type).toBe(TokenType.IMPORT)
-      expect(tokens[1].type).toBe(TokenType.STRING)
-      expect(tokens[1].value).toBe('./common.wf')
-      expect(tokens[2].type).toBe(TokenType.AS)
-      expect(tokens[3].type).toBe(TokenType.IDENTIFIER)
-      expect(tokens[3].value).toBe('common')
+      expect(tokens[0]!.type).toBe(TokenType.IMPORT)
+      expect(tokens[1]!.type).toBe(TokenType.STRING)
+      expect(tokens[1]!.value).toBe('./common.wf')
+      expect(tokens[2]!.type).toBe(TokenType.AS)
+      expect(tokens[3]!.type).toBe(TokenType.IDENTIFIER)
+      expect(tokens[3]!.value).toBe('common')
     })
   })
 
@@ -64,8 +64,8 @@ describe('Module System - Phase 5', () => {
 
       expect(ast.imports).toBeDefined()
       expect(ast.imports).toHaveLength(1)
-      expect(ast.imports![0].path).toBe('./common.wf')
-      expect(ast.imports![0].alias).toBe('common')
+      expect(ast.imports![0]!.path).toBe('./common.wf')
+      expect(ast.imports![0]!.alias).toBe('common')
     })
 
     it('should parse import declaration without alias', () => {
@@ -83,8 +83,8 @@ describe('Module System - Phase 5', () => {
 
       expect(ast.imports).toBeDefined()
       expect(ast.imports).toHaveLength(1)
-      expect(ast.imports![0].path).toBe('./common.wf')
-      expect(ast.imports![0].alias).toBeUndefined()
+      expect(ast.imports![0]!.path).toBe('./common.wf')
+      expect(ast.imports![0]!.alias).toBeUndefined()
     })
 
     it('should parse multiple imports', () => {
@@ -102,8 +102,8 @@ describe('Module System - Phase 5', () => {
       const ast = parser.parse()
 
       expect(ast.imports).toHaveLength(2)
-      expect(ast.imports![0].alias).toBe('common')
-      expect(ast.imports![1].alias).toBe('utils')
+      expect(ast.imports![0]!.alias).toBe('common')
+      expect(ast.imports![1]!.alias).toBe('utils')
     })
 
     it('should parse use declaration', () => {
@@ -122,9 +122,9 @@ describe('Module System - Phase 5', () => {
 
       expect(ast.uses).toBeDefined()
       expect(ast.uses).toHaveLength(1)
-      expect(ast.uses![0].moduleAlias).toBe('common')
-      expect(ast.uses![0].nodeName).toBe('LoginNode')
-      expect(ast.uses![0].localAlias).toBe('login')
+      expect(ast.uses![0]!.moduleAlias).toBe('common')
+      expect(ast.uses![0]!.nodeName).toBe('LoginNode')
+      expect(ast.uses![0]!.localAlias).toBe('login')
     })
   })
 
@@ -146,7 +146,7 @@ describe('Module System - Phase 5', () => {
 
       expect(result.name).toBe('common')
       expect(result.nodes).toHaveLength(1)
-      expect(result.nodes[0].id).toBe('CommonLogin')
+      expect(result.nodes[0]!.id).toBe('CommonLogin')
     })
 
     it('should resolve relative path from base path', () => {

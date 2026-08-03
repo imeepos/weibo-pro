@@ -65,6 +65,7 @@
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
+    "@sker/workflow-compiler": "workspace:*",
     "@types/node": "^26.1.2",
     "@types/node-schedule": "^2.1.7",
     "@types/pg": "^8.11.0",

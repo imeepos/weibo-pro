@@ -34,8 +34,8 @@ describe('WorkflowValidator', () => {
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
       expect(result.errors).toHaveLength(1)
-      expect(result.errors[0].message).toContain('search')
-      expect(result.errors[0].severity).toBe('error')
+      expect(result.errors[0]!.message).toContain('search')
+      expect(result.errors[0]!.severity).toBe('error')
     })
   })
 
@@ -76,7 +76,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('nonexistent')
+      expect(result.errors[0]!.message).toContain('nonexistent')
     })
 
     it('should fail when connection references non-existent target node', () => {
@@ -95,7 +95,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('analyzer')
+      expect(result.errors[0]!.message).toContain('analyzer')
     })
   })
 
@@ -135,7 +135,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('undeclared')
+      expect(result.errors[0]!.message).toContain('undeclared')
     })
 
     it('should check variables in nested expressions', () => {
@@ -161,7 +161,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('missing')
+      expect(result.errors[0]!.message).toContain('missing')
     })
 
     it('should check variables in array expressions', () => {
@@ -185,7 +185,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('notDefined')
+      expect(result.errors[0]!.message).toContain('notDefined')
     })
 
     it('should check variables in binary expressions', () => {
@@ -211,7 +211,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('x')
+      expect(result.errors[0]!.message).toContain('x')
     })
 
     it('should check variables in connection conditions', () => {
@@ -233,7 +233,7 @@ describe('WorkflowValidator', () => {
       }
       const result = validator.validate(ast)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('flag')
+      expect(result.errors[0]!.message).toContain('flag')
     })
   })
 

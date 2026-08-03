@@ -62,9 +62,12 @@ export function handlerRemote(ast: Ast, $input: Observable<any>, ctx: any): Obse
         ).subscribe({
             next: (event) => obs.next(event),
             complete: () => {
-                ast.state = 'success';
-                ast.error = undefined;
-                obs.next({ type: 'node_success', id: ast.id })
+                // 错误经 catchError 处理后 ast.state 已为 'fail'，不应再标记为成功
+                if (ast.state !== 'fail') {
+                    ast.state = 'success';
+                    ast.error = undefined;
+                    obs.next({ type: 'node_success', id: ast.id })
+                }
                 obs.complete();
             },
             error: (error) => {

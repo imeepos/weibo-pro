@@ -18,7 +18,7 @@ describe('E2E - 真实文件导入流程', () => {
   beforeEach(() => {
     root.set([{ provide: WorkflowEventBus, useClass: WorkflowEventBus }])
     useWorkflowStore.getState().clear()
-    compiler = root.get(Compiler)
+    _compiler = root.get(Compiler)
   })
 
   it('应该通过 initWorkflow 正确导入真实文件并保留连线', () => {

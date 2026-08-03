@@ -21,7 +21,7 @@
               "node_id": "0003"
             }
           ],
-          "text_token_count": 12,
+          "text_token_count": 11,
           "prefix_summary": "\n小节内容。\n",
           "node_id": "0002"
         },
@@ -35,17 +35,17 @@
               "line_num": 17,
               "level": 3,
               "nodes": [],
-              "text_token_count": 5,
+              "text_token_count": 4,
               "summary": "\n更多内容。\n",
               "node_id": "0005"
             }
           ],
-          "text_token_count": 12,
+          "text_token_count": 10,
           "prefix_summary": "\n更多内容。\n",
           "node_id": "0004"
         }
       ],
-      "text_token_count": 36,
+      "text_token_count": 30,
       "node_id": "0001"
     }
   ]

@@ -5,17 +5,44 @@ import { RedisClient } from '@sker/redis'
 import { WorkflowScheduleEntity, ScheduleStatus, ScheduleType } from '@sker/entities'
 import { logger } from '@sker/core'
 
+// 共享 mock 状态：vi.mock 工厂被提升到模块顶部，无法直接引用 describe 作用域内的变量，
+// 因此通过 vi.hoisted 定义可共享的 mock 数据容器。
+const mockState = vi.hoisted(() => ({ schedules: [] as WorkflowScheduleEntity[] }))
+
+// Mock useEntityManager：确保 CronSchedulerService（静态导入）拿到的是 mock 实现，
+// 不会在单元测试中触发真实 TypeORM DataSource 连接。
+vi.mock('@sker/entities', async () => {
+  const actual = await vi.importActual('@sker/entities')
+  return {
+    ...actual,
+    useEntityManager: vi.fn().mockImplementation(async (callback: (m: any) => Promise<any>) => {
+      // 创建一个模拟的 EntityManager
+      const mockManager = {
+        find: vi.fn().mockResolvedValue(mockState.schedules),
+        findOne: vi.fn().mockImplementation(async (options: any) => {
+          if (options?.where?.id) {
+            return mockState.schedules.find(s => s.id === options.where.id)
+          }
+          return null
+        }),
+        update: vi.fn().mockResolvedValue({ affected: 1 }),
+        transaction: vi.fn().mockImplementation(async (cb: any) => {
+          return await cb(mockManager)
+        })
+      }
+      return await callback(mockManager)
+    })
+  }
+})
+
 describe('CronSchedulerService - 动态调度加载', () => {
   let service: CronSchedulerService
   let mockExecutionService: WorkflowExecutionService
   let mockRedis: RedisClient
 
-  // 模拟 useEntityManager 返回数据
-  let mockSchedules: WorkflowScheduleEntity[] = []
-
   beforeEach(() => {
     // 重置 mock 数据
-    mockSchedules = []
+    mockState.schedules = []
 
     mockExecutionService = {
       execute: vi.fn()
@@ -34,31 +61,6 @@ describe('CronSchedulerService - 动态调度加载', () => {
       }),
       publish: vi.fn().mockResolvedValue(1)
     } as any
-
-    // Mock useEntityManager 来返回测试数据
-    vi.doMock('@sker/entities', async () => {
-      const actual = await vi.importActual('@sker/entities')
-      return {
-        ...actual,
-        useEntityManager: vi.fn().mockImplementation(async (callback) => {
-          // 创建一个模拟的 EntityManager
-          const mockManager = {
-            find: vi.fn().mockResolvedValue(mockSchedules),
-            findOne: vi.fn().mockImplementation(async (options) => {
-              if (options?.where?.id) {
-                return mockSchedules.find(s => s.id === options.where.id)
-              }
-              return null
-            }),
-            update: vi.fn().mockResolvedValue({ affected: 1 }),
-            transaction: vi.fn().mockImplementation(async (callback) => {
-              return await callback(mockManager)
-            })
-          }
-          return await callback(mockManager)
-        })
-      }
-    })
 
     service = new CronSchedulerService(mockExecutionService, mockRedis)
   })
@@ -108,7 +110,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       }
 
       // 设置 mock 数据
-      mockSchedules = [schedule]
+      mockState.schedules = [schedule]
 
       // Mock find 和 findOne
       const _mockFindOne = vi.fn()
@@ -302,7 +304,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       }
 
       // 设置 mock 数据
-      mockSchedules = [disabledSchedule]
+      mockState.schedules = [disabledSchedule]
 
       // Act - 添加禁用的调度到服务（模拟已存在的任务）
       await service.addSchedule(disabledSchedule)
@@ -328,7 +330,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       }
 
       // 设置 mock 数据
-      mockSchedules = [expiredSchedule]
+      mockState.schedules = [expiredSchedule]
 
       // Act - 添加过期的调度到服务
       await service.addSchedule(expiredSchedule)
@@ -352,7 +354,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       }
 
       // 设置 mock 数据
-      mockSchedules = [enabledSchedule]
+      mockState.schedules = [enabledSchedule]
 
       // Act - 添加启用的调度
       await service.addSchedule(enabledSchedule)
@@ -375,7 +377,7 @@ describe('CronSchedulerService - 动态调度加载', () => {
       }
 
       // 设置 mock 数据
-      mockSchedules = [disabledSchedule]
+      mockState.schedules = [disabledSchedule]
 
       // Act - 直接调用 removeSchedule 模拟 reloadSchedule 发现禁用后的行为
       await service.addSchedule(disabledSchedule)

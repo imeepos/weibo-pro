@@ -153,7 +153,7 @@ describe('EventDispatcherAstVisitor - TDD 测试', () => {
     uncrawledEvents = createMockUncrawledEvents(categories);
 
     // 初始化 Mock 对象
-    mockEntityManager = new MockEntityManager(uncrawledEvents);
+    _mockEntityManager = new MockEntityManager(uncrawledEvents);
 
     const validLlmResponse = `请选择本次要爬取的事件：
 
@@ -164,7 +164,7 @@ describe('EventDispatcherAstVisitor - TDD 测试', () => {
 }
 \`\`\``;
 
-    mockLlmClient = new MockLlmClient(validLlmResponse);
+    _mockLlmClient = new MockLlmClient(validLlmResponse);
   });
 
   describe('基本功能测试', () => {

@@ -3,12 +3,12 @@ import { WorkflowDSLCompiler, compile } from './compiler'
 import { Ast, Node, Input, Output } from '@sker/workflow'
 
 // Test nodes
-@Node({ name: 'LoginNode', description: 'Login node' })
+@Node({ title: 'LoginNode' })
 class LoginNodeAst extends Ast {
   @Output() account?: string
 }
 
-@Node({ name: 'SearchNode', description: 'Search node' })
+@Node({ title: 'SearchNode' })
 class SearchNodeAst extends Ast {
   @Input() account?: string
   @Input() keyword?: string
@@ -16,14 +16,14 @@ class SearchNodeAst extends Ast {
   @Output() results?: string[]
 }
 
-@Node({ name: 'AnalyzerNode', description: 'Analyzer node' })
+@Node({ title: 'AnalyzerNode' })
 class AnalyzerNodeAst extends Ast {
   @Input() data?: string[]
   @Output() sentiment?: number
 }
 
 describe('WorkflowDSLCompiler', () => {
-  const nodeRegistry = new Map<string, typeof Ast>([
+  const nodeRegistry = new Map<string, new (...args: any[]) => Ast>([
     ['LoginNodeAst', LoginNodeAst],
     ['SearchNodeAst', SearchNodeAst],
     ['AnalyzerNodeAst', AnalyzerNodeAst],

@@ -171,7 +171,7 @@ describe('Parser', () => {
         }
       `)
 
-      const keywords = ast.nodes[0]!.inputs!.keywords
+      const keywords = ast.nodes[0]!.inputs!.keywords!
       expect(keywords.type).toBe('Array')
       expect((keywords as any).elements).toHaveLength(3)
     })

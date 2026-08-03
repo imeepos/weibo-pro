@@ -25,7 +25,8 @@
   "scripts": {
     "build": "tsup",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@sker/store": "workspace:*",
@@ -38,12 +39,17 @@
   "devDependencies": {
     "@sker/eslint-config": "workspace:*",
     "@sker/typescript-config": "workspace:*",
+    "@testing-library/react": "^16.2.0",
     "@types/minimatch": "^6.0.0",
     "@types/node": "^26.1.2",
     "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "eslint": "^10.8.0",
+    "jsdom": "^30.0.1",
     "minimatch": "^10.1.1",
+    "react-dom": "^19.1.1",
     "tsup": "^8.4.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.0.16"
   }
 }
