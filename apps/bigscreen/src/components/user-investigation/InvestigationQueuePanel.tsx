@@ -15,14 +15,14 @@ export function InvestigationQueuePanel({
   return (
     <section className="rounded-xl border bg-card p-4">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">高危候选队列</h2>
-        <p className="mt-1 text-sm text-muted-foreground">事件风险、蒸馏状态与 Persona 覆盖情况</p>
+        <h2 className="text-lg font-semibold text-foreground">重点用户队列</h2>
+        <p className="mt-1 text-sm text-muted-foreground">仅展示达到最低证据质量门槛的用户</p>
       </div>
 
       <div className="space-y-3">
         {queue.length === 0 ? (
           <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            当前没有高危候选。
+            当前没有达到证据质量门槛的重点用户。
           </div>
         ) : (
           queue.map((item) => (

@@ -6,6 +6,7 @@ import { useGraphStatistics } from '@/hooks/useGraphStatistics';
 import { useTheme } from '@/hooks/useTheme';
 import { useChartTheme } from '@/hooks/useChartConfig';
 import { GraphStatisticsPanel } from './GraphStatisticsPanel';
+import { sanitizeUserRelationNetwork } from './UserRelationGraph3D.sanitize';
 import * as d3Force from 'd3-force-3d';
 import { Subject } from 'rxjs';
 
@@ -22,6 +23,7 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   className = '',
   onNodeClick,
   onNodeHover,
+  edgeThreshold = 100,
 }) => {
   const { isDark } = useTheme();
   const chartTheme = useChartTheme();
@@ -30,19 +32,27 @@ export const UserRelationGraph3DOffscreen: React.FC<UserRelationGraph3DOffscreen
   const [isSimulating, setIsSimulating] = useState(false);
 
   // 计算统计数据
-  const { communityStats, topUsers, locationStats } = useGraphStatistics(graphData, network.nodes);
+  const visibleNetwork = useMemo(
+    () => sanitizeUserRelationNetwork(network, edgeThreshold),
+    [network, edgeThreshold]
+  );
+
+  const { communityStats, topUsers, locationStats } = useGraphStatistics(
+    graphData,
+    visibleNetwork.nodes
+  );
 
   const graphDataReady$ = useRef(new Subject<boolean>());
   const engineStopped$ = useRef(new Subject<boolean>());
 
   const networkKey = useMemo(
-    () => `${network.nodes.length}-${network.edges.length}`,
-    [network.nodes.length, network.edges.length]
+    () => `${visibleNetwork.nodes.length}-${visibleNetwork.edges.length}`,
+    [visibleNetwork.nodes.length, visibleNetwork.edges.length]
   );
 
   useEffect(() => {
-    if (network.nodes.length > 0 && network.edges.length > 0) {
-      detect(network.nodes, network.edges);
+    if (visibleNetwork.nodes.length > 0 && visibleNetwork.edges.length > 0) {
+      detect(visibleNetwork.nodes, visibleNetwork.edges);
     }
      
   }, [networkKey]);

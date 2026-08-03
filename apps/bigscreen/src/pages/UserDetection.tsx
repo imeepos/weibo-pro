@@ -34,6 +34,7 @@ const UserDetection: React.FC = () => {
 
   const {
     queue,
+    response: queueResponse,
     isLoading: queueLoading,
     error: queueError,
   } = useInvestigationQueue({
@@ -155,6 +156,11 @@ const UserDetection: React.FC = () => {
         onRiskLevelChange={setSelectedRiskLevel}
         riskLevels={riskLevels}
         riskLevelLabels={riskLevelLabels}
+        qualitySummary={queueResponse ? {
+          validCount: queueResponse.total,
+          filteredCount: queueResponse.filteredCount,
+          coverageRate: queueResponse.coverageRate,
+        } : null}
       />
 
       {queueError && (

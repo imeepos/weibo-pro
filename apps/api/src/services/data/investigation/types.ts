@@ -7,6 +7,10 @@ import type {
 
 export interface InvestigationQueueRow extends UserInvestigationQueueItem {
   taskStatus: InvestigationTaskStatus;
+  activityPostCount: number;
+  analyzedPostCount: number;
+  eligibleUserCount?: number;
+  candidateUserCount?: number;
 }
 
 export interface InvestigationQueueOptions extends UserInvestigationQueueQuery {

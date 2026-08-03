@@ -12,6 +12,7 @@ import {
 } from './NodeSizeCalculator';
 import { getRenderData, LAYER_THRESHOLDS } from './LayeredRenderer';
 import { getEdgeColor, getEdgeOpacity } from './UserRelationGraph3D.utils';
+import { sanitizeUserRelationNetwork } from './UserRelationGraph3D.sanitize';
 
 export interface GraphDataResult {
   nodes: any[];
@@ -43,8 +44,7 @@ export function buildGraphData(
 ): GraphDataResult {
   const startTime = performance.now();
 
-  const processedNodes = network.nodes;
-  const processedEdges = network.edges;
+  const { nodes: processedNodes, edges: processedEdges } = sanitizeUserRelationNetwork(network);
 
   // 性能监控：记录原始数据量
   if (showDebugHud) {

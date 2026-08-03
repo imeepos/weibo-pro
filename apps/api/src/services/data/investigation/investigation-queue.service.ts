@@ -11,10 +11,15 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class InvestigationQueueService {
   async getQueue(query: InvestigationQueueOptions): Promise<UserInvestigationQueueResponse> {
-    const rows = await this.fetchQueueRows(query);
+    const fetchedRows = await this.fetchQueueRows(query);
+    const rows = fetchedRows.filter(
+      (row) => row.activityPostCount >= 2 && row.analyzedPostCount > 0,
+    );
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
-    const total = rows.length;
+    const eligibleUserCount = fetchedRows[0]?.eligibleUserCount ?? rows.length;
+    const candidateUserCount = fetchedRows[0]?.candidateUserCount ?? fetchedRows.length;
+    const total = eligibleUserCount;
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
 
     return {
@@ -23,13 +28,17 @@ export class InvestigationQueueService {
         status: taskStatus,
       })),
       total,
+      filteredCount: Math.max(0, candidateUserCount - eligibleUserCount),
+      coverageRate: candidateUserCount
+        ? Number(((eligibleUserCount / candidateUserCount) * 100).toFixed(1))
+        : 0,
       page,
       pageSize,
       totalPages,
     };
   }
 
-  protected async fetchQueueRows(_query: InvestigationQueueOptions): Promise<InvestigationQueueRow[]> {
+  protected async fetchQueueRows(query: InvestigationQueueOptions): Promise<InvestigationQueueRow[]> {
     return useEntityManager(async (manager) => {
       const rows = await manager.query(
         `
@@ -43,7 +52,14 @@ export class InvestigationQueueService {
             LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
             WHERE p.deleted_at IS NULL
               AND p.user_id IS NOT NULL
+              AND ($2::text IS NULL OR p.event_id::text = $2::text)
             GROUP BY p.user_id
+          ),
+          eligible_activity AS (
+            SELECT *
+            FROM user_activity
+            WHERE post_count >= 2
+              AND analyzed_count > 0
           ),
           latest_task AS (
             SELECT DISTINCT ON (t.weibo_user_id)
@@ -86,16 +102,28 @@ export class InvestigationQueueService {
                 WHEN COALESCE(ua.post_count, 0) >= 10 THEN '高频发帖'
                 ELSE NULL
               END
-            ] AS risk_signals
+            ] AS risk_signals,
+            COALESCE(ua.post_count, 0) AS activity_post_count,
+            COALESCE(ua.analyzed_count, 0) AS analyzed_post_count,
+            (SELECT COUNT(*) FROM eligible_activity) AS eligible_user_count,
+            (SELECT COUNT(*) FROM user_activity) AS candidate_user_count
           FROM weibo_users u
-          LEFT JOIN user_activity ua ON ua.weibo_user_id = u.id::text
+          INNER JOIN eligible_activity ua ON ua.weibo_user_id = u.id::text
           LEFT JOIN latest_task lt ON lt.weibo_user_id = u.id::text
           LEFT JOIN persona_link pl ON pl.weibo_user_id = u.id::text
-          WHERE COALESCE(ua.post_count, 0) > 0
+          WHERE ($3::text IS NULL OR (
+            CASE
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::decimal / ua.analyzed_count) > 0.8 THEN 'critical'
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::decimal / ua.analyzed_count) > 0.6 THEN 'high'
+              WHEN ua.analyzed_count > 0 AND (ua.negative_count::decimal / ua.analyzed_count) > 0.3 THEN 'medium'
+              ELSE 'low'
+            END
+          ) = $3::text)
+            AND ($4::text IS NULL OR COALESCE(lt.status, 'queued') = $4::text)
           ORDER BY event_risk_score DESC, lt.created_at DESC NULLS LAST, u.followers_count DESC
           LIMIT $1
         `,
-        [_query.pageSize],
+        [query.pageSize, query.eventId ?? null, query.riskLevel ?? null, query.status ?? null],
       );
 
       return rows.map((row: any) => ({
@@ -109,6 +137,10 @@ export class InvestigationQueueService {
         lastDistilledAt: row.last_distilled_at ? new Date(row.last_distilled_at).toISOString() : null,
         riskSignals: (row.risk_signals || []).filter(Boolean),
         status: row.task_status,
+        activityPostCount: Number(row.activity_post_count || 0),
+        analyzedPostCount: Number(row.analyzed_post_count || 0),
+        eligibleUserCount: Number(row.eligible_user_count || 0),
+        candidateUserCount: Number(row.candidate_user_count || 0),
       }));
     });
   }

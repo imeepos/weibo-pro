@@ -9,7 +9,7 @@ export function UserDossierPanel({ dossier }: UserDossierPanelProps) {
   return (
     <section className="rounded-xl border bg-card p-4">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-foreground">用户 dossier</h2>
+        <h2 className="text-lg font-semibold text-foreground">用户档案</h2>
         <p className="mt-1 text-sm text-muted-foreground">主页历史发帖、关系样本与蒸馏前调查包</p>
       </div>
 

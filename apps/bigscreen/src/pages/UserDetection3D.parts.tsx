@@ -8,6 +8,7 @@ import {
   Rotate3D,
   Filter,
   Network,
+  Database,
 } from 'lucide-react';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
@@ -168,6 +169,13 @@ export function StatsPanel({ totalUsers, usersByRisk, statistics }: StatsPanelPr
         icon={Shield}
         color="green"
         chartComponent={<MiniTrendChart data={statistics?.trendData.lowRisk || []} color="#10b981" type="bar" />}
+      />
+      <MetricCard
+        title="已过滤数据"
+        value={statistics?.filteredCount ?? 0}
+        icon={Database}
+        color="gray"
+        suffix=" 条"
       />
 
       {/* 图例 */}

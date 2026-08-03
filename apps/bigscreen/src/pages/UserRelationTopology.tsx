@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import UserRelationGraph3DOffscreen from '../components/charts/UserRelationGraph3DOffscreen';
 import { getUserTypeColor } from '../components/charts/UserRelationGraph3D.utils';
+import { sanitizeUserRelationNetwork } from '../components/charts/UserRelationGraph3D.sanitize';
 import UserRelationControls from '../components/charts/UserRelationControls';
 import NodeDetailPanel from '../components/charts/NodeDetailPanel';
 import NetworkStatisticsCards from '../components/charts/NetworkStatisticsCards';
@@ -83,6 +84,10 @@ const UserRelationTopology: React.FC = () => {
     minWeight,
     limit: debouncedLimit,
   });
+  const visibleNetwork = useMemo(
+    () => (network ? sanitizeUserRelationNetwork(network, edgeThreshold) : null),
+    [network, edgeThreshold]
+  );
 
   const handleNodeClick = useCallback((node: UserRelationNode) => {
     setSelectedNode(node);
@@ -92,33 +97,28 @@ const UserRelationTopology: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-full bg-gray-50 dark:bg-gray-950 text-foreground relative overflow-hidden flex flex-col">
-      {/* 背景网格 */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:24px_24px]" />
-
-      {/* 未来感渐变光晕 - 多层叠加 */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-br from-cyan-500/20 via-primary/10 to-transparent dark:from-cyan-500/30 dark:via-primary/20 blur-3xl rounded-full animate-pulse-slow" />
-      <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-gradient-to-br from-violet-500/15 to-transparent dark:from-violet-500/25 blur-3xl rounded-full" />
-      <div className="absolute top-20 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-fuchsia-500/15 to-transparent dark:from-fuchsia-500/25 blur-3xl rounded-full" />
+    <div className="h-full bg-zinc-50 dark:bg-zinc-950 text-foreground relative overflow-hidden flex flex-col">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#71717a14_1px,transparent_1px),linear-gradient(to_bottom,#71717a14_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:32px_32px]" />
+      <div className="absolute inset-x-0 top-0 h-px bg-border/80" />
+      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent" />
 
       {/* 主内容区 - flex布局占满剩余空间 */}
       <div className="relative flex-1 overflow-hidden">
         {/* 3D图 - 占满整个区域 */}
-        {!isLoading && !error && network && (
+        {!isLoading && !error && visibleNetwork && (
           <div className="absolute inset-0">
-            {network.nodes.length === 0 ? (
+            {visibleNetwork.nodes.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <div className="text-center backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50 p-8">
-                  <div className="text-6xl mb-4 text-muted-foreground">—</div>
-                  <div className="text-xl font-semibold text-foreground mb-2">暂无数据</div>
-                  <div className="text-muted-foreground text-sm">
-                    尝试调整筛选条件或扩大时间范围
+                <div className="text-center backdrop-blur-md bg-background/90 dark:bg-background/75 rounded-lg shadow-xl border border-border p-8 max-w-sm">
+                  <div className="text-xl font-semibold text-foreground mb-2">暂无有效关系</div>
+                  <div className="text-muted-foreground text-sm leading-6">
+                    当前筛选下没有满足展示质量的真实用户关系。可降低最小交互次数、扩大时间范围或切换事件筛选。
                   </div>
                 </div>
               </div>
             ) : (
               <UserRelationGraph3DOffscreen
-                network={network}
+                network={visibleNetwork}
                 className="w-full h-full"
                 onNodeClick={handleNodeClick}
                 onNodeHover={handleNodeHover}
@@ -131,9 +131,9 @@ const UserRelationTopology: React.FC = () => {
         {/* 加载状态 */}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-background/30">
-            <div className="text-center backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50 p-8">
+            <div className="text-center backdrop-blur-md bg-background/90 dark:bg-background/75 rounded-lg shadow-xl border border-border p-8">
               <div className="inline-block w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-              <div className="text-lg font-semibold text-foreground">加载网络数据中...</div>
+              <div className="text-lg font-semibold text-foreground">加载网络数据中</div>
               <div className="text-sm text-muted-foreground mt-2">正在构建关系图谱</div>
             </div>
           </div>
@@ -142,13 +142,12 @@ const UserRelationTopology: React.FC = () => {
         {/* 错误状态 */}
         {error && (
           <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-background/30">
-            <div className="text-center max-w-md backdrop-blur-md bg-background/80 dark:bg-background/60 rounded-xl shadow-2xl border border-border/50 p-8">
-              <div className="text-3xl font-bold mb-2 text-destructive">错误</div>
+            <div className="text-center max-w-md backdrop-blur-md bg-background/90 dark:bg-background/75 rounded-lg shadow-xl border border-border p-8">
               <div className="text-lg text-destructive mb-3">加载失败</div>
-              <div className="text-muted-foreground mb-6 text-sm bg-destructive/10 rounded-lg p-3">{error}</div>
+              <div className="text-muted-foreground mb-6 text-sm bg-destructive/10 rounded-md p-3">{error}</div>
               <button
                 onClick={refetch}
-                className="px-6 py-3 bg-primary hover:bg-primary/90 rounded-lg transition-all duration-200 text-primary-foreground font-medium text-sm shadow-md hover:shadow-lg"
+                className="px-6 py-3 bg-primary hover:bg-primary/90 rounded-md transition-all duration-200 text-primary-foreground font-medium text-sm shadow-md hover:shadow-lg"
               >
                 重试
               </button>
@@ -210,9 +209,9 @@ const UserRelationTopology: React.FC = () => {
         />
 
         {/* 悬浮统计卡片 - 右下角 */}
-        {network && network.nodes.length > 0 && (
+        {visibleNetwork && visibleNetwork.nodes.length > 0 && (
           <NetworkStatisticsCards
-            statistics={network.statistics}
+            statistics={visibleNetwork.statistics}
             className="absolute bottom-6 right-8"
           />
         )}

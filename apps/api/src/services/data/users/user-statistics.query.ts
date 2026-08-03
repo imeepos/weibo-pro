@@ -2,21 +2,18 @@ import { useEntityManager } from '@sker/entities';
 import { getPreviousTimeRangeBoundaries, getTimeRangeBoundaries } from '../time-range.utils';
 import type { TimeRange } from '../types';
 import type { UserStatistics } from './types';
+import { buildUserDataQuality } from './user-data-quality';
 
 export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatistics> {
   return useEntityManager(async (manager) => {
     const current = getTimeRangeBoundaries(timeRange);
     const previous = getPreviousTimeRangeBoundaries(timeRange);
 
-    const totalUsersResult = await manager.query(`
-      SELECT COUNT(*) as total FROM weibo_users
-    `);
-    const totalUsers = parseInt(totalUsersResult[0]?.total) || 0;
-
     const currentStats = await manager.query(`
       WITH user_activity AS (
         SELECT
           p.user_id as user_id,
+          COUNT(p.id) as post_count,
           COUNT(DISTINCT nlp.id) as analyzed_count,
           COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
         FROM weibo_posts p
@@ -29,8 +26,8 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
       ),
       user_risk AS (
         SELECT
-          u.id as user_id,
-          COALESCE(ua.analyzed_count, 0) as analyzed_count,
+          ua.user_id,
+          ua.analyzed_count,
           CASE
             WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.6 THEN 'high'
             WHEN ua.analyzed_count > 0 AND (ua.negative_count::float / ua.analyzed_count) > 0.3 THEN 'medium'
@@ -40,12 +37,14 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
             WHEN ua.analyzed_count > 0 THEN (ua.negative_count::float / ua.analyzed_count) * 100
             ELSE 0
           END as risk_score
-        FROM weibo_users u
-        LEFT JOIN user_activity ua ON ua.user_id = u.id
+        FROM user_activity ua
+        WHERE ua.post_count >= 2
+          AND ua.analyzed_count > 0
       )
       SELECT
         COUNT(*) as total_users,
-        COUNT(CASE WHEN analyzed_count > 0 THEN 1 END) as total_active,
+        (SELECT COUNT(*) FROM user_activity) as candidate_users,
+        COUNT(*) as total_active,
         COUNT(CASE WHEN risk_level = 'high' THEN 1 END) as high_risk,
         COUNT(CASE WHEN risk_level = 'medium' THEN 1 END) as medium_risk,
         COUNT(CASE WHEN risk_level = 'low' THEN 1 END) as low_risk,
@@ -57,6 +56,7 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
       WITH user_activity AS (
         SELECT
           p.user_id as user_id,
+          COUNT(p.id) as post_count,
           COUNT(DISTINCT nlp.id) as analyzed_count,
           COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
         FROM weibo_posts p
@@ -77,7 +77,10 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
             ELSE 'low'
           END as risk_level
         FROM weibo_users u
-        LEFT JOIN user_activity ua ON ua.user_id = u.id
+        INNER JOIN user_activity ua
+          ON ua.user_id = u.id
+         AND ua.post_count >= 2
+         AND ua.analyzed_count > 0
       )
       SELECT
         COUNT(CASE WHEN analyzed_count > 0 THEN 1 END) as total_active,
@@ -100,6 +103,7 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
         SELECT
           DATE_TRUNC('day', p.ingested_at) as day,
           p.user_id as user_id,
+          COUNT(p.id) as post_count,
           COUNT(DISTINCT nlp.id) as analyzed_count,
           COUNT(DISTINCT CASE WHEN nlp.sentiment->>'overall' = 'negative' THEN nlp.id END) as negative_count
         FROM weibo_posts p
@@ -110,25 +114,45 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
           AND p.user_id IS NOT NULL
         GROUP BY DATE_TRUNC('day', p.ingested_at), p.user_id
       ),
+      cumulative_user_activity AS (
+        SELECT
+          ds.date,
+          dua.user_id,
+          SUM(dua.post_count) as post_count,
+          SUM(dua.analyzed_count) as analyzed_count,
+          SUM(dua.negative_count) as negative_count
+        FROM date_series ds
+        INNER JOIN daily_user_activity dua ON DATE_TRUNC('day', dua.day) <= ds.date
+        GROUP BY ds.date, dua.user_id
+      ),
       daily_user_risk AS (
         SELECT
           ds.date,
-          COUNT(DISTINCT dua.user_id) as total_users,
           COUNT(DISTINCT CASE
-            WHEN dua.analyzed_count > 0 AND (dua.negative_count::float / dua.analyzed_count) > 0.6
-            THEN dua.user_id
+            WHEN cua.post_count >= 2 AND cua.analyzed_count > 0
+            THEN cua.user_id
+          END) as total_users,
+          COUNT(DISTINCT CASE
+            WHEN cua.post_count >= 2
+              AND cua.analyzed_count > 0
+              AND (cua.negative_count::float / cua.analyzed_count) > 0.6
+            THEN cua.user_id
           END) as high_risk,
           COUNT(DISTINCT CASE
-            WHEN dua.analyzed_count > 0 AND (dua.negative_count::float / dua.analyzed_count) > 0.3
-            AND (dua.negative_count::float / dua.analyzed_count) <= 0.6
-            THEN dua.user_id
+            WHEN cua.post_count >= 2
+              AND cua.analyzed_count > 0
+              AND (cua.negative_count::float / cua.analyzed_count) > 0.3
+              AND (cua.negative_count::float / cua.analyzed_count) <= 0.6
+            THEN cua.user_id
           END) as medium_risk,
           COUNT(DISTINCT CASE
-            WHEN dua.analyzed_count = 0 OR (dua.negative_count::float / dua.analyzed_count) <= 0.3
-            THEN dua.user_id
+            WHEN cua.post_count >= 2
+              AND cua.analyzed_count > 0
+              AND (cua.negative_count::float / cua.analyzed_count) <= 0.3
+            THEN cua.user_id
           END) as low_risk
         FROM date_series ds
-        LEFT JOIN daily_user_activity dua ON DATE_TRUNC('day', dua.day) <= ds.date
+        LEFT JOIN cumulative_user_activity cua ON cua.date = ds.date
         GROUP BY ds.date
         ORDER BY ds.date
       )
@@ -148,14 +172,27 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const activityStats = await manager.query(`
+      WITH user_activity AS (
+        SELECT
+          p.user_id,
+          COUNT(*) FILTER (WHERE p.ingested_at >= $1::timestamptz) AS posts_today,
+          COUNT(*) FILTER (WHERE p.ingested_at >= $2::timestamptz) AS posts_week,
+          COUNT(*) AS posts_month,
+          COUNT(DISTINCT nlp.id) FILTER (WHERE p.ingested_at >= $1::timestamptz) AS analyzed_today,
+          COUNT(DISTINCT nlp.id) FILTER (WHERE p.ingested_at >= $2::timestamptz) AS analyzed_week,
+          COUNT(DISTINCT nlp.id) AS analyzed_month
+        FROM weibo_posts p
+        LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
+        WHERE p.ingested_at >= $3::timestamptz
+          AND p.deleted_at IS NULL
+          AND p.user_id IS NOT NULL
+        GROUP BY p.user_id
+      )
       SELECT
-        COUNT(DISTINCT CASE WHEN p.ingested_at >= $1::timestamptz THEN p.user_id END) as active_today,
-        COUNT(DISTINCT CASE WHEN p.ingested_at >= $2::timestamptz THEN p.user_id END) as active_week,
-        COUNT(DISTINCT CASE WHEN p.ingested_at >= $3::timestamptz THEN p.user_id END) as active_month
-      FROM weibo_posts p
-      WHERE p.ingested_at >= $3::timestamptz
-        AND p.deleted_at IS NULL
-        AND p.user_id IS NOT NULL
+        COUNT(*) FILTER (WHERE posts_today >= 2 AND analyzed_today > 0) as active_today,
+        COUNT(*) FILTER (WHERE posts_week >= 2 AND analyzed_week > 0) as active_week,
+        COUNT(*) FILTER (WHERE posts_month >= 2 AND analyzed_month > 0) as active_month
+      FROM user_activity
     `, [oneDayAgo, sevenDaysAgo, thirtyDaysAgo]);
 
     const row = currentStats[0] || {};
@@ -163,6 +200,10 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
     const actRow = activityStats[0] || {};
 
     const totalActive = parseInt(row.total_active) || 0;
+    const quality = buildUserDataQuality(
+      parseInt(row.candidate_users) || 0,
+      parseInt(row.total_users) || 0,
+    );
     const prevTotalActive = parseInt(prevRow.total_active) || 0;
     const avgRiskScore = parseFloat(row.avg_risk_score) || 0;
 
@@ -193,7 +234,9 @@ export async function fetchStatistics(timeRange: TimeRange): Promise<UserStatist
     };
 
     return {
-      total: totalUsers,
+      total: quality.eligibleCount,
+      filteredCount: quality.filteredCount,
+      coverageRate: quality.coverageRate,
       active: totalActive,
       suspended: 0,
       banned: 0,

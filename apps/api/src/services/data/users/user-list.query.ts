@@ -2,6 +2,7 @@ import { useEntityManager } from '@sker/entities';
 import { getTimeRangeBoundaries } from '../time-range.utils';
 import type { TimeRange } from '../types';
 import type { RiskLevel, UserListItem, UserListResponse } from './types';
+import { buildUserDataQuality } from './user-data-quality';
 
 export async function fetchUserList(
   timeRange: TimeRange,
@@ -39,6 +40,12 @@ export async function fetchUserList(
         WHERE p.deleted_at IS NULL
           AND p.user_id IS NOT NULL
         GROUP BY p.user_id
+      ),
+      eligible_activity AS (
+        SELECT *
+        FROM user_activity
+        WHERE post_count >= 2
+          AND analyzed_count > 0
       )
       SELECT
         u.id,
@@ -63,7 +70,7 @@ export async function fetchUserList(
         END as risk_level,
         COALESCE(u.avatar_hd, u.avatar_large, u.profile_image_url) as avatar
       FROM weibo_users u
-      LEFT JOIN user_activity ua ON ua.user_id = u.id
+      INNER JOIN eligible_activity ua ON ua.user_id = u.id
       LEFT JOIN all_user_activity aua ON aua.user_id = u.id
       ORDER BY
         COALESCE(ua.post_count, 0) DESC,
@@ -73,10 +80,29 @@ export async function fetchUserList(
     `, [start, end, pageSize, offset]);
 
     const totalResult = await manager.query(`
-      SELECT COUNT(*) as total
-      FROM weibo_users u
-    `);
-    const totalCount = parseInt(totalResult[0]?.total) || 0;
+      WITH user_activity AS (
+        SELECT
+          p.user_id AS user_id,
+          COUNT(p.id) AS post_count,
+          COUNT(DISTINCT nlp.id) AS analyzed_count
+        FROM weibo_posts p
+        LEFT JOIN post_nlp_results nlp ON nlp.post_id = p.id
+        WHERE p.ingested_at >= $1::timestamptz
+          AND p.ingested_at <= $2::timestamptz
+          AND p.deleted_at IS NULL
+          AND p.user_id IS NOT NULL
+        GROUP BY p.user_id
+      )
+      SELECT
+        COUNT(*) AS candidate_count,
+        COUNT(*) FILTER (WHERE post_count >= 2 AND analyzed_count > 0) AS eligible_count
+      FROM user_activity
+    `, [start, end]);
+    const quality = buildUserDataQuality(
+      parseInt(totalResult[0]?.candidate_count) || 0,
+      parseInt(totalResult[0]?.eligible_count) || 0,
+    );
+    const totalCount = quality.eligibleCount;
 
     const users: UserListItem[] = results.map((row: any) => {
       const analyzedCount = parseInt(row.analyzed_count);
@@ -124,6 +150,8 @@ export async function fetchUserList(
     return {
       users,
       total: totalCount,
+      filteredCount: quality.filteredCount,
+      coverageRate: quality.coverageRate,
       page,
       pageSize,
       totalPages,

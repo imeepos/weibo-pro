@@ -12,6 +12,7 @@ export class UsersController implements sdk.UsersController {
     this.usersService = root.get(UsersService);
   }
 
+  @Get('list')
   async getUserList(
     @Query('timeRange') timeRange?: TimeRange,
     @Query('page') page?: number,
@@ -20,10 +21,12 @@ export class UsersController implements sdk.UsersController {
     return this.usersService.getUserList(timeRange, page, pageSize);
   }
 
+  @Get('risk-levels')
   async getRiskLevels(@Query('timeRange') timeRange?: TimeRange) {
     return this.usersService.getRiskLevels(timeRange);
   }
 
+  @Get('statistics')
   async getStatistics(@Query('timeRange') timeRange?: TimeRange) {
     return this.usersService.getStatistics(timeRange);
   }

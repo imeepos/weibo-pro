@@ -13,4 +13,13 @@ describe('getBaseUrl', () => {
       getBaseUrl(new URL('http://localhost:9088/index'), 'http://localhost:8089')
     ).toBe('http://localhost:8089/api/auth')
   })
+
+  it('ignores configured API base URL for deployed non-local pages', () => {
+    expect(
+      getBaseUrl(
+        new URL('http://192.168.0.102:18088/index'),
+        'http://43.240.223.138:18088'
+      )
+    ).toBe('http://192.168.0.102:18088/api/auth')
+  })
 })

@@ -124,8 +124,8 @@ describe('UserDetection investigation mode', () => {
   it('renders queue, dossier, and distillation workspace in one page', () => {
     render(<UserDetection />);
 
-    expect(screen.getByText('高危候选队列')).toBeInTheDocument();
-    expect(screen.getByText('用户 dossier')).toBeInTheDocument();
+    expect(screen.getByText('重点用户队列')).toBeInTheDocument();
+    expect(screen.getByText('用户档案')).toBeInTheDocument();
     expect(screen.getByText('AI 蒸馏画像')).toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('UserDetection investigation mode', () => {
     expect(screen.getByText('全量 Persona 图谱')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('返回调查模式'));
-    expect(screen.getByText('高危候选队列')).toBeInTheDocument();
+    expect(screen.getByText('重点用户队列')).toBeInTheDocument();
   });
 
   it('drills from persona graph back into investigation mode with selected user', async () => {
@@ -145,7 +145,7 @@ describe('UserDetection investigation mode', () => {
     fireEvent.click(screen.getByText('查看全量图谱'));
     fireEvent.click(screen.getByText('用户A Persona'));
 
-    expect(screen.getByText('高危候选队列')).toBeInTheDocument();
+    expect(screen.getByText('重点用户队列')).toBeInTheDocument();
     expect(screen.getByText('当前选中用户')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
   });

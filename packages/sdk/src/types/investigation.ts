@@ -49,6 +49,8 @@ export interface UserInvestigationQueueItem {
 export interface UserInvestigationQueueResponse {
   items: UserInvestigationQueueItem[]
   total: number
+  filteredCount: number
+  coverageRate: number
   page: number
   pageSize: number
   totalPages: number

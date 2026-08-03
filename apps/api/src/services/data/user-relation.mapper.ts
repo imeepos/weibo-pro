@@ -5,6 +5,25 @@ import type {
   UserRelationType,
 } from '@sker/sdk';
 
+const VALID_USER_TYPES = new Set(['official', 'media', 'kol', 'normal']);
+
+function toValidUserId(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim();
+  return /^\d+$/.test(normalized) ? normalized : null;
+}
+
+function toPositiveWeight(value: unknown): number | null {
+  const weight = Number.parseInt(String(value), 10);
+  return Number.isFinite(weight) && weight > 0 ? weight : null;
+}
+
+function toSafeUserType(value: unknown): UserRelationNode['userType'] {
+  return typeof value === 'string' && VALID_USER_TYPES.has(value)
+    ? (value as UserRelationNode['userType'])
+    : 'normal';
+}
+
 /**
  * 从边数据构建用户关系网络（节点、边、统计信息）
  */
@@ -13,7 +32,21 @@ export async function buildNetworkFromEdges(
   type: UserRelationType,
   manager: any
 ): Promise<UserRelationNetwork> {
-  if (edgesData.length === 0) {
+  const candidateEdges = edgesData
+    .map((edge) => {
+      const source = toValidUserId(edge.source_user_id);
+      const target = toValidUserId(edge.target_user_id);
+      const weight = toPositiveWeight(edge.weight);
+
+      if (!source || !target || !weight || source === target) {
+        return null;
+      }
+
+      return { edge, source, target, weight };
+    })
+    .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge));
+
+  if (candidateEdges.length === 0) {
     return {
       nodes: [],
       edges: [],
@@ -28,9 +61,9 @@ export async function buildNetworkFromEdges(
   }
 
   const userIds = new Set<string>();
-  edgesData.forEach((edge) => {
-    userIds.add(edge.source_user_id);
-    userIds.add(edge.target_user_id);
+  candidateEdges.forEach(({ source, target }) => {
+    userIds.add(source);
+    userIds.add(target);
   });
 
   const userIdsArray = Array.from(userIds);
@@ -52,20 +85,17 @@ export async function buildNetworkFromEdges(
     usersData.map((u: any) => [u.id.toString(), u])
   );
 
-  const nodes: UserRelationNode[] = Array.from(userIds).map((userId) => {
-    const userData = usersMap.get(userId);
-    if (!userData) {
-      return {
-        id: userId,
-        name: `用户_${userId}`,
-        followers: 0,
-        influence: 0,
-        postCount: 0,
-        verified: false,
-        userType: 'normal',
-      };
-    }
+  const validEdges = candidateEdges.filter(
+    ({ source, target }) => usersMap.has(source) && usersMap.has(target)
+  );
+  const visibleUserIds = new Set<string>();
+  validEdges.forEach(({ source, target }) => {
+    visibleUserIds.add(source);
+    visibleUserIds.add(target);
+  });
 
+  const nodes: UserRelationNode[] = Array.from(visibleUserIds).map((userId) => {
+    const userData = usersMap.get(userId);
     const followers = parseInt(userData.followers_count) || 0;
     const posts = parseInt(userData.statuses_count) || 0;
     const influence = Math.min(
@@ -81,15 +111,15 @@ export async function buildNetworkFromEdges(
       influence,
       postCount: posts,
       verified: userData.verified || false,
-      userType: userData.user_type,
+      userType: toSafeUserType(userData.user_type),
       location: userData.location,
     };
   });
 
-  const edges: UserRelationEdge[] = edgesData.map((edge) => ({
-    source: edge.source_user_id,
-    target: edge.target_user_id,
-    weight: parseInt(edge.weight),
+  const edges: UserRelationEdge[] = validEdges.map(({ edge, source, target, weight }) => ({
+    source,
+    target,
+    weight,
     type,
     interactions: {
       likes: edge.like_count ? parseInt(edge.like_count) : undefined,

@@ -29,6 +29,8 @@ export interface UserListItem {
 export interface UserListResponse {
   users: UserListItem[];
   total: number;
+  filteredCount: number;
+  coverageRate: number;
   page: number;
   pageSize: number;
   totalPages: number;
@@ -49,6 +51,8 @@ export interface RiskLevelConfig {
 
 export interface UserStatistics {
   total: number;
+  filteredCount: number;
+  coverageRate: number;
   active: number;
   suspended: number;
   banned: number;

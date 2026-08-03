@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Database, Search, ShieldCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@sker/ui/components/ui/select';
 
 interface UserDetectionHeaderProps {
@@ -10,6 +10,11 @@ interface UserDetectionHeaderProps {
   onRiskLevelChange: (value: string) => void;
   riskLevels: string[];
   riskLevelLabels: Record<string, string>;
+  qualitySummary: {
+    validCount: number;
+    filteredCount: number;
+    coverageRate: number;
+  } | null;
 }
 
 export const UserDetectionHeader = React.memo<UserDetectionHeaderProps>(({
@@ -20,13 +25,15 @@ export const UserDetectionHeader = React.memo<UserDetectionHeaderProps>(({
   onRiskLevelChange,
   riskLevels,
   riskLevelLabels,
+  qualitySummary,
 }) => {
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
         <h1 className="text-2xl font-bold text-foreground">用户检测面板</h1>
         <p className="text-muted-foreground mt-1">
-          当前时间区间: {selectedTimeRange} | 用户行为监测与风险分析
+          {selectedTimeRange} · 基于可验证行为证据的用户风险分析
         </p>
       </div>
 
@@ -60,6 +67,38 @@ export const UserDetectionHeader = React.memo<UserDetectionHeaderProps>(({
           </SelectContent>
         </Select>
       </div>
+      </div>
+
+      {qualitySummary && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <div>
+              <div className="text-xs text-muted-foreground">有效用户</div>
+              <div className="text-lg font-semibold text-foreground">{qualitySummary.validCount.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+            <Database className="h-5 w-5 text-amber-600" />
+            <div>
+              <div className="text-xs text-muted-foreground">已过滤低质量数据</div>
+              <div className="text-lg font-semibold text-foreground">{qualitySummary.filteredCount.toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card px-4 py-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>数据覆盖率</span>
+              <span>{qualitySummary.coverageRate.toFixed(1)}%</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-[width]"
+                style={{ width: `${Math.min(100, Math.max(0, qualitySummary.coverageRate))}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });
