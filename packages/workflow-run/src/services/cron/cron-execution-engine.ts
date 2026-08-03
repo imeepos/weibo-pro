@@ -214,9 +214,8 @@ export class CronExecutionEngine {
         )
       }
 
-      // 执行完毕后调度下一次执行（增加延迟给 GC 更多时间）
+      // 执行完毕后立即调度下一轮；setImmediate 会让出当前调用栈，避免递归堆栈增长。
       if (this.options.registry.hasContinuous(scheduleId)) {
-        await this.delayBeforeNextRun(30000) // 从 5000ms 增加到 30000ms
         setImmediate(() => this.executeContinuous(schedule))
       }
     } catch (error) {

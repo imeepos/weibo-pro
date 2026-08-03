@@ -1,4 +1,5 @@
 import { LlmChatLog, LlmProvider, useEntityManager } from '@sker/entities';
+import { logger } from '@sker/core';
 import type { LlmChatLogStats, LlmChatLogListResult, LlmChatLogItem } from '@sker/sdk';
 import { Between } from 'typeorm';
 
@@ -205,5 +206,29 @@ export async function listChatLogs(
     }));
 
     return { items, total, page, pageSize };
+  });
+}
+
+/**
+ * 清理过期的 LLM 聊天日志：只保留最近 daysToKeep 天的数据，避免数据库无限增长
+ */
+export async function cleanupChatLogs(daysToKeep: number = 30): Promise<number> {
+  return useEntityManager(async m => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+    const repo = m.getRepository(LlmChatLog);
+
+    const result = await repo
+      .createQueryBuilder()
+      .delete()
+      .where('created_at < :cutoffDate', { cutoffDate })
+      .execute();
+
+    const deletedCount = result.affected ?? 0;
+
+    logger.info('已清理过期 LLM 聊天日志', { deletedCount, daysToKeep, cutoffDate });
+
+    return deletedCount;
   });
 }

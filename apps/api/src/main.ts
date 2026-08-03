@@ -18,6 +18,7 @@ import { createSkerAuthPlugin, BETTER_AUTH } from '@sker/auth';
 import { bearer, openAPI } from 'better-auth/plugins';
 import { UploadService } from './services/upload.service';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
+import { cleanupChatLogs } from './services/llm-chat-log.queries';
 import { BetterAuthWrapper } from './utils/auth-wrapper';
 import { validateEnv } from './config/env.config';
 import { runStartupChecks } from './config/startup-check';
@@ -74,6 +75,25 @@ async function bootstrap() {
   } catch (error) {
     logger.warn('Failed to load derived nodes', error);
   }
+
+  // LLM 聊天日志保留策略：只保留最近 1 个月（30 天）数据
+  // 启动时清理一次，此后每天定时清理，避免数据库无限增长
+  const CHAT_LOG_RETENTION_DAYS = 30;
+  const CHAT_LOG_CLEANUP_INTERVAL = 24 * 60 * 60 * 1000;
+
+  const runChatLogCleanup = async (): Promise<void> => {
+    try {
+      const deleted = await cleanupChatLogs(CHAT_LOG_RETENTION_DAYS);
+      logger.info('LLM 聊天日志保留清理完成', { deleted, retentionDays: CHAT_LOG_RETENTION_DAYS });
+    } catch (error) {
+      logger.error('LLM 聊天日志保留清理失败', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  await runChatLogCleanup();
+  setInterval(runChatLogCleanup, CHAT_LOG_CLEANUP_INTERVAL);
 
   // 开发环境端口清理
   if (process.env.DEV) {

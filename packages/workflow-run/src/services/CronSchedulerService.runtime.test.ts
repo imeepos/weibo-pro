@@ -24,7 +24,8 @@ vi.mock('@sker/entities', async () => {
       // 创建一个模拟的 EntityManager
       const mockManager = {
         find: vi.fn().mockResolvedValue(mockState.schedules),
-        findOne: vi.fn().mockImplementation(async (options: any) => {
+        findOne: vi.fn().mockImplementation(async (...args: any[]) => {
+          const options = args.length === 1 ? args[0] : args[1]
           if (options?.where?.id) {
             return mockState.schedules.find(s => s.id === options.where.id)
           }
@@ -197,6 +198,33 @@ describe('CronSchedulerService - 运行时行为', () => {
       // Assert - 验证任务已被移除
       expect(service.getJobCount()).toBe(0)
       expect(mockExecutionService.execute).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('CONTINUOUS - 持续调度轮转', () => {
+    it('成功完成一轮后应立即调度下一轮，不应保留 30 秒延迟定时器', async () => {
+      vi.useFakeTimers()
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
+
+      const schedule = createSchedule({
+        id: 'test-continuous-immediate-next-run',
+        name: '持续调度立即下一轮',
+        scheduleType: ScheduleType.CONTINUOUS,
+        status: ScheduleStatus.ENABLED
+      })
+      mockState.schedules = [schedule]
+
+      await service.addSchedule(schedule)
+      await vi.runOnlyPendingTimersAsync()
+
+      await vi.waitFor(() => {
+        expect(mockExecutionService.execute).toHaveBeenCalledTimes(1)
+      })
+
+      expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 30000)
+
+      service.removeSchedule(schedule.id)
+      setTimeoutSpy.mockRestore()
     })
   })
 })
