@@ -7,32 +7,28 @@
  */
 import 'reflect-metadata';
 import { describe, it, expect, vi } from 'vitest';
-import { of, type Subscriber } from 'rxjs';
 import { compile } from '@sker/workflow-compiler';
 import {
   executeWorkflow,
-  Compiler,
   WorkflowGraphAst,
   type NodeEvent,
 } from '@sker/workflow';
 import {
   WeiboLoginAst,
-  WeiboKeywordSearchAst,
   LastAst,
 } from '@sker/workflow-ast';
 import { root } from '@sker/core';
 
-import { WeiboLoginAstVisitor } from '../WeiboLoginAstVisitor';
-import { WeiboKeywordSearchAstVisitor } from '../WeiboKeywordSearchAstVisitor';
 import { WeiboAuthService } from '../services/weibo-auth.service';
 import { createMockAuthService, collectEvents } from '../test/helpers/workflow-link-test-utils';
-// 副作用导入：注册 LastAstVisitor 的 @Handler(LastAst)，让引擎把 LastAst
-// 分派到真实 workflow-run visitor，而非 DefaultVisitor。
-import '../LastAstVisitor';
+// 副作用导入：按 index 顺序加载全部 visitor，注册 @Handler(WeiboLoginAst) 与
+// @Handler(LastAst)，让引擎把对应节点分派到真实 workflow-run visitor，
+// 而非 DefaultVisitor。直接导入单个 visitor 会因模块求值顺序问题漏注册。
+import '../index';
 
 // ---------------------------------------------------------------------------
-// Mock @sker/entities：避免真实实体模块在导入时向 root 容器注册副作用，
-// 保证 WeiboAuthService 的 mock 覆盖在 executeWorkflow 链路中生效。
+// Mock @sker/entities 的 useEntityManager：避免真实实体模块在导入时向 root
+// 容器注册副作用，保证 WeiboAuthService 的 mock 覆盖在链路中生效。
 // ---------------------------------------------------------------------------
 vi.mock('@sker/entities', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

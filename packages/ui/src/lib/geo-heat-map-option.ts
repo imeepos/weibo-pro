@@ -78,6 +78,29 @@ export function buildGeoHeatMapOption({
   const values = data.map((item) => item.value).filter((v) => !isNaN(v))
   const maxValue = values.length > 0 ? Math.max(...values, 1) : 1
 
+  const visualMapOption =
+    showVisualMap && data.length > 0
+      ? {
+        min: 0,
+        max: maxValue,
+        left: 'left',
+        top: 'bottom',
+        text: ['高', '低'],
+        textStyle: {
+          color: colors.text,
+        },
+        backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+        borderColor: colors.border,
+        borderWidth: 1,
+        borderRadius: 6,
+        padding: [8, 12],
+        inRange: {
+          color: colorRange,
+        },
+        calculable: true,
+      }
+      : undefined
+
   return {
     title: title
       ? {
@@ -157,29 +180,7 @@ export function buildGeoHeatMapOption({
         color: colors.text,
       },
     },
-    ...(showVisualMap && data.length > 0
-      ? {
-        visualMap: {
-          min: 0,
-          max: maxValue,
-          left: 'left',
-          top: 'bottom',
-          text: ['高', '低'],
-          textStyle: {
-            color: colors.text,
-          },
-          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.8)',
-          borderColor: colors.border,
-          borderWidth: 1,
-          borderRadius: 6,
-          padding: [8, 12],
-          inRange: {
-            color: colorRange,
-          },
-          calculable: true,
-        },
-      }
-      : {}),
+    ...(visualMapOption ? { visualMap: visualMapOption } : {}),
     series: [
       {
         name: '散点分布',

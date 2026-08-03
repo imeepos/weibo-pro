@@ -8,6 +8,7 @@ import { EditMenu } from './workflow-menubar-edit-menu'
 import { ViewMenu } from './workflow-menubar-view-menu'
 import { LayoutMenu } from './workflow-menubar-layout-menu'
 import { RunMenu } from './workflow-menubar-run-menu'
+import type { WorkflowMenubarProps } from './workflow-menubar-types'
 
 export type { WorkflowMenubarProps } from './workflow-menubar-types'
 

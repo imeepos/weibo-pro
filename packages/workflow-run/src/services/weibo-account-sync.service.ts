@@ -3,6 +3,7 @@ import { RedisClient } from '@sker/redis'
 import { useEntityManager, WeiboAccountEntity, WeiboAccountStatus } from '@sker/entities'
 import { PlaywrightService } from './PlaywrightService'
 import { WeiboHtmlParser } from './WeiboHtmlParser'
+import { composeCookieHeader } from './weibo-cookie.util'
 
 /**
  * 同步结果接口
@@ -262,7 +263,7 @@ export class WeiboAccountSyncService {
    */
   private async checkAccountHealth(account: WeiboAccountEntity): Promise<boolean> {
     // 1. 将 JSON 格式的 cookies 转换为 Cookie Header 格式
-    const cookieHeader = this.composeCookieHeader(account.cookies)
+    const cookieHeader = composeCookieHeader(account.cookies)
     if (!cookieHeader) {
       throw new Error('Cookie 格式无效或为空')
     }
@@ -285,41 +286,4 @@ export class WeiboAccountSyncService {
     }
   }
 
-  /**
-   * 将 JSON 格式的 cookies 转换为 Cookie Header 格式
-   * （复用 WeiboAccountService 的逻辑）
-   */
-  private composeCookieHeader(raw: string | null | undefined): string | null {
-    if (!raw || !raw.trim()) {
-      return null
-    }
-
-    const trimmed = raw.trim()
-
-    try {
-      const parsed = JSON.parse(trimmed)
-
-      if (Array.isArray(parsed)) {
-        const fragments = parsed
-          .map((entry) => {
-            if (!entry) {
-              return ''
-            }
-            const name = typeof entry.name === 'string' ? entry.name.trim() : ''
-            const value = typeof entry.value === 'string' ? entry.value.trim() : ''
-            if (!name || !value) {
-              return ''
-            }
-            return `${name}=${value}`
-          })
-          .filter((fragment) => fragment.length > 0)
-
-        return fragments.length > 0 ? fragments.join('; ') : null
-      }
-    } catch {
-      // fall through - treat as plain cookie string
-    }
-
-    return trimmed.includes('=') ? trimmed : null
-  }
 }

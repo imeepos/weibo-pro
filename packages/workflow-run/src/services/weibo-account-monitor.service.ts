@@ -1,67 +1,15 @@
 import { Injectable, Inject } from '@sker/core'
 import { RedisClient } from '@sker/redis'
 import { useEntityManager, WeiboAccountEntity, WeiboAccountStatus } from '@sker/entities'
+import {
+  HourlySnapshot,
+  Alert,
+  AccountMetrics,
+  buildAlerts,
+  emitAlerts,
+} from './weibo-account-alert.util'
 
-/**
- * 小时快照接口
- */
-export interface HourlySnapshot {
-  /** 快照时间 */
-  timestamp: Date
-  /** 总账号数 */
-  total: number
-  /** ACTIVE 账号数 */
-  active: number
-  /** EXPIRED 账号数 */
-  expired: number
-  /** Redis 健康账号数 */
-  available: number
-  /** 可用率（百分比） */
-  availabilityRate: number
-}
-
-/**
- * 告警级别
- */
-export type AlertLevel = 'critical' | 'warning' | 'emergency'
-
-/**
- * 告警接口
- */
-export interface Alert {
-  /** 告警级别 */
-  level: AlertLevel
-  /** 告警消息 */
-  message: string
-  /** 监控指标 */
-  metric: string
-  /** 当前值 */
-  value: number
-  /** 阈值 */
-  threshold: number
-  /** 告警时间 */
-  timestamp: Date
-}
-
-/**
- * 账号监控指标接口
- */
-export interface AccountMetrics {
-  /** 总账号数 */
-  total: number
-  /** ACTIVE 账号数 */
-  active: number
-  /** EXPIRED 账号数 */
-  expired: number
-  /** Redis 健康账号数 */
-  available: number
-  /** 可用率（百分比，保留两位小数） */
-  availabilityRate: number
-  /** 最后检查时间 */
-  lastCheckTime: Date
-  /** 24小时趋势数据 */
-  trend: HourlySnapshot[]
-}
+export type { HourlySnapshot, Alert, AlertLevel, AccountMetrics } from './weibo-account-alert.util'
 
 /**
  * 微博账号监控服务
@@ -189,85 +137,7 @@ export class WeiboAccountMonitorService {
    * @returns 告警列表（可能为空）
    */
   async checkAlerts(metrics: AccountMetrics): Promise<Alert[]> {
-    const alerts: Alert[] = []
-
-    // 1. 检查 ACTIVE 账号数（紧急告警）
-    if (metrics.active < 2) {
-      const alert: Alert = {
-        level: 'emergency',
-        message: `账号数量过少: ${metrics.active} 个 (阈值: 2)`,
-        metric: 'activeAccounts',
-        value: metrics.active,
-        threshold: 2,
-        timestamp: new Date(),
-      }
-
-      if (!await this.shouldSuppressAlert(alert.level, alert.metric)) {
-        alerts.push(alert)
-        await this.recordAlert(alert)
-      }
-    }
-
-    // 2. 检查可用率（严重告警 < 50%）
-    if (metrics.availabilityRate < 50) {
-      const alert: Alert = {
-        level: 'critical',
-        message: `账号可用率过低: ${metrics.availabilityRate}% (阈值: 50%)`,
-        metric: 'availabilityRate',
-        value: metrics.availabilityRate,
-        threshold: 50,
-        timestamp: new Date(),
-      }
-
-      if (!await this.shouldSuppressAlert(alert.level, alert.metric)) {
-        alerts.push(alert)
-        await this.recordAlert(alert)
-      }
-    }
-    // 3. 检查可用率（警告 < 70%）
-    else if (metrics.availabilityRate < 70) {
-      const alert: Alert = {
-        level: 'warning',
-        message: `账号可用率偏低: ${metrics.availabilityRate}% (阈值: 70%)`,
-        metric: 'availabilityRate',
-        value: metrics.availabilityRate,
-        threshold: 70,
-        timestamp: new Date(),
-      }
-
-      if (!await this.shouldSuppressAlert(alert.level, alert.metric)) {
-        alerts.push(alert)
-        await this.recordAlert(alert)
-      }
-    }
-
-    return alerts
-  }
-
-  /**
-   * 检查是否应该抑制告警
-   *
-   * @param level 告警级别
-   * @param metric 监控指标
-   * @returns true=抑制, false=不抑制
-   */
-  private async shouldSuppressAlert(level: AlertLevel, metric: string): Promise<boolean> {
-    const key = `weibo:account:last_alert:${level}:${metric}`
-    const lastAlertTime = await this.redis.get(key)
-    return lastAlertTime !== null
-  }
-
-  /**
-   * 记录告警到 Redis
-   *
-   * @param alert 告警信息
-   */
-  private async recordAlert(alert: Alert): Promise<void> {
-    const key = `weibo:account:last_alert:${alert.level}:${alert.metric}`
-    const value = alert.timestamp.toISOString()
-
-    await this.redis.set(key, value)
-    await this.redis.expire(key, 3600) // 1小时后自动删除
+    return buildAlerts(metrics, this.redis)
   }
 
   /**
@@ -276,33 +146,6 @@ export class WeiboAccountMonitorService {
    * @param alerts 告警列表
    */
   sendAlerts(alerts: Alert[]): void {
-    if (alerts.length === 0) {
-      return
-    }
-
-    for (const alert of alerts) {
-      const emoji = this.getAlertEmoji(alert.level)
-      const level = alert.level.toUpperCase()
-      console.log(`${emoji} [${level}] ${alert.message}`)
-    }
-  }
-
-  /**
-   * 获取告警 emoji
-   *
-   * @param level 告警级别
-   * @returns emoji 字符串
-   */
-  private getAlertEmoji(level: AlertLevel): string {
-    switch (level) {
-      case 'critical':
-        return '🚨'
-      case 'warning':
-        return '⚠️ '
-      case 'emergency':
-        return '🚨'
-      default:
-        return '❓'
-    }
+    emitAlerts(alerts)
   }
 }

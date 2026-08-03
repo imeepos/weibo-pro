@@ -1,13 +1,17 @@
 import { useCallback } from 'react'
 import { executeAst, fromJson, toJson, type WorkflowGraphAst, globalRuntime } from '@sker/workflow'
-import { root } from '@sker/core'
-import { WorkflowController } from '@sker/sdk'
 import { Subject, takeUntil, finalize } from 'rxjs'
 import { useExecutionStore } from '../../../store/execution.store'
 import type { UseWorkflowReturn } from '../../../hooks/useWorkflow'
 import type { WorkflowOperationsCallbacks, WorkflowOperationRefs } from './types'
 import { extractErrorInfo, resetConnectedInputs } from './utils'
 import { applyWorkflowRunEvent } from './run-events'
+import {
+  resetRunningNodesToPending,
+  resetAllNodesToPending,
+  applyInputsToNodes,
+  saveWorkflowState,
+} from './run-workflow-utils'
 
 /**
  * 整个工作流执行 / 取消操作 Hook
@@ -75,83 +79,15 @@ export function useRunWorkflowOperations(
           onShowToast?.('info', '已取消上一次运行', '开始新的工作流执行')
 
           // 重置正在运行的节点状态（不可变方式），但保留输出字段
-          workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
-            if (node.state === 'running') {
-              // 保留输出字段
-              const outputFields: Record<string, any> = {}
-              node.metadata?.outputs?.forEach((output: any) => {
-                if (node[output.property] !== undefined) {
-                  outputFields[output.property] = node[output.property]
-                }
-              })
-
-              return Object.assign(
-                Object.create(Object.getPrototypeOf(node)),
-                node,
-                { state: 'pending', error: undefined, ...outputFields }
-              )
-            }
-            return node
-          })
+          workflow.workflowAst.nodes = resetRunningNodesToPending(workflow.workflowAst.nodes)
           workflow.syncFromAst()
         }
 
         // 应用输入参数到对应节点
-        console.log(`[runWorkflow] 接收到的 inputs:`, inputs)
-        if (inputs && Object.keys(inputs).length > 0) {
-          // 收集所有需要修改的节点更新（批量优化）
-          const nodeUpdates = new Map<string, Record<string, any>>()
-
-          Object.entries(inputs).forEach(([key, value]) => {
-            // 跳过 undefined 值（保留节点默认值）
-            if (value === undefined) {
-              return
-            }
-
-            // key 格式: "nodeId.propertyKey"
-            const dotIndex = key.indexOf('.')
-            if (dotIndex === -1) {
-              console.warn(`⚠️ 无效的输入键格式: ${key}`)
-              return
-            }
-
-            const nodeId = key.substring(0, dotIndex)
-            const propertyKey = key.substring(dotIndex + 1)
-
-            if (!nodeUpdates.has(nodeId)) {
-              nodeUpdates.set(nodeId, {})
-            }
-            nodeUpdates.get(nodeId)![propertyKey] = value
-          })
-
-          // 批量更新节点（不可变方式，避免修改只读对象）
-          workflow.workflowAst!.nodes = workflow.workflowAst!.nodes.map(node => {
-            const updates = nodeUpdates.get(node.id)
-            if (updates) {
-              // 创建新节点对象，保持原型链
-              return Object.assign(
-                Object.create(Object.getPrototypeOf(node)),
-                node,
-                updates
-              )
-            }
-            return node
-          })
-
-          // 同步到 React Flow
-          workflow.syncFromAst()
-        }
+        applyInputsToNodes(workflow.workflowAst, inputs || {})
 
         // 执行前保存状态
-        try {
-          if (getViewport) {
-            workflow.workflowAst.viewport = getViewport()
-          }
-          const controller = root.get<WorkflowController>(WorkflowController)
-          await controller.saveWorkflow(workflow.workflowAst)
-        } catch (error: any) {
-          console.error('[runWorkflow] 执行前保存工作流失败:', error)
-        }
+        await saveWorkflowState(workflow.workflowAst, getViewport, '执行前')
 
         // 创建新的取消 Subject（重置上一次的）
         cancelSubject$.current = new Subject<void>()
@@ -166,27 +102,7 @@ export function useRunWorkflowOperations(
         // ✨ 重置所有节点状态为 pending（参考 reactive-scheduler.ts 的 resetWorkflowGraphAst）
         // 确保进度条从 0% 开始，但保留输出字段数据
         workflow.workflowAst.state = 'pending'
-        workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
-          // 保留输出字段（qrcode, account, message 等）
-          const outputFields: Record<string, any> = {}
-          node.metadata?.outputs?.forEach((output: any) => {
-            if (node[output.property] !== undefined) {
-              outputFields[output.property] = node[output.property]
-            }
-          })
-
-          return Object.assign(
-            Object.create(Object.getPrototypeOf(node)),
-            node,
-            {
-              state: 'pending',
-              count: 0,
-              emitCount: 0,
-              error: undefined,
-              ...outputFields
-            }
-          )
-        })
+        workflow.workflowAst.nodes = resetAllNodesToPending(workflow.workflowAst.nodes)
         workflow.syncFromAst()
 
         // 🎬 开始录制事件（清空历史，开启存储）
@@ -241,15 +157,7 @@ export function useRunWorkflowOperations(
               cleanup()
 
               // 执行失败后保存状态
-              try {
-                if (getViewport) {
-                  workflow.workflowAst!.viewport = getViewport()
-                }
-                const controller = root.get<WorkflowController>(WorkflowController)
-                await controller.saveWorkflow(workflow.workflowAst!)
-              } catch (saveError: any) {
-                console.error('[runWorkflow] 执行失败后保存工作流失败:', saveError)
-              }
+              await saveWorkflowState(workflow.workflowAst, getViewport, '执行失败后')
             },
             complete: async () => {
               // 确保最终状态同步到 UI
@@ -270,15 +178,7 @@ export function useRunWorkflowOperations(
               cleanup()
 
               // 执行完成后保存状态
-              try {
-                if (getViewport) {
-                  workflow.workflowAst!.viewport = getViewport()
-                }
-                const controller = root.get<WorkflowController>(WorkflowController)
-                await controller.saveWorkflow(workflow.workflowAst!)
-              } catch (error: any) {
-                console.error('[runWorkflow] 执行完成后保存工作流失败:', error)
-              }
+              await saveWorkflowState(workflow.workflowAst, getViewport, '执行完成后')
 
               onComplete?.()
             }
@@ -325,24 +225,7 @@ export function useRunWorkflowOperations(
 
     // 重置正在运行的节点状态（不可变方式），但保留输出字段
     if (workflow.workflowAst) {
-      workflow.workflowAst.nodes = workflow.workflowAst.nodes.map(node => {
-        if (node.state === 'running') {
-          // 保留输出字段
-          const outputFields: Record<string, any> = {}
-          node.metadata?.outputs?.forEach((output: any) => {
-            if (node[output.property] !== undefined) {
-              outputFields[output.property] = node[output.property]
-            }
-          })
-
-          return Object.assign(
-            Object.create(Object.getPrototypeOf(node)),
-            node,
-            { state: 'pending', error: undefined, ...outputFields }
-          )
-        }
-        return node
-      })
+      workflow.workflowAst.nodes = resetRunningNodesToPending(workflow.workflowAst.nodes)
       workflow.syncFromAst()
     }
 

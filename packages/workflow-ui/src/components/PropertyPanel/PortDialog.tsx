@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Settings, AlertCircle } from 'lucide-react'
 import { INodeInputMetadata, INodeOutputMetadata } from '@sker/workflow'
 import { cn } from '@sker/ui/lib/utils'
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@sker/ui/components/ui/switch'
 import { Button } from '@sker/ui/components/ui/button'
 import { Label } from '@sker/ui/components/ui/label'
+import { usePortForm } from './usePortForm'
+import { CONDITION_PRESETS } from './port-dialog-utils'
 
 export interface PortDialogProps {
   open: boolean
@@ -23,132 +25,40 @@ export interface PortDialogProps {
   onSave: (port: INodeInputMetadata | INodeOutputMetadata) => void
 }
 
-const INPUT_TYPES = ['string', 'text', 'number', 'boolean', 'date', 'select', 'image', 'video', 'audio', 'object', 'any'] as const
-const OUTPUT_TYPES = ['string', 'number', 'boolean', 'object', 'array', 'any'] as const
-
-const CONDITION_PRESETS = [
-  { label: '等于', template: '$input === ' },
-  { label: '不等于', template: '$input !== ' },
-  { label: '大于', template: '$input > ' },
-  { label: '小于', template: '$input < ' },
-  { label: '包含', template: '$input.includes(' },
-  { label: '默认', template: 'true' },
-] as const
-
-function validateProperty(
-  property: string,
-  existingProperties: string[],
-  currentProperty?: string
-): string | null {
-  if (!property) {
-    return '属性名不能为空'
-  }
-
-  if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(property)) {
-    return '属性名必须以字母开头，只能包含字母、数字、下划线'
-  }
-
-  const isDuplicate = existingProperties.some(
-    p => p === property && p !== currentProperty
-  )
-
-  if (isDuplicate) {
-    return '属性名已存在'
-  }
-
-  return null
-}
-
-export function PortDialog({
-  open,
-  onOpenChange,
-  mode,
-  portType,
-  initialValues,
-  existingProperties,
-  onSave,
-}: PortDialogProps) {
-  const [property, setProperty] = useState('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [type, setType] = useState('string')
-  const [isRouter, setIsRouter] = useState(false)
-  const [condition, setCondition] = useState('')
-  const [required, setRequired] = useState(false)
-  const [defaultValue, setDefaultValue] = useState('')
-
-  useEffect(() => {
-    if (open) {
-      if (initialValues) {
-        setProperty(initialValues.property || '')
-        setTitle(initialValues.title || '')
-        setDescription(initialValues.description || '')
-        setType(initialValues.type || 'string')
-        setIsRouter('isRouter' in initialValues ? initialValues.isRouter || false : false)
-        setCondition('condition' in initialValues ? initialValues.condition || '' : '')
-        setRequired('required' in initialValues ? initialValues.required || false : false)
-        setDefaultValue('defaultValue' in initialValues ? String(initialValues.defaultValue || '') : '')
-      } else {
-        setProperty('')
-        setTitle('')
-        setDescription('')
-        setType('string')
-        setIsRouter(false)
-        setCondition('')
-        setRequired(false)
-        setDefaultValue('')
-      }
-    }
-  }, [open, initialValues])
-
-  const propertyError = validateProperty(
-    property,
+export function PortDialog(props: PortDialogProps) {
+  const {
+    open,
+    onOpenChange,
+    mode,
+    portType,
+    initialValues,
     existingProperties,
-    mode === 'edit' ? initialValues?.property : undefined
-  )
+    onSave,
+  } = props
 
-  const isFormValid = property && !propertyError && type
-
-  const handleSave = () => {
-    if (!isFormValid) return
-
-    const basePort = {
-      property,
-      title,
-      description,
-      type,
-      isStatic: false,
-    }
-
-    if (portType === 'input') {
-      const inputPort: INodeInputMetadata = {
-        ...basePort,
-        required,
-        ...(defaultValue && { defaultValue }),
-      } as INodeInputMetadata
-      onSave(inputPort)
-    } else {
-      const outputPort: INodeOutputMetadata = {
-        ...basePort,
-        isRouter,
-        ...(condition && { condition }),
-        ...(defaultValue && { defaultValue }),
-      } as INodeOutputMetadata
-      onSave(outputPort)
-    }
-
-    onOpenChange(false)
-  }
-
-  const applyPreset = (template: string) => {
-    if (template === 'true') {
-      setCondition('true')
-    } else {
-      setCondition(template)
-    }
-  }
-
-  const availableTypes = portType === 'input' ? INPUT_TYPES : OUTPUT_TYPES
+  const {
+    property,
+    setProperty,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    type,
+    setType,
+    isRouter,
+    setIsRouter,
+    condition,
+    setCondition,
+    required,
+    setRequired,
+    defaultValue,
+    setDefaultValue,
+    propertyError,
+    isFormValid,
+    handleSave,
+    applyPreset,
+    availableTypes,
+  } = usePortForm(props)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

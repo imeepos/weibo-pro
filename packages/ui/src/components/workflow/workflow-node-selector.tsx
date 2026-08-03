@@ -2,38 +2,14 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Sparkles, Box, Globe } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
+import { CategoryList } from './workflow-node-selector-category-list'
+import { NodeList } from './workflow-node-selector-node-list'
+import { type CategoryKey } from './workflow-node-selector-categories'
+import type { NodeItem, WorkflowNodeSelectorProps } from './workflow-node-selector-types'
 
-export type NodeType = 'llm' | 'basic' | 'crawler' | 'control' | 'sentiment' | 'analysis' | 'scheduler'
-
-export interface NodeItem {
-  type: string
-  label: string
-  nodeType?: NodeType
-  inputs: any[]
-  outputs: any[]
-}
-
-export interface WorkflowNodeSelectorProps {
-  visible: boolean
-  position: { x: number; y: number }
-  nodes: NodeItem[]
-  onSelect: (node: NodeItem) => void
-  onClose: () => void
-  className?: string
-}
-
-// 分类配置
-const CATEGORIES = [
-  { key: 'all', label: '全部', icon: Box },
-  { key: 'basic', label: '基础', icon: Box },
-  { key: 'control', label: '控制', icon: Globe },
-  { key: 'llm', label: 'LLM', icon: Sparkles },
-  { key: 'crawler', label: '爬虫', icon: Globe },
-] as const
-
-type CategoryKey = typeof CATEGORIES[number]['key']
+export type { NodeType, NodeItem, WorkflowNodeSelectorProps } from './workflow-node-selector-types'
 
 /**
  * 工作流节点选择器
@@ -161,33 +137,10 @@ export const WorkflowNodeSelector: React.FC<WorkflowNodeSelectorProps> = ({
       }}
     >
       {/* 左侧分类 */}
-      <div className="flex flex-col w-32 border-r border-border bg-muted/30 rounded-l-xl">
-        <div className="px-3 py-3 border-b border-border">
-          <h3 className="text-xs font-semibold text-muted-foreground">分类</h3>
-        </div>
-        <div className="flex flex-col gap-1 p-2">
-          {CATEGORIES.map((category) => {
-            const Icon = category.icon
-            const isActive = selectedCategory === category.key
-            return (
-              <button
-                key={category.key}
-                type="button"
-                onClick={() => setSelectedCategory(category.key)}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                )}
-              >
-                <Icon className="h-4 w-4" strokeWidth={2} />
-                <span>{category.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <CategoryList
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
 
       {/* 右侧节点列表 */}
       <div className="flex flex-col flex-1">
@@ -208,55 +161,13 @@ export const WorkflowNodeSelector: React.FC<WorkflowNodeSelectorProps> = ({
 
         {/* 节点列表 */}
         <div className="flex-1 overflow-y-auto px-2 py-2">
-          {filteredNodes.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center text-sm text-muted-foreground">
-                {searchQuery ? '未找到匹配的节点' : '暂无可用节点'}
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {filteredNodes.map((node, index) => (
-                <button
-                  key={node.type}
-                  type="button"
-                  className={cn(
-                    'flex w-full items-center justify-between gap-4 rounded-lg border px-3 py-2.5',
-                    'text-left text-sm transition',
-                    index === selectedIndex
-                      ? 'border-primary bg-accent text-foreground shadow-[0_0_12px_rgba(19,91,236,0.25)]'
-                      : 'border-transparent bg-muted text-foreground hover:border-border hover:bg-accent'
-                  )}
-                  onClick={() => handleSelect(node)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-muted-foreground">
-                      {node.label.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{node.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {node.type}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2 text-xs text-muted-foreground">
-                    {node.inputs.length > 0 && (
-                      <span className="rounded-full border border-border bg-muted px-2 py-0.5">
-                        入 {node.inputs.length}
-                      </span>
-                    )}
-                    {node.outputs.length > 0 && (
-                      <span className="rounded-full border border-border bg-muted px-2 py-0.5">
-                        出 {node.outputs.length}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <NodeList
+            filteredNodes={filteredNodes}
+            selectedIndex={selectedIndex}
+            searchQuery={searchQuery}
+            onSelect={handleSelect}
+            onHover={setSelectedIndex}
+          />
         </div>
 
         {/* 底部快捷键提示 */}

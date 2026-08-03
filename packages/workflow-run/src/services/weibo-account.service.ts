@@ -5,6 +5,7 @@ import {
     WeiboAccountEntity,
     WeiboAccountStatus,
 } from '@sker/entities';
+import { composeCookieHeader as composeCookieHeaderUtil, extractXsrfToken } from './weibo-cookie.util';
 
 export interface RequestWithHeaders {
     url?: string;
@@ -176,20 +177,9 @@ export class WeiboAccountService {
             return null;
         }
 
-        const xsrfToken = this.extractXsrfToken(selection.cookieHeader);
+        const xsrfToken = extractXsrfToken(selection.cookieHeader);
 
         return { ...selection, xsrfToken };
-    }
-
-    private extractXsrfToken(cookieHeader: string): string {
-        const cookies = cookieHeader.split(';').map(it => it.trim());
-        for (const cookie of cookies) {
-            const [name, value] = cookie.split('=').map(it => it.trim());
-            if (name === 'XSRF-TOKEN' && value) {
-                return value;
-            }
-        }
-        return ``;
     }
 
     private composeCookieHeader(raw: string | null | undefined): string | null {
@@ -198,33 +188,7 @@ export class WeiboAccountService {
             return null;
         }
 
-        const trimmed = raw.trim();
-
-        try {
-            const parsed = JSON.parse(trimmed);
-
-            if (Array.isArray(parsed)) {
-                const fragments = parsed
-                    .map((entry) => {
-                        if (!entry) {
-                            return '';
-                        }
-                        const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-                        const value = typeof entry.value === 'string' ? entry.value.trim() : '';
-                        if (!name || !value) {
-                            return '';
-                        }
-                        return `${name}=${value}`;
-                    })
-                    .filter((fragment) => fragment.length > 0);
-
-                return fragments.length > 0 ? fragments.join('; ') : null;
-            }
-        } catch {
-            // fall through - treat as plain cookie string
-        }
-
-        return trimmed.includes('=') ? trimmed : null;
+        return composeCookieHeaderUtil(raw);
     }
 
     async saveOrUpdateAccount(message: WeiboLoginSuccessMessage): Promise<WeiboAccountEntity | null> {

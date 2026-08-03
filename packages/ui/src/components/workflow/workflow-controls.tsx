@@ -1,68 +1,18 @@
 'use client'
 
 import React from 'react'
-import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Minimize2,
-  PlayIcon,
-  SaveIcon,
-  SettingsIcon,
-  Download,
-  UploadIcon,
-  LayoutGrid,
-  Clock,
-  XCircle,
-  History,
-  Undo,
-  Redo,
-  Database,
-  FileCode,
-  Bug,
-} from 'lucide-react'
 import { cn } from '@sker/ui/lib/utils'
-import { Button } from '@sker/ui/components/ui/button'
 
-export interface WorkflowControlsProps {
-  // 工作流操作
-  onRun?: () => void
-  onDebugRun?: () => void
-  onCancel?: () => void
-  onSave?: () => void
-  onExport?: () => void
-  onAiExport?: () => void
-  onImport?: () => void
-  onSettings?: () => void
-  onSchedule?: () => void
-  onScheduleList?: () => void
-  onRunHistory?: () => void
-  onEventStoreToggle?: (enabled: boolean) => void
+import type { WorkflowControlsProps } from './workflow-controls-types.js'
+import {
+  FileControls,
+  HistoryControls,
+  LayoutControls,
+  ViewControls,
+} from './workflow-controls-actions.js'
+import { RunControls } from './workflow-controls-run.js'
 
-  // 视图控制
-  onZoomIn?: () => void
-  onZoomOut?: () => void
-  onFitView?: () => void
-
-  // 节点操作
-  onCollapseNodes?: () => void
-  onExpandNodes?: () => void
-  onAutoLayout?: () => void
-
-  // 历史操作
-  onUndo?: () => void
-  onRedo?: () => void
-  canUndo?: boolean
-  canRedo?: boolean
-
-  // 状态
-  isRunning?: boolean
-  isSaving?: boolean
-  eventStoreEnabled?: boolean
-
-  // 样式
-  className?: string
-}
+export type { WorkflowControlsProps } from './workflow-controls-types.js'
 
 /**
  * 工作流控制面板
@@ -78,7 +28,6 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onAiExport,
   onImport,
   onSettings,
-  onSchedule: _onSchedule,
   onScheduleList,
   onRunHistory,
   onEventStoreToggle,
@@ -97,8 +46,6 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   eventStoreEnabled = false,
   className,
 }) => {
-  const buttonClassName = 'h-9 w-9 text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-
   return (
     <div
       className={cn(
@@ -107,271 +54,36 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
         className
       )}
     >
-      {/* 运行 / 取消 */}
-      {(onRun || onCancel) && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={isRunning ? onCancel : onRun}
-          title={isRunning ? '取消运行' : '运行工作流'}
-          className={cn(
-            buttonClassName,
-            isRunning && 'text-destructive hover:text-destructive hover:bg-destructive/10'
-          )}
-        >
-          {isRunning ? (
-            <XCircle className="h-4 w-4" strokeWidth={2} />
-          ) : (
-            <PlayIcon className="h-4 w-4" strokeWidth={2} />
-          )}
-        </Button>
-      )}
+      <RunControls
+        onRun={onRun}
+        onDebugRun={onDebugRun}
+        onCancel={onCancel}
+        onSave={onSave}
+        onSettings={onSettings}
+        onScheduleList={onScheduleList}
+        onRunHistory={onRunHistory}
+        onEventStoreToggle={onEventStoreToggle}
+        isRunning={isRunning}
+        isSaving={isSaving}
+        eventStoreEnabled={eventStoreEnabled}
+      />
 
-      {/* 调试运行 */}
-      {onDebugRun && !isRunning && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onDebugRun}
-          title="调试运行工作流&#10;自动开启事件存储并运行"
-          className={cn(buttonClassName, 'text-primary/80 hover:text-primary')}
-        >
-          <Bug className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
+      <HistoryControls
+        onUndo={onUndo}
+        onRedo={onRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
 
-      {/* 设置 */}
-      {onSettings && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onSettings}
-          title="工作流设置"
-          className={buttonClassName}
-        >
-          <SettingsIcon className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
+      <ViewControls onZoomIn={onZoomIn} onZoomOut={onZoomOut} onFitView={onFitView} />
 
-      {/* 调度 */}
-      {onScheduleList && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onScheduleList}
-          title="调度管理"
-          className={buttonClassName}
-        >
-          <Clock className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
+      <FileControls onImport={onImport} onExport={onExport} onAiExport={onAiExport} />
 
-      {/* 运行历史 */}
-      {onRunHistory && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onRunHistory}
-          title="运行历史"
-          className={buttonClassName}
-        >
-          <History className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 事件存储开关 */}
-      {onEventStoreToggle && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onEventStoreToggle(!eventStoreEnabled)}
-          title={
-            eventStoreEnabled
-              ? '关闭事件存储\n点击后将不再记录工作流事件'
-              : '开启事件存储\n支持时间旅行和续跑功能'
-          }
-          className={cn(
-            buttonClassName,
-            eventStoreEnabled && 'text-primary bg-primary/10 hover:bg-primary/20'
-          )}
-        >
-          <Database className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 保存 */}
-      {onSave && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onSave}
-          disabled={isSaving}
-          title={isSaving ? '保存中...' : '保存工作流'}
-          className={cn(
-            buttonClassName,
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-        >
-          <SaveIcon className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 分隔线 */}
-      {(onUndo || onRedo) && <div className="my-1 h-px bg-border" />}
-
-      {/* 撤销 */}
-      {onUndo && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="撤销&#10;快捷键: Ctrl+Z"
-          className={cn(
-            buttonClassName,
-            'disabled:opacity-30 disabled:cursor-not-allowed'
-          )}
-        >
-          <Undo className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 重做 */}
-      {onRedo && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="重做&#10;快捷键: Ctrl+Shift+Z"
-          className={cn(
-            buttonClassName,
-            'disabled:opacity-30 disabled:cursor-not-allowed'
-          )}
-        >
-          <Redo className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 缩放控制 */}
-      {onZoomIn && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onZoomIn}
-          title="放大"
-          className={buttonClassName}
-        >
-          <ZoomIn className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {onZoomOut && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onZoomOut}
-          title="缩小"
-          className={buttonClassName}
-        >
-          <ZoomOut className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {onFitView && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onFitView}
-          title="适应视图"
-          className={buttonClassName}
-        >
-          <Maximize2 className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 导入导出 */}
-      {onImport && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onImport}
-          title="导入工作流"
-          className={buttonClassName}
-        >
-          <UploadIcon className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {onExport && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onExport}
-          title="导出工作流"
-          className={buttonClassName}
-        >
-          <Download className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {onAiExport && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onAiExport}
-          title="导出AI分析格式&#10;自动截断长文本，方便复制到AI开发工具"
-          className={buttonClassName}
-        >
-          <FileCode className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 分隔线 */}
-      {(onCollapseNodes || onExpandNodes || onAutoLayout) && (
-        <div className="my-1 h-px bg-border" />
-      )}
-
-      {/* 折叠/展开 */}
-      {onCollapseNodes && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onCollapseNodes}
-          title="折叠节点（有选中时仅折叠选中的，无选中时折叠全部）&#10;快捷键: Ctrl+Shift+C"
-          className={buttonClassName}
-        >
-          <Minimize2 className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {onExpandNodes && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onExpandNodes}
-          title="展开节点（有选中时仅展开选中的，无选中时展开全部）&#10;快捷键: Ctrl+Shift+E"
-          className={buttonClassName}
-        >
-          <Maximize2 className="h-4 w-4" strokeWidth={2} />
-        </Button>
-      )}
-
-      {/* 自动布局 */}
-      {onAutoLayout && (
-        <>
-          <div className="my-1 h-px bg-border" />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onAutoLayout}
-            title="自动布局（基于拓扑结构重新排列节点）&#10;快捷键: Ctrl+Shift+L"
-            className={buttonClassName}
-          >
-            <LayoutGrid className="h-4 w-4" strokeWidth={2} />
-          </Button>
-        </>
-      )}
+      <LayoutControls
+        onCollapseNodes={onCollapseNodes}
+        onExpandNodes={onExpandNodes}
+        onAutoLayout={onAutoLayout}
+      />
     </div>
   )
 }

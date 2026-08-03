@@ -3,338 +3,133 @@ import { Entity } from './decorator';
 import { booleanToSmallintTransformer } from './transformers/boolean-to-smallint.transformer';
 import { WeiboUserCategoryRelationEntity } from './weibo-user-category-relation.entity';
 
+/**
+ * 常用列选项工厂
+ * 每次调用返回新对象，避免多个列共享同一引用。
+ */
+const varchar = (length: number) => ({ type: 'varchar' as const, length, nullable: true });
+const text = () => ({ type: 'text' as const, nullable: true });
+const jsonb = () => ({ type: 'jsonb' as const, nullable: true });
+const bool = (def: boolean) => ({ type: 'boolean' as const, default: def, nullable: true });
+const int = (def: number) => ({ type: 'integer' as const, default: def, nullable: true });
+const bigint = (def: number) => ({ type: 'bigint' as const, default: def, nullable: true });
+const smallintBool = (def: number) => ({ type: 'smallint' as const, default: def, nullable: true, transformer: booleanToSmallintTransformer });
+
 @Entity('weibo_users')
 @Index(['id'], { unique: true })
 export class WeiboUserEntity {
   @PrimaryColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({ type: 'varchar', length: 32, nullable: true })
-  idstr!: string | null;
-
-  @Column({ type: 'smallint', default: 1, nullable: true, transformer: booleanToSmallintTransformer })
-  class!: number | null;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  screen_name!: string | null;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  name!: string | null;
-
-  @Column({ type: 'varchar', length: 16, nullable: true })
-  province!: string | null;
-
-  @Column({ type: 'varchar', length: 16, nullable: true })
-  city!: string | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  location!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  description!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  url!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  profile_image_url!: string | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  light_ring!: boolean | null;
-
-  @Column({ type: 'text', nullable: true })
-  cover_image_phone!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  profile_url!: string | null;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  domain!: string | null;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  weihao!: string | null;
-
-  @Column({ type: 'char', length: 1, default: 'n', nullable: true })
-  gender!: string | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  followers_count!: number | null;
-
-  @Column({ type: 'varchar', length: 32, default: '0', nullable: true })
-  followers_count_str!: string | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  friends_count!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  pagefriends_count!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  statuses_count!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  video_status_count!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  video_play_count!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  v_plus!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  super_topic_not_syn_count!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  favourites_count!: number | null;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  created_at!: string | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  following!: boolean | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  allow_all_act_msg!: boolean | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  geo_enabled!: boolean | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  verified!: boolean | null;
-
-  @Column({ type: 'smallint', default: -1, nullable: true, transformer: booleanToSmallintTransformer })
-  verified_type!: number | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  remark!: string | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  insecurity!: Record<string, unknown> | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  ptype!: number | null;
-
-  @Column({ type: 'boolean', default: true, nullable: true })
-  allow_all_comment!: boolean | null;
-
-  @Column({ type: 'text', nullable: true })
-  avatar_large!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  avatar_hd!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  verified_reason!: string | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  verified_trade!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  verified_reason_url!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  verified_source!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  verified_source_url!: string | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  follow_me!: boolean | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  like!: boolean | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  like_me!: boolean | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  online_status!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  bi_followers_count!: number | null;
-
-  @Column({ type: 'varchar', length: 16, default: 'zh-cn', nullable: true })
-  lang!: string | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  star!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  mbtype!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  mbrank!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  svip!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  vvip!: number | null;
-
-  @Column({ type: 'bigint', default: 0, nullable: true })
-  mb_expire_time!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  block_word!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  block_app!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  chaohua_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  brand_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  nft_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  vplus_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  wenda_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  live_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  gongyi_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  paycolumn_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  newbrand_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  ecommerce_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  hardfan_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  wbcolumn_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  interaction_user!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  audio_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  place_ability!: number | null;
-
-  @Column({ type: 'integer', default: 0, nullable: true })
-  credit_score!: number | null;
-
-  @Column({ type: 'bigint', default: 0, nullable: true })
-  user_ability!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  urank!: number | null;
-
-  @Column({ type: 'smallint', default: -1, nullable: true, transformer: booleanToSmallintTransformer })
-  story_read_state!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  vclub_member!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  is_teenager!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  is_guardian!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  is_teenager_list!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  pc_new!: number | null;
-
-  @Column({ type: 'boolean', default: false, nullable: true })
-  special_follow!: boolean | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  planet_video!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  video_mark!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  live_status!: number | null;
-
-  @Column({ type: 'bigint', default: 0, nullable: true })
-  user_ability_extend!: number | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  status_total_counter!: Record<string, unknown> | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  video_total_counter!: Record<string, unknown> | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  brand_account!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  hongbaofei!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  reward_status!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  green_mode!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  green_mode_source!: number | null;
-
-  @Column({ type: 'bigint', default: 0, nullable: true })
-  urisk!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  unfollowing_recom_switch!: number | null;
-
-  @Column({ type: 'smallint', default: 1, nullable: true, transformer: booleanToSmallintTransformer })
-  avatar_type!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  is_big!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  auth_status!: number | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  auth_realname!: string | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  auth_career!: string | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  auth_career_name!: string | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  show_auth!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  is_auth!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  is_punish!: number | null;
-
-  @Column({ type: 'varchar', length: 128, nullable: true })
-  avatar_hd_pid!: string | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  like_display!: number | null;
-
-  @Column({ type: 'smallint', default: 0, nullable: true, transformer: booleanToSmallintTransformer })
-  comment_display!: number | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  icons!: Array<Record<string, unknown>> | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  detail!: Array<Record<string, unknown>> | null;
+  @Column(varchar(32)) idstr!: string | null;
+  @Column(smallintBool(1)) class!: number | null;
+  @Column(varchar(64)) screen_name!: string | null;
+  @Column(varchar(64)) name!: string | null;
+  @Column(varchar(16)) province!: string | null;
+  @Column(varchar(16)) city!: string | null;
+  @Column(varchar(128)) location!: string | null;
+  @Column(text()) description!: string | null;
+  @Column(text()) url!: string | null;
+  @Column(text()) profile_image_url!: string | null;
+  @Column(bool(false)) light_ring!: boolean | null;
+  @Column(text()) cover_image_phone!: string | null;
+  @Column(text()) profile_url!: string | null;
+  @Column(varchar(64)) domain!: string | null;
+  @Column(varchar(64)) weihao!: string | null;
+  @Column({ type: 'char', length: 1, default: 'n', nullable: true }) gender!: string | null;
+  @Column(int(0)) followers_count!: number | null;
+  @Column({ type: 'varchar', length: 32, default: '0', nullable: true }) followers_count_str!: string | null;
+  @Column(int(0)) friends_count!: number | null;
+  @Column(int(0)) pagefriends_count!: number | null;
+  @Column(int(0)) statuses_count!: number | null;
+  @Column(int(0)) video_status_count!: number | null;
+  @Column(int(0)) video_play_count!: number | null;
+  @Column(int(0)) v_plus!: number | null;
+  @Column(int(0)) super_topic_not_syn_count!: number | null;
+  @Column(int(0)) favourites_count!: number | null;
+  @Column(varchar(64)) created_at!: string | null;
+  @Column(bool(false)) following!: boolean | null;
+  @Column(bool(false)) allow_all_act_msg!: boolean | null;
+  @Column(bool(false)) geo_enabled!: boolean | null;
+  @Column(bool(false)) verified!: boolean | null;
+  @Column(smallintBool(-1)) verified_type!: number | null;
+  @Column(varchar(255)) remark!: string | null;
+  @Column(jsonb()) insecurity!: Record<string, unknown> | null;
+  @Column(smallintBool(0)) ptype!: number | null;
+  @Column(bool(true)) allow_all_comment!: boolean | null;
+  @Column(text()) avatar_large!: string | null;
+  @Column(text()) avatar_hd!: string | null;
+  @Column(text()) verified_reason!: string | null;
+  @Column(varchar(128)) verified_trade!: string | null;
+  @Column(text()) verified_reason_url!: string | null;
+  @Column(text()) verified_source!: string | null;
+  @Column(text()) verified_source_url!: string | null;
+  @Column(bool(false)) follow_me!: boolean | null;
+  @Column(bool(false)) like!: boolean | null;
+  @Column(bool(false)) like_me!: boolean | null;
+  @Column(smallintBool(0)) online_status!: number | null;
+  @Column(int(0)) bi_followers_count!: number | null;
+  @Column({ type: 'varchar', length: 16, default: 'zh-cn', nullable: true }) lang!: string | null;
+  @Column(smallintBool(0)) star!: number | null;
+  @Column(smallintBool(0)) mbtype!: number | null;
+  @Column(smallintBool(0)) mbrank!: number | null;
+  @Column(smallintBool(0)) svip!: number | null;
+  @Column(smallintBool(0)) vvip!: number | null;
+  @Column(bigint(0)) mb_expire_time!: number | null;
+  @Column(smallintBool(0)) block_word!: number | null;
+  @Column(smallintBool(0)) block_app!: number | null;
+  @Column(int(0)) chaohua_ability!: number | null;
+  @Column(int(0)) brand_ability!: number | null;
+  @Column(int(0)) nft_ability!: number | null;
+  @Column(int(0)) vplus_ability!: number | null;
+  @Column(int(0)) wenda_ability!: number | null;
+  @Column(int(0)) live_ability!: number | null;
+  @Column(int(0)) gongyi_ability!: number | null;
+  @Column(int(0)) paycolumn_ability!: number | null;
+  @Column(int(0)) newbrand_ability!: number | null;
+  @Column(int(0)) ecommerce_ability!: number | null;
+  @Column(int(0)) hardfan_ability!: number | null;
+  @Column(int(0)) wbcolumn_ability!: number | null;
+  @Column(int(0)) interaction_user!: number | null;
+  @Column(int(0)) audio_ability!: number | null;
+  @Column(int(0)) place_ability!: number | null;
+  @Column(int(0)) credit_score!: number | null;
+  @Column(bigint(0)) user_ability!: number | null;
+  @Column(smallintBool(0)) urank!: number | null;
+  @Column(smallintBool(-1)) story_read_state!: number | null;
+  @Column(smallintBool(0)) vclub_member!: number | null;
+  @Column(smallintBool(0)) is_teenager!: number | null;
+  @Column(smallintBool(0)) is_guardian!: number | null;
+  @Column(smallintBool(0)) is_teenager_list!: number | null;
+  @Column(smallintBool(0)) pc_new!: number | null;
+  @Column(bool(false)) special_follow!: boolean | null;
+  @Column(smallintBool(0)) planet_video!: number | null;
+  @Column(smallintBool(0)) video_mark!: number | null;
+  @Column(smallintBool(0)) live_status!: number | null;
+  @Column(bigint(0)) user_ability_extend!: number | null;
+  @Column(jsonb()) status_total_counter!: Record<string, unknown> | null;
+  @Column(jsonb()) video_total_counter!: Record<string, unknown> | null;
+  @Column(smallintBool(0)) brand_account!: number | null;
+  @Column(smallintBool(0)) hongbaofei!: number | null;
+  @Column(smallintBool(0)) reward_status!: number | null;
+  @Column(smallintBool(0)) green_mode!: number | null;
+  @Column(smallintBool(0)) green_mode_source!: number | null;
+  @Column(bigint(0)) urisk!: number | null;
+  @Column(smallintBool(0)) unfollowing_recom_switch!: number | null;
+  @Column(smallintBool(1)) avatar_type!: number | null;
+  @Column(smallintBool(0)) is_big!: number | null;
+  @Column(smallintBool(0)) auth_status!: number | null;
+  @Column(varchar(128)) auth_realname!: string | null;
+  @Column(varchar(128)) auth_career!: string | null;
+  @Column(varchar(128)) auth_career_name!: string | null;
+  @Column(smallintBool(0)) show_auth!: number | null;
+  @Column(smallintBool(0)) is_auth!: number | null;
+  @Column(smallintBool(0)) is_punish!: number | null;
+  @Column(varchar(128)) avatar_hd_pid!: string | null;
+  @Column(smallintBool(0)) like_display!: number | null;
+  @Column(smallintBool(0)) comment_display!: number | null;
+  @Column(jsonb()) icons!: Array<Record<string, unknown>> | null;
+  @Column(jsonb()) detail!: Array<Record<string, unknown>> | null;
 
   @OneToMany(
     () => WeiboUserCategoryRelationEntity,
