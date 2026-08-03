@@ -7,7 +7,6 @@ import {
   buildEdgesArray,
   buildNodesArray,
   createEmptyStatistics,
-  getMockTopologyData,
   normalizeTopologyData
 } from './transform';
 import type { NodeInfo, TopologyData, TopologyStatistics } from './types';
@@ -62,14 +61,8 @@ export const useNetworkTopology = ({
           onNodeClickRef.current?.(response.data);
         }
       } catch {
-        // 如果 API 失败，创建基本的节点信息
-        const basicNodeInfo: NodeInfo = {
-          nodeId,
-          nodeType: 'UNKNOWN',
-          friendlyName: `Node ${nodeId}`
-        };
-        onNodeClickRef.current?.(basicNodeInfo);
-        logger.debug('Using fallback node info for:', nodeId);
+        // 节点详情 API 失败时如实上报，不注入伪造节点信息
+        logger.error('Failed to fetch node detail for:', nodeId);
       }
     },
     [customerId]
@@ -176,9 +169,7 @@ export const useNetworkTopology = ({
         const errorMessage = err instanceof Error ? err.message : '获取拓扑数据失败';
         logger.error('Failed to fetch topology data:', err);
         setError(errorMessage);
-
-        // 使用模拟数据作为后备
-        setTopologyData(getMockTopologyData());
+        // 失败时如实上报错误，不回退到伪造数据
       } finally {
         setIsLoading(false);
       }

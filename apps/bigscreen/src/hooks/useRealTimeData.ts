@@ -77,9 +77,7 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
         total: sentimentStats?.totalAnalyzed ?? 0,
         positive: sentimentStats?.positive?.count ?? 0,
         negative: sentimentStats?.negative?.count ?? 0,
-        neutral: sentimentStats?.neutral?.count ?? 0,
-        growth: 0, // Mock data
-        growthRate: 0 // Mock data
+        neutral: sentimentStats?.neutral?.count ?? 0
       };
 
       const convertedKeywords: KeywordData[] = (keywords || []).map(k => ({

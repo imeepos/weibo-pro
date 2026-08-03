@@ -25,8 +25,9 @@ export interface StatisticsData {
   positive: number;
   negative: number;
   neutral: number;
-  growth: number;
-  growthRate: number;
+  // 增长数据由后端按需提供，未提供时不得在前端伪造
+  growth?: number;
+  growthRate?: number;
 }
 
 // 数据总览统计类型

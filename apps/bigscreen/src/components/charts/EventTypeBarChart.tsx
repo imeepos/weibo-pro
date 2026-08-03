@@ -42,7 +42,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
 }) => {
   const { isDark } = useTheme();
   const { selectedTimeRange } = useAppStore();
-  const [mockData, setMockData] = useState<Array<{ name: string, value: number, color?: string }>>([]);
+  const [data, setData] = useState<Array<{ name: string, value: number, color?: string }>>([]);
 
   useEffect(() => {
     if (externalData !== undefined) {
@@ -57,15 +57,15 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
         if (cancelled) return;
         // 确保数据是数组格式，并只取前6条
         if (Array.isArray(data)) {
-          setMockData(data);
+          setData(data);
         } else {
           logger.warn('Event types data is not an array:', data);
-          setMockData([]);
+          setData([]);
         }
       } catch (error) {
         if (cancelled) return;
         logger.error('Failed to fetch event types data:', error);
-        setMockData([]);
+        setData([]);
       }
     };
 
@@ -76,7 +76,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
     };
   }, [externalData, selectedTimeRange]);
 
-  const displayedData = externalData !== undefined ? (externalData || []) : mockData;
+  const displayedData = externalData !== undefined ? (externalData || []) : data;
   const displayedLoading = externalLoading ?? false;
   const displayedError = externalError ?? null;
 

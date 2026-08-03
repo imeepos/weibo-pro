@@ -17,7 +17,7 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
   className = ''
 }) => {
   const { isDark } = useTheme();
-  const [mockData, setMockData] = useState<Array<{ date: string, count: number }>>([]);
+  const [data, setData] = useState<Array<{ date: string, count: number }>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,15 +28,15 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
         if (cancelled) return;
 
         if (Array.isArray(data)) {
-          setMockData(data);
+          setData(data);
         } else {
           logger.warn('Date series data is not an array:', data);
-          setMockData([]);
+          setData([]);
         }
       } catch (error) {
         if (cancelled) return;
         logger.error('Failed to fetch date series data:', error);
-        setMockData([]);
+        setData([]);
       }
     };
 
@@ -49,7 +49,7 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
 
   const option = React.useMemo(() => {
     // Return minimal option if no valid data
-    if (!Array.isArray(mockData) || mockData.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       return {
         title: {
           text: '暂无数据',
@@ -80,7 +80,7 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
       },
       xAxis: {
         type: 'category',
-        data: mockData.map(item => item.date),
+        data: data.map(item => item.date),
         axisLine: {
           lineStyle: {
             color: '#374151'
@@ -108,7 +108,7 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
       },
       series: [
         {
-          data: mockData.map(item => item.count),
+          data: data.map(item => item.count),
           type: 'bar',
           itemStyle: {
             color: {
@@ -141,7 +141,7 @@ const EventCountChart: React.FC<EventCountChartProps> = ({
         }
       ]
     };
-  }, [isDark, mockData]);
+  }, [isDark, data]);
 
   return (
     <motion.div

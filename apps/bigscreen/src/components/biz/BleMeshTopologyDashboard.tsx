@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import BleMeshNetworkChart from './BleMeshNetworkChart';
 import {
@@ -14,23 +14,8 @@ interface BleMeshTopologyDashboardProps {
 const BleMeshTopologyDashboard: React.FC<BleMeshTopologyDashboardProps> = ({ 
   className = '' 
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleRefresh = useCallback(async () => {
-    if (!BLE_MESH_API_AVAILABLE) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // 模拟刷新数据
-      await new Promise(resolve => setTimeout(resolve, 800));
-    } catch (error) {
-      console.error('刷新失败:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // BLE Mesh API 未接入，刷新为无操作，不模拟加载
+  const handleRefresh = useCallback(async () => {}, []);
 
   return (
     <div className={`w-full h-full bg-white ${className}`}>
@@ -62,9 +47,8 @@ const BleMeshTopologyDashboard: React.FC<BleMeshTopologyDashboardProps> = ({
               <div className="p-4" style={{ height: '600px' }}>
                 <BleMeshNetworkChart
                   type="reachability"
-                  isLoading={isLoading}
                   onRefresh={handleRefresh}
-                  customerId="demo"
+                  customerId=""
                   maxNodes={300}
                   enableVirtualization={true}
                 />

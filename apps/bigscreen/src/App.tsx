@@ -19,12 +19,11 @@ const EventDetail = lazy(() => import('@/pages/EventDetail'));
 const UserDetection = lazy(() => import('@/pages/UserDetection'));
 const UserDetection3D = lazy(() => import('@/pages/UserDetection3D'));
 const UserRelationTopology = lazy(() => import('@/pages/UserRelationTopology'));
-const LayoutDemo = lazy(() => import('@/pages/LayoutDemo').then(m => ({ default: m.LayoutDemo })));
+const LayoutEditor = lazy(() => import('@/pages/LayoutEditor').then(m => ({ default: m.LayoutEditor })));
 const WorkflowEditor = lazy(() => import('@/pages/WorkflowEditor'));
 const CrawlerControl = lazy(() => import('@/pages/CrawlerControl'));
 const LlmManagement = lazy(() => import('@/pages/LlmManagement'));
 const LlmChatLogs = lazy(() => import('@/pages/LlmChatLogs'));
-const HeroDemo = lazy(() => import('@/pages/HeroDemo'));
 const MemoryGraphPage = lazy(() => import('@/pages/MemoryGraphPage'));
 const PromptManagement = lazy(() => import('@/pages/PromptManagement'));
 const WorkflowManagement = lazy(() => import('@/pages/WorkflowManagement'));
@@ -108,7 +107,7 @@ const App: React.FC = () => {
         )}>
           <Routes>
             {/* 全屏布局页面 */}
-            <Route path="/" element={<FullscreenLayout><AnimatedPage pageKey="hero"><HeroDemo /></AnimatedPage></FullscreenLayout>} />
+            <Route path="/" element={<Navigate to="/index" replace />} />
             <Route path="/event-analysis/:eventId" element={<FullscreenLayout><AnimatedPage pageKey="event-detail"><EventDetail /></AnimatedPage></FullscreenLayout>} />
             <Route path="/chat" element={<FullscreenLayout><AnimatedPage pageKey="chat"><ChatPage /></AnimatedPage></FullscreenLayout>} />
 
@@ -119,7 +118,7 @@ const App: React.FC = () => {
             <Route path="/user-detection" element={<Layout><AnimatedPage pageKey="user-detection"><UserDetection /></AnimatedPage></Layout>} />
             <Route path="/user-detection-3d" element={<FullscreenLayout><AnimatedPage pageKey="user-detection-3d"><UserDetection3D /></AnimatedPage></FullscreenLayout>} />
             <Route path="/custom-overview" element={<Layout><AnimatedPage pageKey="custom-overview"><CustomDataOverview /></AnimatedPage></Layout>} />
-            <Route path="/layout-editor" element={<Layout><AnimatedPage pageKey="layout-editor"><LayoutDemo /></AnimatedPage></Layout>} />
+            <Route path="/layout-editor" element={<Layout><AnimatedPage pageKey="layout-editor"><LayoutEditor /></AnimatedPage></Layout>} />
             <Route path="/ble-mesh-topology" element={<Navigate to="/user-relation-topology" replace />} />
             <Route path="/workflow-editor/:name?" element={<Layout><AnimatedPage pageKey="workflow-editor"><WorkflowEditor /></AnimatedPage></Layout>} />
             <Route path="/crawler-control" element={<Layout><AnimatedPage pageKey="crawler"><CrawlerControl /></AnimatedPage></Layout>} />

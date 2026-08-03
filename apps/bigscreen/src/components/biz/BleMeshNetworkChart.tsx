@@ -26,7 +26,7 @@ const BleMeshNetworkChart: React.FC<BleMeshNetworkChartProps> = ({
   isLoading = false,
   onDeviceSelect,
   onRefresh,
-  customerId = 'demo'
+  customerId = ''
 }) => {
   const [networkData, setNetworkData] = useState<NetworkGraphData | null>(null);
   const [error, setError] = useState<string | null>(null);

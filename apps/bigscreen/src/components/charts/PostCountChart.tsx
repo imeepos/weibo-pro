@@ -18,7 +18,7 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
   className = "",
 }) => {
   const { isDark } = useTheme();
-  const [mockData, setMockData] = useState<Array<{date: string, count: number}>>([]);
+  const [data, setData] = useState<Array<{date: string, count: number}>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -27,7 +27,7 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
       try {
         const data = await CommonAPI.getPostCountHistory(7);
         if (cancelled) return;
-        setMockData(data);
+        setData(data);
       } catch (error) {
         if (cancelled) return;
         logger.error('Failed to fetch post count history data:', error);
@@ -43,7 +43,7 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
 
   const option = React.useMemo(() => {
     // Return null if no data to prevent gradient rendering errors
-    if (!Array.isArray(mockData) || mockData.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       return {
         title: {
           text: '暂无数据',
@@ -74,7 +74,7 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
       },
       xAxis: {
         type: "category",
-        data: mockData.map((item) => item.date),
+        data: data.map((item) => item.date),
         axisLine: {
           lineStyle: {
             color: "#374151",
@@ -102,7 +102,7 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
       },
       series: [
         {
-          data: mockData.map((item) => item.count),
+          data: data.map((item) => item.count),
           type: "line",
           smooth: true,
           lineStyle: {
@@ -133,7 +133,7 @@ const PostCountChart: React.FC<PostCountChartProps> = ({
         },
       ],
     };
-  }, [isDark, mockData]);
+  }, [isDark, data]);
 
   return (
     <motion.div

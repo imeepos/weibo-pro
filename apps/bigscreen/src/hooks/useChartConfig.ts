@@ -145,7 +145,7 @@ export function useColorGenerator() {
 }
 
 /**
- * 稳定的数据引用Hook - 避免mockData依赖问题
+ * 稳定的数据引用Hook - 避免序列化依赖导致的重复计算
  */
 export function useStableData<T>(data: T): T {
   return useMemo(() => data, [JSON.stringify(data)]);

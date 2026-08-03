@@ -24,7 +24,7 @@ class WebSocketManager {
   // 连接 WebSocket
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // 优雅的降级处理：如果无法连接到WebSocket，自动启用Mock模式
+      // 检查服务器是否支持WebSocket，不支持时如实报错，不伪装已连接
       const checkConnection = async () => {
         try {
           // 检查服务器是否支持WebSocket
@@ -41,11 +41,9 @@ class WebSocketManager {
       // 检查连接可用性
       checkConnection().then((available) => {
         if (!available) {
-          logger.warn('WebSocket server not available, falling back to mock mode');
-          setTimeout(() => {
-            this.emit('connected', true);
-            resolve();
-          }, 100);
+          const error = new Error('WebSocket server not available');
+          logger.error('WebSocket server not available', error);
+          reject(error);
           return;
         }
 

@@ -3,7 +3,6 @@ import {
   buildEdgesArray,
   buildNodesArray,
   createEmptyStatistics,
-  getMockTopologyData,
   getNodeLevel,
   normalizeTopologyData
 } from './transform';
@@ -118,12 +117,3 @@ describe('buildEdgesArray', () => {
   });
 });
 
-describe('getMockTopologyData', () => {
-  it('returns a non-empty mock data set with expected shape', () => {
-    const data = getMockTopologyData();
-    expect(data).toHaveProperty('data');
-    expect(Array.isArray(data.data)).toBe(true);
-    expect(data.data.length).toBeGreaterThan(0);
-    expect(data.data[0]).toMatchObject({ Source: expect.any(String), target: expect.any(String) });
-  });
-});

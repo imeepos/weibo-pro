@@ -35,8 +35,6 @@ const baseURL = getBaseUrl(
   }
 })();
 
-// Mock服务现在由vite-plugin-mock处理
-
 // 错误边界组件
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

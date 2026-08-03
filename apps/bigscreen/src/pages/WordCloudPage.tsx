@@ -3,7 +3,7 @@ import WordCloudChart, { type WordCloudChartRef } from "@/components/charts/Word
 import { useWordCloudData } from "@/hooks/useChartData"
 import { Button } from "@sker/ui/components/ui/button"
 import { Download } from "lucide-react"
-import { MAX_WORD_CLOUD_WORDS } from "@/constants/mockData"
+import { MAX_WORD_CLOUD_WORDS } from "@/constants/wordCloud"
 
 interface KeywordData {
   keyword: string

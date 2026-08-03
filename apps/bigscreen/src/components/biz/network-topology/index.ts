@@ -5,8 +5,7 @@ export {
   createEmptyStatistics,
   normalizeTopologyData,
   buildNodesArray,
-  buildEdgesArray,
-  getMockTopologyData
+  buildEdgesArray
 } from './transform';
 export { networkOptions } from './options';
 export type {

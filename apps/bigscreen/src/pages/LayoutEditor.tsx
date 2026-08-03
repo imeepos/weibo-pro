@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { LayoutDesigner } from '../components/layout/LayoutDesigner';
 import { LayoutConfig } from '../stores/useLayoutStore';
 
-export const LayoutDemo: React.FC = () => {
+export const LayoutEditor: React.FC = () => {
   const [savedLayout, setSavedLayout] = useState<LayoutConfig | null>(null);
 
   const handleSaveLayout = (layout: LayoutConfig) => {

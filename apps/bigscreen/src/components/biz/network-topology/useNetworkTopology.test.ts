@@ -82,7 +82,7 @@ describe('useNetworkTopology', () => {
     expect(apiMocks.fetchTopologyData).toHaveBeenCalledWith('override');
   });
 
-  it('sets error message and falls back to mock data when fetch fails', async () => {
+  it('sets error message and does not inject fabricated topology data when fetch fails', async () => {
     apiMocks.fetchTopologyData.mockRejectedValue(new Error('network down'));
     const { result } = renderHook(() => useNetworkTopology({ customerId: 'c1' }));
     await act(async () => {
@@ -90,6 +90,8 @@ describe('useNetworkTopology', () => {
     });
     expect(result.current.error).toBe('network down');
     expect(result.current.isLoading).toBe(false);
+    // 失败时不得回退到伪造拓扑数据：不创建任何网络实例
+    expect(visMocks.MockNetwork.instances).toHaveLength(0);
   });
 
   it('exposes default empty statistics', () => {

@@ -20,7 +20,7 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
 }) => {
   const { isDark } = useTheme();
   const { selectedTimeRange } = useAppStore();
-  const [mockData, setMockData] = useState<Array<{name: string, value: number, color: string}>>([]);
+  const [data, setData] = useState<Array<{name: string, value: number, color: string}>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,15 +31,15 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
         if (cancelled) return;
 
         if (Array.isArray(data)) {
-          setMockData(data);
+          setData(data);
         } else {
           logger.warn('Sentiment pie data is not an array:', data);
-          setMockData([]);
+          setData([]);
         }
       } catch (error) {
         if (cancelled) return;
         logger.error('Failed to fetch sentiment pie data:', error);
-        setMockData([]);
+        setData([]);
       }
     };
 
@@ -50,11 +50,11 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
     };
   }, [selectedTimeRange]);
 
-  const total = Array.isArray(mockData) ? mockData.reduce((sum, item) => sum + item.value, 0) : 0;
+  const total = Array.isArray(data) ? data.reduce((sum, item) => sum + item.value, 0) : 0;
 
   const option = React.useMemo(() => {
     // Return minimal option if no valid data
-    if (!Array.isArray(mockData) || mockData.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
       return {
         title: {
           text: '暂无数据',
@@ -88,7 +88,7 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
           color: isDark ? "#ffffff" : "#111827",
         },
         formatter: (name: string) => {
-          const item = mockData.find((d) => d.name === name);
+          const item = data.find((d) => d.name === name);
           if (!item) return name;
           const percentage = ((item.value / total) * 100).toFixed(1);
           return `${name} (${percentage}%)`;
@@ -135,7 +135,7 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
               color: isDark ? "#ffffff" : "#111827",
             },
           },
-          data: mockData.map((item) => ({
+          data: data.map((item) => ({
             value: item.value,
             name: item.name,
             itemStyle: {
@@ -164,7 +164,7 @@ const SimpleSentimentPieChart: React.FC<SimpleSentimentPieChartProps> = ({
         },
       ],
     };
-  }, [total, isDark, mockData]);
+  }, [total, isDark, data]);
 
   return (
     <motion.div

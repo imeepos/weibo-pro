@@ -66,7 +66,7 @@ export function CommentCreateForm({
       // Get existing discussion
       const discussion = discussions.find((d) => d.id === discussionId);
       if (!discussion) {
-        // Mock creating suggestion
+        // 本地创建新讨论（尚未接入后端持久化）
         const newDiscussion: TDiscussion = {
           id: discussionId,
           comments: [
@@ -128,7 +128,7 @@ export function CommentCreateForm({
       .join('');
 
     const _discussionId = nanoid();
-    // Mock creating new discussion
+    // 本地创建新讨论（尚未接入后端持久化）
     const newDiscussion: TDiscussion = {
       id: _discussionId,
       comments: [

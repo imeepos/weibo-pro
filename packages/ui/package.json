@@ -15,7 +15,6 @@
     "@better-auth/passkey": "1.4.9",
     "@better-auth/sso": "1.4.9",
     "@emoji-mart/data": "^1.2.1",
-    "@faker-js/faker": "^10.1.0",
     "@lexical/react": "^0.38.2",
     "@lexical/rich-text": "^0.38.2",
     "@lexical/selection": "^0.38.2",

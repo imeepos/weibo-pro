@@ -12,7 +12,6 @@ import {
   mockCn,
 } from './UserRelationWordCloud.mocks';
 import {
-  mockNetwork,
   noEdgesNetwork,
   largeNetwork,
   selfLoopNetwork,
