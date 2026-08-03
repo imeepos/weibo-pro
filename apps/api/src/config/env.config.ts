@@ -17,6 +17,7 @@ const envSchema = z.object({
 
   API_BASE_URL: z.string().url().default('http://localhost:8089'),
   S3_BASE_URL: z.string().url().default('http://localhost:8089'),
+  BETTER_AUTH_SECRET: z.string().min(32),
 
   KUAIDAILI_SECRET_ID: z.string().optional(),
   KUAIDAILI_SECRET_KEY: z.string().optional(),

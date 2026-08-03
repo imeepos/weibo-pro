@@ -90,6 +90,7 @@ async function bootstrap() {
   // 注意：本项目使用 Better Auth 仅作为 API 路由转发器，不使用其认证功能
   // 因此不配置 database，移除不必要的认证插件
   const auth = betterAuth({
+    secret: env.BETTER_AUTH_SECRET,
     // 禁用全局限流
     rateLimit: {
       enabled: false,
