@@ -21,7 +21,6 @@ export * from './MarkdownAst';
 export * from './DateAst';
 export * from './ast-utils';
 export { Compiler } from './compiler/index';
-export * from './MqAst';
 export * from './StoreAst';
 export * from './CollectorAst';
 export * from './LoopAst';

@@ -41,7 +41,6 @@
     "@sker/entities": "workspace:*",
     "@sker/ip-proxy": "workspace:*",
     "@sker/json-harmony": "workspace:*",
-    "@sker/mq": "workspace:*",
     "@sker/nlp": "workspace:*",
     "@sker/redis": "workspace:*",
     "@sker/sdk": "workspace:*",

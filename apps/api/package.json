@@ -27,7 +27,6 @@
     "@sker/entities": "workspace:*",
     "@sker/ip-proxy": "workspace:*",
     "@sker/llm-protocol": "workspace:*",
-    "@sker/mq": "workspace:*",
     "@sker/redis": "workspace:*",
     "@sker/sdk": "workspace:*",
     "@sker/utils": "workspace:*",

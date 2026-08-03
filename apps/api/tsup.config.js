@@ -11,7 +11,6 @@ export default {
     '@sker/auth',
     '@sker/core',
     '@sker/entities',
-    '@sker/mq',
     '@sker/llm-protocol',
     '@sker/redis',
     '@sker/sdk',

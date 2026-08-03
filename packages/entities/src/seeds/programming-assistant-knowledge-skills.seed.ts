@@ -105,12 +105,6 @@ export const programmingAssistantKnowledgeSkills = [
 - 迁移管理通过 typeorm migration
 - 种子数据在启动时初始化
 
-### 消息队列 (@sker/mq)
-- RabbitMQ 生产者-消费者模式
-- RxJS Observable 处理异步消息
-- batch() 方法支持批量发布
-- NoRetryError 支持不可重试错误
-
 ### API 层 (@sker/api)
 - NestJS 作为HTTP层facade
 - 实际服务由 @sker/core DI管理

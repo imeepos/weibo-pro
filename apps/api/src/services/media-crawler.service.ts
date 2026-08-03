@@ -109,7 +109,7 @@ export class MediaCrawlerService {
     return {
       success: true,
       message: 'Environment is healthy',
-      output: `Node.js: ${process.version}\n@sker/crawler-core: Available`,
+      output: `Node.js: ${process.version}`,
     }
   }
 

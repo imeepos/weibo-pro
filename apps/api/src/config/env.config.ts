@@ -8,7 +8,7 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
-  RABBITMQ_URL: z.string().url(),
+  RABBITMQ_URL: z.string().url().optional(),
   MONGODB_URL: z.string().url(),
 
   OPENAI_BASE_URL: z.string().url(),

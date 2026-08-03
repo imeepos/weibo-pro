@@ -36,9 +36,6 @@ export { LlmTextAgentAstVisitor } from './LlmTextAgentAstVisitor'
 export { LlmStructuredOutputAstVisitor } from './LlmStructuredOutputAstVisitor'
 export { StoryWeaverAstVisitor } from './StoryWeaverAstVisitor'
 
-// 消息队列节点
-export { MqPushAstVisitor, MqPullAstVisitor } from './MqAstVisitor'
-
 // 存储节点
 export { StoreGetAstVisitor, StoreSetAstVisitor } from './StoreAstVisitor'
 

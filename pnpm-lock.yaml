@@ -104,9 +104,6 @@ importers:
       '@sker/llm-protocol':
         specifier: workspace:*
         version: link:../../packages/llm-protocol
-      '@sker/mq':
-        specifier: workspace:*
-        version: link:../../packages/mq
       '@sker/redis':
         specifier: workspace:*
         version: link:../../packages/redis
@@ -573,9 +570,6 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../../packages/entities
-      '@sker/mq':
-        specifier: workspace:*
-        version: link:../../packages/mq
       '@sker/workflow':
         specifier: workspace:*
         version: link:../../packages/workflow
@@ -864,64 +858,6 @@ importers:
         specifier: ^4.0.16
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
 
-  packages/aui:
-    dependencies:
-      '@sker/store':
-        specifier: workspace:*
-        version: link:../store
-      react:
-        specifier: ^19.1.1
-        version: 19.2.8
-      rxjs:
-        specifier: ^7.8.1
-        version: 7.8.2
-      tslib:
-        specifier: ^2.0.0
-        version: 2.8.1
-    devDependencies:
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@testing-library/react':
-        specifier: ^16.2.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@types/minimatch':
-        specifier: ^6.0.0
-        version: 6.0.0
-      '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
-      '@types/react':
-        specifier: ^19.0.0
-        version: 19.2.18
-      '@types/react-dom':
-        specifier: ^19.0.0
-        version: 19.2.4(@types/react@19.2.18)
-      eslint:
-        specifier: ^10.8.0
-        version: 10.8.0(jiti@2.7.0)
-      jsdom:
-        specifier: ^30.0.1
-        version: 30.0.1(@noble/hashes@2.2.0)
-      minimatch:
-        specifier: ^10.1.1
-        version: 10.2.6
-      react-dom:
-        specifier: ^19.1.1
-        version: 19.2.8(react@19.2.8)
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.4)(typescript@6.0.3)(yaml@2.9.0)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
-
   packages/auth:
     dependencies:
       '@sker/core':
@@ -1008,46 +944,6 @@ importers:
         specifier: ^4.0.16
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
 
-  packages/compiler:
-    dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.115.0
-        version: 0.115.0(zod@4.4.3)
-      '@sker/core':
-        specifier: workspace:*
-        version: link:../core
-      openai:
-        specifier: ^7.3.0
-        version: 7.3.0(ws@8.21.1)(zod@4.4.3)
-      rxjs:
-        specifier: ^7.8.1
-        version: 7.8.2
-      zod:
-        specifier: ^4.2.1
-        version: 4.4.3
-    devDependencies:
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
-      eslint:
-        specifier: ^10.8.0
-        version: 10.8.0(jiti@2.7.0)
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.4)(typescript@6.0.3)(yaml@2.9.0)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
-
   packages/core:
     dependencies:
       dayjs:
@@ -1059,97 +955,6 @@ importers:
       zod:
         specifier: ^4.2.1
         version: 4.4.3
-    devDependencies:
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
-      eslint:
-        specifier: ^10.8.0
-        version: 10.8.0(jiti@2.7.0)
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.4)(typescript@6.0.3)(yaml@2.9.0)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
-
-  packages/crawler-core:
-    dependencies:
-      '@sker/core':
-        specifier: workspace:*
-        version: link:../core
-      '@sker/entities':
-        specifier: workspace:*
-        version: link:../entities
-      '@sker/mq':
-        specifier: workspace:*
-        version: link:../mq
-      '@sker/nlp':
-        specifier: workspace:*
-        version: link:../nlp
-      '@sker/workflow':
-        specifier: workspace:*
-        version: link:../workflow
-      axios:
-        specifier: ^1.7.9
-        version: 1.7.9
-      cron:
-        specifier: ^4.4.0
-        version: 4.4.0
-      exceljs:
-        specifier: ^4.4.0
-        version: 4.4.0
-      playwright:
-        specifier: ^1.49.1
-        version: 1.62.1
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
-      rxjs:
-        specifier: ^7.8.1
-        version: 7.8.2
-      socks-proxy-agent:
-        specifier: ^10.1.0
-        version: 10.1.0
-      tough-cookie:
-        specifier: ^6.0.2
-        version: 6.0.2
-      typeorm:
-        specifier: ^1.1.0
-        version: 1.1.0(babel-plugin-macros@3.1.0)(better-sqlite3@13.0.2)(ioredis@6.0.0)(mongodb@7.5.0(socks@2.8.9))(pg@8.22.0)(redis@6.2.0(@node-rs/xxhash@1.7.6)(@opentelemetry/api@1.9.1))(ts-node@10.9.2(@swc/core@1.15.47(@swc/helpers@0.5.23))(@types/node@26.1.2)(typescript@6.0.3))
-    devDependencies:
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
-      '@types/tough-cookie':
-        specifier: ^4.0.5
-        version: 4.0.5
-      eslint:
-        specifier: ^10.8.0
-        version: 10.8.0(jiti@2.7.0)
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.4)(typescript@6.0.3)(yaml@2.9.0)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/email:
     devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
@@ -1351,49 +1156,6 @@ importers:
         specifier: ^4.0.16
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
 
-  packages/mq:
-    dependencies:
-      '@sker/core':
-        specifier: workspace:*
-        version: link:../core
-      amqplib:
-        specifier: ^2.0.1
-        version: 2.0.1
-      dotenv:
-        specifier: ^17.4.2
-        version: 17.4.2
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
-      rxjs:
-        specifier: ^7.8.1
-        version: 7.8.2
-    devDependencies:
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/amqplib':
-        specifier: ^0.10.5
-        version: 0.10.8
-      '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
-      eslint:
-        specifier: ^10.8.0
-        version: 10.8.0(jiti@2.7.0)
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.4)(typescript@6.0.3)(yaml@2.9.0)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
-
   packages/nlp:
     dependencies:
       '@sker/core':
@@ -1538,37 +1300,6 @@ importers:
       '@sker/entities':
         specifier: workspace:*
         version: link:../entities
-      '@sker/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@sker/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      '@types/node':
-        specifier: ^26.1.2
-        version: 26.1.2
-      eslint:
-        specifier: ^10.8.0
-        version: 10.8.0(jiti@2.7.0)
-      tsup:
-        specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(jiti@2.7.0)(postcss@8.5.25)(tsx@4.23.4)(typescript@6.0.3)(yaml@2.9.0)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.0.16
-        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.102.0)(terser@5.49.0)(tsx@4.23.4)(yaml@2.9.0))
-
-  packages/store:
-    dependencies:
-      rxjs:
-        specifier: ^7.8.1
-        version: 7.8.2
-      tslib:
-        specifier: ^2.0.0
-        version: 2.8.1
-    devDependencies:
       '@sker/eslint-config':
         specifier: workspace:*
         version: link:../eslint-config
@@ -2239,9 +1970,6 @@ importers:
       '@sker/json-harmony':
         specifier: workspace:*
         version: link:../json-harmony
-      '@sker/mq':
-        specifier: workspace:*
-        version: link:../mq
       '@sker/nlp':
         specifier: workspace:*
         version: link:../nlp
@@ -6541,9 +6269,6 @@ packages:
   '@types/lodash@4.17.25':
     resolution: {integrity: sha512-+K1NIO8I+F9/wNulfVvu23QYd0Pe9/OCqRrim4NoYIf1VoEDL90Ve4ClzpyqBLc7NpGGWRvYNCKZ1BE/Jpf8dQ==}
 
-  '@types/luxon@3.7.3':
-    resolution: {integrity: sha512-pE7BSbKHiojpl4v7iEzdfFLXXJaH5RPJxI3Wr4x3HU59l83PJfhcUx4mGPWq245+DCAENAzRF/+ZoYr2tJCe/g==}
-
   '@types/mdast@3.0.15':
     resolution: {integrity: sha512-LnwD+mUEfxWMa1QpDraczIn6k0Ee3SMicuYSSzS6ZYl2gKS09EClnJYGd8Du6rfc5r/GZEk5o1mRb8TaTj03sQ==}
 
@@ -6594,9 +6319,6 @@ packages:
 
   '@types/three@0.185.3':
     resolution: {integrity: sha512-8TqTn1+fjPWuJ4mR6Igtg56DCf9b5EeAlwhb5xaa6WlBrsg7SvG0NQbyctGRkHCKwg0uftfCspOEsTXelgktMA==}
-
-  '@types/tough-cookie@4.0.5':
-    resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
 
   '@types/unist@2.0.11':
     resolution: {integrity: sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA==}
@@ -7566,10 +7288,6 @@ packages:
   cron-parser@5.7.0:
     resolution: {integrity: sha512-iSpDHpwwW/GhIg4JVODYlWUEpMNSimaHvqOhHpOz1W+Y97z1lL1nf+dpcF17cNwFRpTtKN9devgi1fxflp3Phw==}
     engines: {node: '>=18'}
-
-  cron@4.4.0:
-    resolution: {integrity: sha512-fkdfq+b+AHI4cKdhZlppHveI/mgz2qpiYxcm+t5E5TsxX7QrLS1VE0+7GENEk9z0EeGPcpSciGv6ez24duWhwQ==}
-    engines: {node: '>=18.x'}
 
   cross-env@10.1.0:
     resolution: {integrity: sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==}
@@ -11306,10 +11024,6 @@ packages:
   socket.io@4.8.3:
     resolution: {integrity: sha512-2Dd78bqzzjE6KPkD5fHZmDAKRNe3J15q+YHDrIsy9WEkqttc7GY+kT9OBLSMaPbQaEd0x1BjcmtMtXkfpc+T5A==}
     engines: {node: '>=10.2.0'}
-
-  socks-proxy-agent@10.1.0:
-    resolution: {integrity: sha512-WlMj/67cEJ6MDI1OcsnjuYKDNDoyPCCYZ249kuuXPiMDw9F8PXkVaQ7YWu3siTydfQ/4BEZcvGzu+aYvz7dDCQ==}
-    engines: {node: '>= 20'}
 
   socks-proxy-agent@8.0.5:
     resolution: {integrity: sha512-HehCEsotFqbPW9sJ8WVYB6UbmIMv7kUUORIF2Nncq4VQvBfNBLibW9YZR5dlYCSUhwcD628pRllm7n+E+YTzJw==}
@@ -16687,8 +16401,6 @@ snapshots:
 
   '@types/lodash@4.17.25': {}
 
-  '@types/luxon@3.7.3': {}
-
   '@types/mdast@3.0.15':
     dependencies:
       '@types/unist': 2.0.11
@@ -16747,8 +16459,6 @@ snapshots:
       '@types/webxr': 0.5.24
       fflate: 0.8.3
       meshoptimizer: 1.1.1
-
-  '@types/tough-cookie@4.0.5': {}
 
   '@types/unist@2.0.11': {}
 
@@ -17767,11 +17477,6 @@ snapshots:
 
   cron-parser@5.7.0:
     dependencies:
-      luxon: 3.7.2
-
-  cron@4.4.0:
-    dependencies:
-      '@types/luxon': 3.7.3
       luxon: 3.7.2
 
   cross-env@10.1.0:
@@ -22264,14 +21969,6 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
-
-  socks-proxy-agent@10.1.0:
-    dependencies:
-      agent-base: 9.0.0
-      debug: 4.4.3(supports-color@5.5.0)
-      socks: 2.8.9
-    transitivePeerDependencies:
-      - supports-color
 
   socks-proxy-agent@8.0.5:
     dependencies:
