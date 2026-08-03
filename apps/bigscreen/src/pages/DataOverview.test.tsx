@@ -2,15 +2,23 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DataOverview from './DataOverview';
 
-vi.mock('@/hooks/useOverviewData', () => ({
-  useOverviewData: () => ({
-    statsOverviewData: {
-      events: { value: 12, change: 5 },
-      posts: { value: 120, change: 10 },
-      users: { value: 48, change: 3 },
-      interactions: { value: 300, change: 18 },
-    },
-    sentimentData: {
+vi.mock('@/hooks/useIndexRealtimeSnapshot', () => ({
+  useIndexRealtimeSnapshot: () => ({
+    data: {
+      timeRange: '24h',
+      generatedAt: '2026-08-03T00:00:00.000Z',
+      cacheTtlSeconds: 10,
+      statistics: {
+        eventCount: 12,
+        eventCountChange: 5,
+        postCount: 120,
+        postCountChange: 10,
+        userCount: 48,
+        userCountChange: 3,
+        interactionCount: 300,
+        interactionCountChange: 18,
+      },
+      sentiment: {
       positive: 30,
       negative: 10,
       neutral: 60,
@@ -20,16 +28,28 @@ vi.mock('@/hooks/useOverviewData', () => ({
       neutralPercentage: 60,
       trend: 'stable',
       avgScore: 0.2,
+      },
+      locations: [],
+      hotEvents: [],
+      wordCloud: [],
+      emotionCurve: { categories: [], series: [] },
+      eventTypes: { categories: [], series: [{ name: '事件类型', data: [] }] },
+      userRelationNetwork: {
+        nodes: [],
+        edges: [],
+        statistics: {
+          totalUsers: 0,
+          totalRelations: 0,
+          avgDegree: 0,
+          density: 0,
+          communities: 0,
+        },
+      },
     },
     loading: false,
     error: null,
-    isStale: false,
     refetch: vi.fn(),
   }),
-}));
-
-vi.mock('@/hooks/useChartData', () => ({
-  useWordCloudData: () => ({ data: [] }),
 }));
 
 vi.mock('@/stores/useAppStore', () => ({

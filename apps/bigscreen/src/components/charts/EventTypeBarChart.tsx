@@ -10,6 +10,10 @@ import type { EChartsFormatterParams } from '@/types/charts';
 interface EventTypeBarChartProps {
   height?: number;
   className?: string;
+  data?: Array<{ name: string; value: number; color?: string }> | null;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 const logger = createLogger('EventTypeBarChart');
@@ -31,12 +35,20 @@ const CHART_COLORS = [
 const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
   height: _height = 0,
   className = "",
+  data: externalData,
+  loading: externalLoading,
+  error: externalError,
+  onRetry,
 }) => {
   const { isDark } = useTheme();
   const { selectedTimeRange } = useAppStore();
   const [mockData, setMockData] = useState<Array<{ name: string, value: number, color?: string }>>([]);
 
   useEffect(() => {
+    if (externalData !== undefined) {
+      return;
+    }
+
     let cancelled = false;
 
     const fetchData = async () => {
@@ -62,11 +74,15 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [selectedTimeRange]);
+  }, [externalData, selectedTimeRange]);
+
+  const displayedData = externalData !== undefined ? (externalData || []) : mockData;
+  const displayedLoading = externalLoading ?? false;
+  const displayedError = externalError ?? null;
 
   const option = React.useMemo(() => {
     // Return null if no valid data to prevent gradient rendering errors
-    if (!Array.isArray(mockData) || mockData.length === 0) {
+    if (!Array.isArray(displayedData) || displayedData.length === 0) {
       return {
         title: {
           text: '暂无数据',
@@ -102,7 +118,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
       },
       xAxis: {
         type: "category",
-        data: Array.isArray(mockData) ? mockData.map((item) => item.name) : [],
+        data: Array.isArray(displayedData) ? displayedData.map((item) => item.name) : [],
         axisLabel: {
           color: isDark ? "#f3f4f6" : "#111827",
           fontSize: 12,
@@ -146,7 +162,7 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
         {
           name: "事件类型",
           type: "bar",
-          data: mockData.map((item, index) => ({
+          data: displayedData.map((item, index) => ({
             value: item.value,
             name: item.name,
             itemStyle: {
@@ -173,7 +189,28 @@ const EventTypeBarChart: React.FC<EventTypeBarChartProps> = ({
         },
       ],
     };
-  }, [isDark, mockData]);
+  }, [isDark, displayedData]);
+
+  if (displayedLoading) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        加载中...
+      </div>
+    );
+  }
+
+  if (displayedError) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="text-sm text-muted-foreground">数据加载失败</div>
+          {onRetry ? (
+            <button className="mt-2 text-xs text-primary" onClick={onRetry}>重试</button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div

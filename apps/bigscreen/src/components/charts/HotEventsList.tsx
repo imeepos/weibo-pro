@@ -20,11 +20,15 @@ import { useAppStore } from '@/stores/useAppStore';
 
 interface HotEventsListProps {
   className?: string;
+  events?: HotEvent[] | null;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 const logger = createLogger('HotEventsList');
 
-const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
+const HotEventsList: React.FC<HotEventsListProps> = ({ className = '', events: externalEvents, loading: externalLoading, error: externalError, onRetry }) => {
   const navigate = useNavigate();
   const { selectedTimeRange } = useAppStore();
   const [events, setEvents] = useState<HotEvent[]>([]);
@@ -32,6 +36,10 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
   const [_isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
+    if (externalEvents !== undefined) {
+      return;
+    }
+
     let isCancelled = false;
 
     const fetchHotEvents = async (isBackgroundRefresh = false) => {
@@ -84,7 +92,7 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
     return () => {
       isCancelled = true;
     };
-  }, [selectedTimeRange]);
+  }, [externalEvents, selectedTimeRange]);
 
   const getSentimentColor = (sentiment: HotEvent['sentiment']) => {
     if (sentiment.positive > sentiment.negative && sentiment.positive > sentiment.neutral) {
@@ -141,7 +149,11 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
     );
   };
 
-  if (loading) {
+  const displayedEvents = externalEvents !== undefined ? (externalEvents || []) : events;
+  const displayedLoading = externalLoading ?? loading;
+  const displayedError = externalError ?? null;
+
+  if (displayedLoading) {
     return (
       <div className={cn('flex items-center justify-center h-64', className)}>
         <div className="text-muted-foreground">加载中...</div>
@@ -149,10 +161,23 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '' }) => {
     );
   }
 
+  if (displayedError) {
+    return (
+      <div className={cn('flex items-center justify-center h-64', className)}>
+        <div className="text-center">
+          <div className="text-sm text-muted-foreground">数据加载失败</div>
+          {onRetry ? (
+            <button className="mt-2 text-xs text-primary" onClick={onRetry}>重试</button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ScrollArea className={cn('h-full', className)}>
       <div className="space-y-4 pr-4">
-        {Array.isArray(events) ? events.map((event, index) => (
+        {Array.isArray(displayedEvents) ? displayedEvents.map((event, index) => (
           <motion.div
             key={event.id}
             initial={{ opacity: 0, x: -20 }}

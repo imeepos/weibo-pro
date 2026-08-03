@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 import { root } from '@sker/core';
 import { OverviewService } from '../services/data/overview.service';
+import { OverviewRealtimeSnapshotService } from '../services/data/overview-realtime-snapshot.service';
 import { OverviewController } from './overview.controller';
 import type { TimeRange } from '../services/data/types';
 
@@ -11,16 +12,25 @@ describe('OverviewController (unit, mock service)', () => {
     getSentiment: vi.fn(),
     getLocations: vi.fn(),
   };
+  const mockSnapshotService = {
+    getSnapshot: vi.fn(),
+    refreshCache: vi.fn(),
+  };
   let controller: OverviewController;
 
   beforeAll(() => {
-    root.set([{ provide: OverviewService, useValue: mockService }]);
+    root.set([
+      { provide: OverviewService, useValue: mockService },
+      { provide: OverviewRealtimeSnapshotService, useValue: mockSnapshotService },
+    ]);
   });
 
   beforeEach(() => {
     mockService.getStatistics.mockClear().mockResolvedValue({ eventCount: 1 });
     mockService.getSentiment.mockClear().mockResolvedValue({ positive: 0.6, negative: 0.4 });
     mockService.getLocations.mockClear().mockResolvedValue([{ name: '北京', count: 10 }]);
+    mockSnapshotService.getSnapshot.mockClear().mockResolvedValue({ generatedAt: '2026-08-03T00:00:00.000Z' });
+    mockSnapshotService.refreshCache.mockClear().mockResolvedValue({ success: true, clearedPatterns: [] });
     controller = new OverviewController();
   });
 
@@ -34,16 +44,25 @@ describe('OverviewController (unit, mock service)', () => {
 
       await controller.getLocations('1h');
       expect(mockService.getLocations).toHaveBeenCalledWith('1h');
+
+      await controller.getRealtimeSnapshot('6h');
+      expect(mockSnapshotService.getSnapshot).toHaveBeenCalledWith('6h');
     });
 
     it('缺失 timeRange 时默认使用 24h', async () => {
       await controller.getStatistics(undefined);
       expect(mockService.getStatistics).toHaveBeenCalledWith('24h');
+
+      await controller.getRealtimeSnapshot(undefined);
+      expect(mockSnapshotService.getSnapshot).toHaveBeenCalledWith('24h');
     });
 
     it('非法 timeRange 时回退到 24h', async () => {
       await controller.getStatistics('bogus' as never);
       expect(mockService.getStatistics).toHaveBeenCalledWith('24h');
+
+      await controller.refreshRealtimeSnapshotCache('bogus' as never);
+      expect(mockSnapshotService.refreshCache).toHaveBeenCalledWith('24h');
     });
 
     it('支持 90d/180d/365d/all 等扩展范围', async () => {
@@ -69,6 +88,17 @@ describe('OverviewController (unit, mock service)', () => {
     it('getLocations 原样返回 service 结果', async () => {
       const result = await controller.getLocations('24h');
       expect(result).toEqual([{ name: '北京', count: 10 }]);
+    });
+
+    it('getRealtimeSnapshot 原样返回 service 结果', async () => {
+      const result = await controller.getRealtimeSnapshot('24h');
+      expect(result).toEqual({ generatedAt: '2026-08-03T00:00:00.000Z' });
+    });
+
+    it('refreshRealtimeSnapshotCache 不传 timeRange 时清理全部快照缓存', async () => {
+      const result = await controller.refreshRealtimeSnapshotCache(undefined);
+      expect(mockSnapshotService.refreshCache).toHaveBeenCalledWith(undefined);
+      expect(result).toEqual({ success: true, clearedPatterns: [] });
     });
   });
 });

@@ -9,6 +9,7 @@ interface UseUserRelationNetworkParams {
   eventId?: string;
   minWeight: number;
   limit: number;
+  enabled?: boolean;
 }
 
 const CACHE_KEY = 'user_relation_network_cache';
@@ -31,13 +32,15 @@ function setCachedData(data: UserRelationNetwork) {
 }
 
 export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
-  const { relationType, timeRange, eventId, minWeight, limit } = params;
+  const { relationType, timeRange, eventId, minWeight, limit, enabled = true } = params;
   const [network, setNetwork] = useState<UserRelationNetwork | null>(() => getCachedData());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchNetwork = useCallback(async (isBackgroundRefresh = false) => {
+    if (!enabled) return;
+
     setError(null);
 
     if (isBackgroundRefresh) {
@@ -65,15 +68,16 @@ export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [relationType, timeRange, eventId, minWeight, limit]);
+  }, [enabled, relationType, timeRange, eventId, minWeight, limit]);
 
   const refetch = useCallback(async () => {
     await fetchNetwork(true);
   }, [fetchNetwork]);
 
   useEffect(() => {
+    if (!enabled) return;
     fetchNetwork(!!network);
-  }, [fetchNetwork]);
+  }, [enabled, fetchNetwork, network]);
 
   return { network, isLoading, isRefreshing, error, refetch };
 }

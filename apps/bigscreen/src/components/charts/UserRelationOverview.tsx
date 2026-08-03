@@ -4,10 +4,14 @@ import { Maximize2 } from 'lucide-react';
 import UserRelationGraph3DOffscreen from './UserRelationGraph3DOffscreen';
 import { useUserRelationNetwork } from '../../hooks/useUserRelationNetwork';
 import { useAppStore } from '@/stores/useAppStore';
-import type { UserRelationType, UserRelationNode } from '@sker/sdk';
+import type { UserRelationNetwork, UserRelationType, UserRelationNode } from '@sker/sdk';
 
 interface UserRelationOverviewProps {
   className?: string;
+  network?: UserRelationNetwork | null;
+  loading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 /**
@@ -16,7 +20,11 @@ interface UserRelationOverviewProps {
  * 自适应父容器高度
  */
 export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
-  className = ''
+  className = '',
+  network: externalNetwork,
+  loading: externalLoading,
+  error: externalError,
+  onRetry,
 }) => {
   const navigate = useNavigate();
   const selectedTimeRange = useAppStore((state) => state.selectedTimeRange);
@@ -28,10 +36,14 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
     timeRange: selectedTimeRange,
     minWeight: 1,
     limit: 5000,
+    enabled: externalNetwork === undefined,
   });
+  const displayedNetwork = externalNetwork !== undefined ? externalNetwork : network;
+  const displayedLoading = externalLoading ?? isLoading;
+  const displayedError = externalError ?? error;
 
   const summaryItems = useMemo(() => {
-    const stats = network?.statistics;
+    const stats = displayedNetwork?.statistics;
     if (!stats) return [];
 
     return [
@@ -48,7 +60,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
         value: (stats.communities ?? 0).toLocaleString('zh-CN'),
       },
     ];
-  }, [network?.statistics]);
+  }, [displayedNetwork?.statistics]);
 
   const handleFullscreen = () => {
     navigate('/user-relation-topology');
@@ -71,7 +83,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   );
 
   // 加载状态 - 简洁的大屏幕样式
-  if (isLoading) {
+  if (displayedLoading) {
     return (
       <div className={`flex items-center justify-center h-full w-full relative ${className}`}>
         {fullscreenButton}
@@ -84,14 +96,14 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   }
 
   // 错误状态
-  if (error) {
+  if (displayedError) {
     return (
       <div className={`flex items-center justify-center h-full w-full relative ${className}`}>
         {fullscreenButton}
         <div className="text-center text-muted-foreground">
           <div className="text-sm">数据加载失败</div>
           <button
-            onClick={refetch}
+            onClick={onRetry ?? refetch}
             className="mt-2 px-3 py-1 text-xs bg-primary hover:bg-primary/90 rounded transition-colors text-primary-foreground"
           >
             重试
@@ -102,7 +114,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
   }
 
   // 无数据状态
-  if (!network?.nodes?.length) {
+  if (!displayedNetwork?.nodes?.length) {
     return (
       <div className={`flex items-center justify-center h-full w-full relative ${className}`}>
         {fullscreenButton}
@@ -132,7 +144,7 @@ export const UserRelationOverview: React.FC<UserRelationOverviewProps> = ({
       ) : null}
       <div className="w-full h-full pt-16">
         <UserRelationGraph3DOffscreen
-          network={network}
+          network={displayedNetwork}
           className="w-full h-full"
           onNodeClick={handleNodeClick}
           onNodeHover={handleNodeHover}

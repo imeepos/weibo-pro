@@ -11,10 +11,19 @@ const logger = createLogger('EmotionCurveChart');
 
 interface EmotionCurveChartProps {
   className?: string;
+  data?: {
+    hours: string[];
+    positiveData: number[];
+    negativeData: number[];
+    neutralData: number[];
+  } | null;
+  loading?: boolean;
 }
 
 const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
-  className = ''
+  className = '',
+  data: externalData,
+  loading: externalLoading = false,
 }) => {
   const { isDark } = useTheme();
   const { selectedTimeRange } = useAppStore();
@@ -33,6 +42,10 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
   const [_isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
+    if (externalData !== undefined) {
+      return;
+    }
+
     let cancelled = false;
 
     const fetchData = async (isBackgroundRefresh = false) => {
@@ -60,9 +73,10 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [selectedTimeRange]);
+  }, [externalData, selectedTimeRange]);
 
-  const { hours, positiveData, negativeData, neutralData } = emotionData;
+  const sourceData = externalData ?? emotionData;
+  const { hours, positiveData, negativeData, neutralData } = sourceData;
 
   const option = React.useMemo(
     () => buildEmotionChartOption({
@@ -113,7 +127,11 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
 
       {/* 图表 */}
       <div className="flex-1 min-h-0">
-        {option ? (
+        {externalLoading || (!sourceData.hours.length && externalData !== null) ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            加载中...
+          </div>
+        ) : option ? (
           <EChart
             option={option}
             opts={{ renderer: 'canvas' }}

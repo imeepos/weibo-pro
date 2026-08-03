@@ -3,7 +3,7 @@
  */
 
 import { root } from '@sker/core';
-import { OverviewController, type TimeRange } from '@sker/sdk';
+import { OverviewController, type OverviewRealtimeSnapshot, type TimeRange } from '@sker/sdk';
 import type { OverviewStatisticsData } from '../../types';
 
 // 使用统一的 OverviewStatisticsData 类型
@@ -50,5 +50,15 @@ export const OverviewAPI = {
   getLocations: async (timeRange?: TimeRange): Promise<OverviewLocation[]> => {
     const overviewController = root.get(OverviewController);
     return await overviewController.getLocations(timeRange) as OverviewLocation[];
+  },
+
+  getRealtimeSnapshot: async (timeRange?: TimeRange): Promise<OverviewRealtimeSnapshot> => {
+    const overviewController = root.get(OverviewController);
+    return await overviewController.getRealtimeSnapshot(timeRange);
+  },
+
+  refreshRealtimeSnapshotCache: async (timeRange?: TimeRange) => {
+    const overviewController = root.get(OverviewController);
+    return await overviewController.refreshRealtimeSnapshotCache(timeRange);
   },
 };

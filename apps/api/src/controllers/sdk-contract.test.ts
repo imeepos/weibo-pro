@@ -86,6 +86,8 @@ describe('SDK 路由元数据明细（方法/path 精确匹配）', () => {
     ['Overview.getStatistics', sdk.OverviewController, 'statistics', RequestMethod.GET, 'overview'],
     ['Overview.getSentiment', sdk.OverviewController, 'sentiment', RequestMethod.GET, 'overview'],
     ['Overview.getLocations', sdk.OverviewController, 'locations', RequestMethod.GET, 'overview'],
+    ['Overview.getRealtimeSnapshot', sdk.OverviewController, 'realtime-snapshot', RequestMethod.GET, 'overview'],
+    ['Overview.refreshRealtimeSnapshotCache', sdk.OverviewController, 'realtime-snapshot/cache', RequestMethod.POST, 'overview'],
     ['PropagationVelocity.getVelocity', sdk.PropagationVelocityController, 'velocity', RequestMethod.GET, 'events/:eventId/propagation'],
   ];
 

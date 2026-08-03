@@ -86,6 +86,7 @@ export class CacheService {
 export const CACHE_KEYS = {
     OVERVIEW_STATS: 'overview:stats',
     OVERVIEW_LOCATIONS: 'overview:locations',
+    OVERVIEW_REALTIME_SNAPSHOT: 'overview:realtime-snapshot',
     HOT_EVENTS: 'events:hot',
     HOT_POSTS: 'posts:hot',
     ACTIVE_USERS: 'users:active',

@@ -1,6 +1,8 @@
-import { Controller, Get, Query, ApiDescription } from '@sker/core'
+import { Controller, Get, Post, Query, ApiDescription } from '@sker/core'
 import type { TimeRange } from '@sker/entities';
 import type {
+  OverviewRealtimeSnapshot,
+  OverviewRealtimeSnapshotRefreshResult,
   OverviewStatisticsData,
   OverviewSentiment,
   OverviewLocation
@@ -23,5 +25,15 @@ export class OverviewController {
   @Get('locations')
   getLocations(@Query('timeRange') timeRange?: TimeRange): Promise<OverviewLocation[]> {
     throw new Error('method getLocations not implements')
+  }
+
+  @Get('realtime-snapshot')
+  getRealtimeSnapshot(@Query('timeRange') timeRange?: TimeRange): Promise<OverviewRealtimeSnapshot> {
+    throw new Error('method getRealtimeSnapshot not implements')
+  }
+
+  @Post('realtime-snapshot/cache')
+  refreshRealtimeSnapshotCache(@Query('timeRange') timeRange?: TimeRange): Promise<OverviewRealtimeSnapshotRefreshResult> {
+    throw new Error('method refreshRealtimeSnapshotCache not implements')
   }
 }

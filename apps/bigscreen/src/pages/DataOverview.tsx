@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Spinner } from "@sker/ui/components/ui/spinner";
 import EventTypeBarChart from "@/components/charts/EventTypeBarChart";
 import WordCloudChart from "@/components/charts/WordCloudChart";
@@ -12,59 +12,39 @@ import {
 } from "@/components/ui";
 import { UserRelationOverview } from "@/components";
 import GeoHeatMap, { type GeoDataPoint } from "@sker/ui/components/ui/geo-heat-map";
-import { useOverviewData } from "@/hooks/useOverviewData";
-import { useAppStore } from "@/stores/useAppStore";
-import { MAX_WORD_CLOUD_WORDS } from "@/constants/mockData";
-import { OverviewController } from "@sker/sdk";
-import { root, createLogger } from "@sker/core";
-import { useWordCloudData } from "@/hooks/useChartData";
-
-const logger = createLogger('DataOverview');
+import { useIndexRealtimeSnapshot } from "@/hooks/useIndexRealtimeSnapshot";
 
 const DataOverview: React.FC = () => {
-  const { selectedTimeRange } = useAppStore();
   const {
-    statsOverviewData,
-    sentimentData,
+    data: snapshot,
     loading,
     error,
-    refetch
-  } = useOverviewData();
+    refetch,
+  } = useIndexRealtimeSnapshot();
 
-  const { data: wordCloudData } = useWordCloudData(MAX_WORD_CLOUD_WORDS);
+  const locationData = useMemo<GeoDataPoint[]>(() => {
+    const locations = snapshot?.locations ?? [];
+    return locations
+      .filter(loc => loc.coordinates && loc.coordinates.length === 2)
+      .map(loc => ({
+        name: loc.region,
+        coordinates: loc.coordinates!,
+        value: loc.count,
+        sentiment: 'neutral' as const
+      }));
+  }, [snapshot?.locations]);
 
-  const [locationData, setLocationData] = useState<GeoDataPoint[]>([]);
-  const [locationLoading, setLocationLoading] = useState(true);
-
-  // 获取地理位置数据
-  useEffect(() => {
-    const fetchLocationData = async () => {
-      try {
-        setLocationLoading(true);
-        const controller = root.get(OverviewController);
-        const locations = await controller.getLocations(selectedTimeRange);
-
-        // 转换 API 数据为 GeoDataPoint 格式
-        const geoData: GeoDataPoint[] = (Array.isArray(locations) ? locations : [])
-          .filter(loc => loc.coordinates && loc.coordinates.length === 2)
-          .map(loc => ({
-            name: loc.region,
-            coordinates: loc.coordinates!,
-            value: loc.count,
-            sentiment: 'neutral' as const
-          }));
-
-        setLocationData(geoData);
-      } catch (err) {
-        logger.error('Failed to fetch location data:', err);
-        setLocationData([]);
-      } finally {
-        setLocationLoading(false);
-      }
-    };
-
-    fetchLocationData();
-  }, [selectedTimeRange]);
+  const hotEvents = useMemo(() => {
+    return (snapshot?.hotEvents ?? []).map((event) => ({
+      id: event.id,
+      title: event.title,
+      postCount: event.posts ?? 0,
+      sentiment: { positive: 0, negative: 0, neutral: 0 },
+      hotness: event.heat ?? 0,
+      trend: event.trend === 'rising' ? 'up' as const : event.trend === 'falling' ? 'down' as const : 'stable' as const,
+      trendData: [],
+    }));
+  }, [snapshot?.hotEvents]);
 
   if (loading) {
     return (
@@ -79,7 +59,7 @@ const DataOverview: React.FC = () => {
   }
 
   // 即使数据为 0 也显示完整页面，让用户看到可视化界面
-  if (!statsOverviewData || !sentimentData) {
+  if (!snapshot) {
     return (
       <EmptyState
         title="暂无数据"
@@ -93,28 +73,48 @@ const DataOverview: React.FC = () => {
       <div className="flex-1 flex gap-3 min-h-0">
         <div className="flex-1 min-w-0 flex flex-col gap-3 min-h-0">
           <div className="flex-shrink-0">
-            <StatsOverview data={statsOverviewData} />
+            <StatsOverview
+              data={{
+                events: {
+                  value: snapshot.statistics.eventCount,
+                  change: snapshot.statistics.eventCountChange,
+                },
+                posts: {
+                  value: snapshot.statistics.postCount,
+                  change: snapshot.statistics.postCountChange,
+                },
+                users: {
+                  value: snapshot.statistics.userCount,
+                  change: snapshot.statistics.userCountChange,
+                },
+                interactions: {
+                  value: snapshot.statistics.interactionCount,
+                  change: snapshot.statistics.interactionCountChange,
+                },
+              }}
+            />
           </div>
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-0">
-            <HotEventsList />
+            <HotEventsList events={hotEvents} loading={false} />
           </div>
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
-            <WordCloudChart data={wordCloudData} maxWords={MAX_WORD_CLOUD_WORDS} />
+            <WordCloudChart
+              data={snapshot.wordCloud.map((item) => ({
+                keyword: item.keyword,
+                weight: item.weight,
+                sentiment: item.sentiment,
+              }))}
+              maxWords={snapshot.wordCloud.length}
+            />
           </div>
         </div>
 
         <div className="flex-[1.5] min-w-0 flex flex-col gap-3 min-h-0">
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden">
-            {locationLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Spinner className="size-6" />
-              </div>
-            ) : (
-              <GeoHeatMap
-                data={locationData}
-                title="全国舆情热度分布"
-              />
-            )}
+            <GeoHeatMap
+              data={locationData}
+              title="全国舆情热度分布"
+            />
           </div>
           <div className="flex-1 rounded-xl border bg-card shadow-sm overflow-hidden">
             <div className="border-b border-border/60 px-4 py-3">
@@ -124,18 +124,34 @@ const DataOverview: React.FC = () => {
               </p>
             </div>
             <div className="h-[calc(100%-61px)] p-4 pt-3">
-              <UserRelationOverview className="h-full" />
+              <UserRelationOverview className="h-full" network={snapshot.userRelationNetwork} loading={false} />
             </div>
           </div>
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col gap-3 min-h-0">
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <SentimentOverview data={sentimentData} />
-            <EmotionCurveChart className="flex-1 min-h-0" />
+            <SentimentOverview data={snapshot.sentiment} />
+            <EmotionCurveChart
+              className="flex-1 min-h-0"
+              data={{
+                hours: snapshot.emotionCurve.categories,
+                positiveData: snapshot.emotionCurve.series.find((item) => item.name === '正面')?.data ?? [],
+                negativeData: snapshot.emotionCurve.series.find((item) => item.name === '负面')?.data ?? [],
+                neutralData: snapshot.emotionCurve.series.find((item) => item.name === '中性')?.data ?? [],
+              }}
+              loading={false}
+            />
           </div>
           <div className="flex-1 bg-card border rounded-xl shadow-sm overflow-hidden p-4">
-            <EventTypeBarChart className="h-full" />
+            <EventTypeBarChart
+              className="h-full"
+              data={snapshot.eventTypes.categories.map((name, index) => ({
+                name,
+                value: snapshot.eventTypes.series[0]?.data[index] ?? 0,
+              }))}
+              loading={false}
+            />
           </div>
         </div>
       </div>
