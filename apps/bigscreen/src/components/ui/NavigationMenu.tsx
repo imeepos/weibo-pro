@@ -5,7 +5,7 @@ import {
   BarChart3,
   Activity,
   Users,
-  } from 'lucide-react';
+} from 'lucide-react';
 import { cn } from '@/utils';
 
 interface NavigationItem {

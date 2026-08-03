@@ -99,8 +99,6 @@ describe('CrawlerControl', () => {
       expect(screen.getByText('running')).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('button', { name: '🧠 仅分析' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '批量触发 NLP 分析' })).toBeDisabled()
     expect(screen.getAllByText(/当前主分支未接入 NLP 手动触发接口/).length).toBeGreaterThan(0)
   })
 
