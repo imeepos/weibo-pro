@@ -80,6 +80,21 @@ export function getSentimentBgColor(sentiment: 'positive' | 'negative' | 'neutra
   }
 }
 
+// 单值情感字符串 → 情感分布对象（用于 HotEventsList/DataOverview 的 HotEvent 转换）
+// SDK 返回 sentiment: 'positive' | 'negative' | 'neutral'，本地展示类型为 {positive,negative,neutral} 分布
+export function toSentimentDistribution(
+  sentiment: 'positive' | 'negative' | 'neutral' | undefined
+): { positive: number; negative: number; neutral: number } {
+  switch (sentiment) {
+    case 'positive':
+      return { positive: 1, negative: 0, neutral: 0 };
+    case 'negative':
+      return { positive: 0, negative: 1, neutral: 0 };
+    default:
+      return { positive: 0, negative: 0, neutral: 1 };
+  }
+}
+
 // 获取情感颜色（十六进制，用于图表）
 export function getSentimentColorHex(sentiment: 'positive' | 'negative' | 'neutral'): string {
   switch (sentiment) {

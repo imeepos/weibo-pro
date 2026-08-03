@@ -148,6 +148,11 @@ export class WorkflowExecuteHandler {
         let disposed = false;
 
         runPromise.then(run => {
+          // 客户端已断开：不再启动工作流（避免"先启动再取消"窗口产生僵尸执行）
+          if (disposed) {
+            return;
+          }
+
           if (!run) {
             const error = new NotFoundException(`运行实例不存在: ${runId}`);
             observer.error(error);

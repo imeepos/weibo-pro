@@ -198,6 +198,11 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
           ast.initialPrompt = initialVersion.prompt;
         }
 
+        // 客户端已断开：不再启动工作流（避免"先启动再取消"窗口产生僵尸执行）
+        if (disposed) {
+          return;
+        }
+
         // 执行优化
         const sub = executeAst(ast, {}).subscribe(observer);
         if (disposed) {

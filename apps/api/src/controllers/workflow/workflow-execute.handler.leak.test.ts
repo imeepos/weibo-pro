@@ -45,21 +45,43 @@ describe('WorkflowExecuteHandler.fineTuneNode SSE 内层订阅拆除', () => {
     );
   });
 
-  it('客户端在 runPromise 解析前断开（unsubscribe），内层工作流订阅被拆除', async () => {
+  it('内层订阅启动后客户端断开（unsubscribe），内层工作流订阅被拆除', async () => {
     const svc = root.get(WorkflowRunService) as unknown as { getRun: ReturnType<typeof vi.fn> };
-    svc.getRun.mockResolvedValue({ id: 'r1', graphSnapshot: '{}' });
+    let resolveRun!: (v: unknown) => void;
+    svc.getRun.mockReturnValue(new Promise((res) => { resolveRun = res; }));
 
     const obs = handler.fineTuneNode('r1', 'n1', { config: {} });
     const sub = obs.subscribe({ next: () => {}, error: () => {} });
 
-    // 模拟 req.on('close')：外层 unsubscribe
+    // runPromise 解析，内层订阅启动
+    await Promise.resolve();
+    resolveRun({ id: 'r1', graphSnapshot: '{}' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // 客户端断开（req.on('close'）：外层 unsubscribe），内层 teardown 应被调用
+    sub.unsubscribe();
+    expect(teardownSpy).toHaveBeenCalled();
+  });
+
+  it('客户端在 runPromise 解析前断开时，不应启动内层工作流订阅（先启动再取消窗口）', async () => {
+    const svc = root.get(WorkflowRunService) as unknown as { getRun: ReturnType<typeof vi.fn> };
+    svc.getRun.mockResolvedValue({ id: 'r1', graphSnapshot: '{}' });
+    const executeSpy = workflow.executeAstWithWorkflowGraph as unknown as ReturnType<typeof vi.fn>;
+
+    const obs = handler.fineTuneNode('r1', 'n1', { config: {} });
+    const sub = obs.subscribe({ next: () => {}, error: () => {} });
+
+    // 在 runPromise 解析前断开客户端连接
     sub.unsubscribe();
 
-    // 让 runPromise.then 的微任务执行完
+    // 让 runPromise.then 的微任务执行完——此时 disposed 已为 true，
+    // 若实现仍先 subscribe 再退订，executeSpy 会被调用（副作用已发生）
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(teardownSpy).toHaveBeenCalled();
+    expect(executeSpy).not.toHaveBeenCalled();
   });
 });

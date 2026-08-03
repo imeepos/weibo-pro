@@ -24,6 +24,9 @@ import { validateEnv } from './config/env.config';
 import { runStartupChecks } from './config/startup-check';
 import { createHonoApp } from './main.hono';
 import { createApiServer } from './main.server';
+import { createGracefulShutdown } from './utils/graceful-shutdown';
+import type { Server as HttpServer } from 'http';
+import type { Server as SocketIOServer } from 'socket.io';
 
 Reflect.set(global, 'window', {
   WebSocket: WebSocket
@@ -155,21 +158,21 @@ async function bootstrap() {
     logger.info('✓ HTTP API ready');
     logger.info('✓ WebSocket ready at /ws');
     logger.info('✓ Claude Gateway ready for mobile connections');
+
+    // 优雅退出：SIGTERM/SIGINT 时先关闭 server/socket.io，再退出。
+    // 直接 process.exit(0) 会粗暴中断在途请求与连接（Docker 滚动重启场景）。
+    const shutdown = createGracefulShutdown({
+      server: server as unknown as HttpServer,
+      io: (server as unknown as { io: SocketIOServer }).io,
+      logger: {
+        info: (msg) => logger.info(msg),
+        warn: (msg) => logger.warn(msg),
+      },
+    });
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   });
 }
-
-// 进程信号处理
-process.on('SIGTERM', () => {
-  const logger = root.get(Logger);
-  logger.info('Received SIGTERM signal, shutting down gracefully');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  const logger = root.get(Logger);
-  logger.info('Received SIGINT signal, shutting down gracefully');
-  process.exit(0);
-});
 
 process.on('unhandledRejection', (reason, promise) => {
   const logger = root.get(Logger);

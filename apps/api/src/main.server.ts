@@ -89,6 +89,9 @@ export function createApiServer(
     });
   });
 
+  // 暴露 io 引用，供优雅退出时关闭 Socket.IO 连接
+  (server as unknown as { io: SocketIOServer }).io = io;
+
   // 将 WebSocket 广播功能暴露给全局
   global.websocketBroadcast = (message: any) => {
     const eventName = getEventName(message);

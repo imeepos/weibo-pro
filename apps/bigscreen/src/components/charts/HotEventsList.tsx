@@ -10,7 +10,7 @@ import {
   BarChart3,
   Eye
 } from 'lucide-react';
-import { cn, formatNumber } from '@/utils';
+import { cn, formatNumber, toSentimentDistribution } from '@/utils';
 import { createLogger } from '@sker/core';
 import { HotEvent } from '@/types';
 import { EventsController } from '@sker/sdk';
@@ -62,7 +62,8 @@ const HotEventsList: React.FC<HotEventsListProps> = ({ className = '', events: e
             id: event.id,
             title: event.title,
             postCount: event.posts || 0,
-            sentiment: { positive: 0, negative: 0, neutral: 0 },
+            // SDK HotEvent.sentiment 是单值字符串，转为分布，使情感标签/颜色判定正确
+            sentiment: toSentimentDistribution(event.sentiment),
             hotness: event.heat || 0,
             trend: event.trend === 'rising' ? 'up' : event.trend === 'falling' ? 'down' : 'stable',
             trendData: []

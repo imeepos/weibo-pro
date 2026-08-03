@@ -97,7 +97,8 @@ describe('useIndexRealtimeSnapshot 稳定性', () => {
       // 超时后的下一次刷新正常返回
       .mockResolvedValueOnce(snapshot);
 
-    const { result } = renderHook(() => useIndexRealtimeSnapshot(10_000));
+    // refreshInterval 调大到 60s，避免 advanceTimersByTimeAsync 同时触发 interval 轮询干扰断言
+    const { result } = renderHook(() => useIndexRealtimeSnapshot(60_000));
 
     // 首次请求悬挂中
     await act(async () => {

@@ -53,7 +53,7 @@ describe('OverviewRealtimeSnapshotService', () => {
     };
   }
 
-  it('聚合 /index 所需全部实时快照数据并写入 10 秒短缓存', async () => {
+  it('聚合 /index 所需全部实时快照数据并写入 15 秒短缓存（TTL 需大于前端轮询周期，避免缓存击穿）', async () => {
     const {
       service,
       cacheService,
@@ -68,11 +68,11 @@ describe('OverviewRealtimeSnapshotService', () => {
     expect(cacheService.getOrSet).toHaveBeenCalledWith(
       CacheService.buildKey(CACHE_KEYS.OVERVIEW_REALTIME_SNAPSHOT, '24h'),
       expect.any(Function),
-      10,
+      15,
     );
     expect(snapshot).toMatchObject({
       timeRange: '24h',
-      cacheTtlSeconds: 10,
+      cacheTtlSeconds: 15,
       statistics: { eventCount: 1 },
       sentiment: { positive: 1 },
       locations: [{ region: '北京', count: 1 }],

@@ -10,7 +10,8 @@ import { ChartsService } from './charts.service';
 import { EventsService } from './events/events.service';
 import { UserRelationService } from './user-relation.service';
 
-const REALTIME_SNAPSHOT_TTL_SECONDS = 10;
+// TTL 需大于前端轮询周期(10s)：若相等，每次轮询时缓存恰已过期，必触发全量重算（缓存击穿）
+const REALTIME_SNAPSHOT_TTL_SECONDS = 15;
 const WORD_CLOUD_LIMIT = 50;
 const USER_RELATION_LIMIT = 5000;
 

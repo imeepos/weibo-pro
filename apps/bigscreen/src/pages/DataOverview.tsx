@@ -13,6 +13,7 @@ import {
 import { UserRelationOverview } from "@/components";
 import GeoHeatMap, { type GeoDataPoint } from "@sker/ui/components/ui/geo-heat-map";
 import { useIndexRealtimeSnapshot } from "@/hooks/useIndexRealtimeSnapshot";
+import { toSentimentDistribution } from "@/utils";
 
 const DataOverview: React.FC = () => {
   const {
@@ -39,7 +40,9 @@ const DataOverview: React.FC = () => {
       id: event.id,
       title: event.title,
       postCount: event.posts ?? 0,
-      sentiment: { positive: 0, negative: 0, neutral: 0 },
+      // SDK HotEvent.sentiment 是单值字符串，转为分布，使 HotEventsList 的
+      // getSentimentColor/getSentimentLabel 能正确判定正/负/中性
+      sentiment: toSentimentDistribution(event.sentiment),
       hotness: event.heat ?? 0,
       trend: event.trend === 'rising' ? 'up' as const : event.trend === 'falling' ? 'down' as const : 'stable' as const,
       trendData: [],
