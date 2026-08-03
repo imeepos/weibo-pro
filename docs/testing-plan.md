@@ -116,6 +116,13 @@ L0 基础库    core / utils / json-harmony / store / compiler / typescript-conf
 | Service 集成 | 业务服务 ↔ 真实 entities/redis/typeorm（sqlite 或 mock 连接） |
 | 契约测试 | `@sker/sdk` 控制器 ↔ `@sker/api` 实现一致（SDK 驱动开发） |
 
+**完成度（2026-08-03 补强）**：apps/api 共 50 个测试文件 / 462 用例全绿。新增：
+- Controller 单元：`overview.controller.test.ts`（时间范围校验 + 响应结构）、`posting-time.controller.test.ts`、`media-type.controller.test.ts`（mock service 透传/响应结构）
+- Service 集成：`layout.service.test.ts`（mock repository + mock redis，覆盖 CRUD/默认布局保护/缓存清理）
+- 契约测试：`sdk-contract.test.ts`（13 组 SDK↔API 控制器对：SDK controller 前缀、路由 method/path 元数据、API 实现方法一致性）
+
+DB 隔离：全部测试通过 `test-setup.ts` 的内存 `EntityManager`/`RedisClient` mock，不连接真实 PG/Redis；无 E2E 性质测试依赖真实服务。
+
 ### 6.2 E2E 端到端测试（apps/tests + docker-compose）
 利用现有 `docker-compose.yml`（PostgreSQL/RabbitMQ/Redis）启动真实依赖，验证**完整业务流**：
 
@@ -156,6 +163,7 @@ L0 基础库    core / utils / json-harmony / store / compiler / typescript-conf
 3. **L2**：`workflow-run` 补齐、`agent` 新增
 4. **L3**：api 集成补强 + E2E 核心流
 
-## 附：当前测试覆盖现状（扫描）
-- **有测试**：api 47、workflow-run 28、bigscreen 23、workflow-ui 19、store 10、ip-proxy 8、ui 8、entities 7、workflow-compiler 6、compiler 4、core 4、cli 3、workflow-ast 2、tests 2、auth/crawler-core/json-harmony/workflow/app/crawler/worker 各 1
-- **无测试（缺口）**：`mq`、`utils`、`redis`、`sdk`、`nlp`、`agent`、`aui`、`email`、`llm-protocol`、`pageindex`、`workflow-browser`、apps/cli、email-d1、storybook
+## 附：当前测试覆盖现状（扫描，2026-08-03 执行测试计划后更新）
+- **有测试（含新增缺口补齐）**：api 50、workflow-run 30、bigscreen 58、workflow-ui 21、ui 23、aui 7、pageindex 21、store 10、ip-proxy 8、entities 7、workflow-compiler 6、compiler 4、core 4、utils 11、mq 5、redis 3、sdk 3、nlp 2、llm-protocol 3、agent 4、email 5、workflow-browser 5、workflow-ast 2、cli-v2 3、tests 2、auth/crawler-core/json-harmony/workflow/app/crawler/worker 各 1
+- **执行状态**：L0/L1/L2 三层门禁全绿（详见 `docs/plans/testing-plan-execution.md`）；L3 api 集成补强完成；**E2E（计划 6.2）需 docker-compose 真实依赖，当前环境无 docker，留待有 docker 的环境执行**
+- **无测试（剩余缺口）**：apps/cli、apps/email-d1（Cloudflare Worker）、storybook

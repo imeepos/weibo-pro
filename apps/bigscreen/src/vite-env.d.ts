@@ -1,5 +1,9 @@
 /// <reference types="vite/client" />
 
+// `@sker/workflow-ui/styles` resolves to a CSS file via package exports, so the
+// `*.css` wildcard from `vite/client` does not match this aliased subpath.
+declare module '@sker/workflow-ui/styles';
+
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string
   readonly VITE_WS_URL: string

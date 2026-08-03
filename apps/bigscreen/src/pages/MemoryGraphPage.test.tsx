@@ -19,6 +19,10 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
 }));
 
+/** ISO timestamp for `hours` hours before now (keeps mock data inside the default 90-day filter). */
+const hoursAgo = (hours: number): string =>
+  new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
 describe('MemoryGraphPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,7 +36,7 @@ describe('MemoryGraphPage', () => {
         avatar: null,
         description: '人物画像',
         memoryCount: 3,
-        createdAt: '2026-04-28T01:00:00.000Z',
+        createdAt: hoursAgo(48),
       },
     ]);
 
@@ -49,8 +53,8 @@ describe('MemoryGraphPage', () => {
       tree: [],
       timeline: [
         {
-          bucketStart: '2026-04-28T01:00:00.000Z',
-          bucketEnd: '2026-04-28T02:00:00.000Z',
+          bucketStart: hoursAgo(48),
+          bucketEnd: hoursAgo(47),
           postCount: 12,
           sameContentCount: 8,
           eventCount: 2,
@@ -63,8 +67,8 @@ describe('MemoryGraphPage', () => {
           level: 'high',
           eventKey: 'event-a',
           timeRange: {
-            startAt: '2026-04-28T01:00:00.000Z',
-            endAt: '2026-04-28T01:30:00.000Z',
+            startAt: hoursAgo(48),
+            endAt: hoursAgo(47.5),
           },
           relatedPostCount: 8,
           description: '同一事件窗口内发现 8 条高同质内容',
