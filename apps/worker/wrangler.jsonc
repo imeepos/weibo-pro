@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2024-01-01",
   "compatibility_flags": ["nodejs_compat"],
-  "account_id": "768c876155e77e3a6e52a855489a6c8a",
+  "account_id": "67720b647ff2b55cf37ba3ef9e677083",
 
   // 可观测性配置
   "observability": {
@@ -14,14 +14,6 @@
       "head_sampling_rate": 1
     }
   },
-
-  // In your wrangler.json
-  "pipelines": [
-    {
-      "pipeline": "8d3e4e99b9834e08a7130e61c34999be",
-      "binding": "LOGS_STREAM"
-    }
-  ],
 
   // 浏览器渲染绑定
   "browser": {
