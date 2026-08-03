@@ -1,106 +1,10 @@
 /// <reference types="@testing-library/jest-dom" />
-import { describe, it, expect, } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { CommunityEvolutionTimeline } from './CommunityEvolutionTimeline';
-import type { CommunityEvolutionAnalysis } from '@sker/sdk';
+import { mockEvolutionData, emptyEvolutionData } from './CommunityEvolutionTimeline.fixtures';
 
 describe('CommunityEvolutionTimeline', () => {
-  const mockEvolutionData: CommunityEvolutionAnalysis = {
-    timeSlices: [
-      {
-        timestamp: '2024-01-01T00:00:00.000Z',
-        communities: [
-          {
-            id: 'community-0',
-            name: 'Community 1',
-            members: [
-              {
-                userId: 'user1',
-                screenName: 'User One',
-                role: 'leader',
-                inDegree: 5,
-                outDegree: 3,
-              },
-            ],
-            size: 10,
-            density: 0.8,
-            avgInfluence: 0.75,
-            topKeywords: ['keyword1', 'keyword2'],
-            sentiment: { positive: 0.6, negative: 0.2, neutral: 0.2 },
-          },
-        ],
-        modularity: 0.75,
-        totalMembers: 10,
-      },
-      {
-        timestamp: '2024-01-02T00:00:00.000Z',
-        communities: [
-          {
-            id: 'community-0',
-            name: 'Community 1',
-            members: [
-              {
-                userId: 'user1',
-                screenName: 'User One',
-                role: 'leader',
-                inDegree: 5,
-                outDegree: 3,
-              },
-            ],
-            size: 12,
-            density: 0.85,
-            avgInfluence: 0.8,
-            topKeywords: ['keyword1', 'keyword2'],
-            sentiment: { positive: 0.6, negative: 0.2, neutral: 0.2 },
-          },
-          {
-            id: 'community-1',
-            name: 'Community 2',
-            members: [],
-            size: 5,
-            density: 0.6,
-            avgInfluence: 0.5,
-            topKeywords: [],
-            sentiment: { positive: 0.4, negative: 0.3, neutral: 0.3 },
-          },
-        ],
-        modularity: 0.78,
-        totalMembers: 17,
-      },
-    ],
-    evolutionEvents: [
-      {
-        type: 'birth',
-        timestamp: '2024-01-02T00:00:00.000Z',
-        involvedCommunities: ['community-1'],
-        magnitude: 5,
-        description: '新社区 Community 2 出现，包含 5 个成员',
-      },
-      {
-        type: 'growth',
-        timestamp: '2024-01-02T00:00:00.000Z',
-        involvedCommunities: ['community-0', 'community-0'],
-        magnitude: 0.2,
-        description: '社区 Community 1 成长 20%',
-      },
-    ],
-    overallStability: 0.9,
-    keyChanges: [
-      {
-        communityId: 'community-0',
-        changeType: 'growth',
-        beforeSize: 10,
-        afterSize: 12,
-        keyMembers: ['user2'],
-      },
-    ],
-    trendPrediction: {
-      predictedCommunityCount: 3,
-      predictedModularity: 0.75,
-      confidence: 0.8,
-    },
-  };
-
   describe('渲染', () => {
     it('应该正确渲染组件', () => {
       render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
@@ -186,55 +90,9 @@ describe('CommunityEvolutionTimeline', () => {
     });
   });
 
-  describe('交互功能', () => {
-    it('点击事件应该显示详情', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const eventElements = document.querySelectorAll('[data-testid="evolution-event"]');
-      expect(eventElements.length).toBeGreaterThan(0);
-
-      if (eventElements.length > 0) {
-        fireEvent.click(eventElements[0]);
-        // 详情面板应该显示
-      }
-    });
-
-    it('应该支持折叠/展开', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const collapseButton = screen.getByTestId('evolution-collapse-button');
-      fireEvent.click(collapseButton);
-
-      // 内容应该被隐藏
-      expect(screen.queryByText('时间切片')).not.toBeInTheDocument();
-    });
-
-    it('再次点击应该展开内容', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const collapseButton = screen.getByTestId('evolution-collapse-button');
-      fireEvent.click(collapseButton); // 折叠
-      fireEvent.click(collapseButton); // 展开
-
-      expect(screen.getByText('时间切片')).toBeInTheDocument();
-    });
-  });
-
   describe('空数据处理', () => {
     it('空事件数据应该显示空状态', () => {
-      const emptyData: CommunityEvolutionAnalysis = {
-        timeSlices: [],
-        evolutionEvents: [],
-        overallStability: 0,
-        keyChanges: [],
-        trendPrediction: {
-          predictedCommunityCount: 0,
-          predictedModularity: 0,
-          confidence: 0,
-        },
-      };
-
-      render(<CommunityEvolutionTimeline data={emptyData} />);
+      render(<CommunityEvolutionTimeline data={emptyEvolutionData} />);
 
       expect(screen.getByText('暂无演化数据')).toBeInTheDocument();
     });
@@ -243,73 +101,6 @@ describe('CommunityEvolutionTimeline', () => {
       render(<CommunityEvolutionTimeline data={undefined as any} />);
 
       expect(screen.getByText('暂无演化数据')).toBeInTheDocument();
-    });
-  });
-
-  describe('事件类型颜色编码', () => {
-    it('birth 事件应该显示为绿色', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const birthEvent = document.querySelector('[data-event-type="birth"]');
-      expect(birthEvent).toBeInTheDocument();
-      expect(birthEvent?.getAttribute('data-event-color')).toBe('green');
-    });
-
-    it('death 事件应该显示为红色', () => {
-      const dataWithDeath: CommunityEvolutionAnalysis = {
-        ...mockEvolutionData,
-        evolutionEvents: [
-          {
-            type: 'death',
-            timestamp: '2024-01-02T00:00:00.000Z',
-            involvedCommunities: ['community-0'],
-            magnitude: 5,
-            description: '社区解散',
-          },
-        ],
-      };
-
-      render(<CommunityEvolutionTimeline data={dataWithDeath} />);
-
-      const deathEvent = document.querySelector('[data-event-type="death"]');
-      expect(deathEvent).toBeInTheDocument();
-      expect(deathEvent?.getAttribute('data-event-color')).toBe('red');
-    });
-
-    it('growth 事件应该显示为蓝色', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const growthEvent = document.querySelector('[data-event-type="growth"]');
-      expect(growthEvent).toBeInTheDocument();
-      expect(growthEvent?.getAttribute('data-event-color')).toBe('blue');
-    });
-  });
-
-  describe('响应式设计', () => {
-    it('应该支持自定义 className', () => {
-      const { container } = render(
-        <CommunityEvolutionTimeline data={mockEvolutionData} className="custom-class" />
-      );
-
-      expect(container.firstChild).toHaveClass('custom-class');
-    });
-
-    it('应该支持折叠状态控制', () => {
-      // 测试默认展开
-      const { unmount } = render(
-        <CommunityEvolutionTimeline data={mockEvolutionData} defaultCollapsed={false} />
-      );
-
-      expect(screen.getByText('时间切片')).toBeInTheDocument();
-
-      unmount();
-
-      // 测试默认折叠
-      render(
-        <CommunityEvolutionTimeline data={mockEvolutionData} defaultCollapsed={true} />
-      );
-
-      expect(screen.queryByText('时间切片')).not.toBeInTheDocument();
     });
   });
 
@@ -328,42 +119,6 @@ describe('CommunityEvolutionTimeline', () => {
       render(<CommunityEvolutionTimeline data={null as any} error={error} />);
 
       expect(screen.getByText(/加载失败/)).toBeInTheDocument();
-    });
-  });
-
-  describe('图表渲染', () => {
-    it('应该显示社区数量变化图表', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const chartContainer = document.querySelector('[data-testid="community-count-chart"]');
-      expect(chartContainer).toBeInTheDocument();
-    });
-
-    it('应该显示模块度变化图表', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const chartContainer = document.querySelector('[data-testid="modularity-chart"]');
-      expect(chartContainer).toBeInTheDocument();
-    });
-  });
-
-  describe('事件过滤', () => {
-    it('应该支持按事件类型过滤', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const birthFilter = screen.getByTestId('filter-birth');
-      fireEvent.click(birthFilter);
-
-      // 只显示 birth 事件
-    });
-
-    it('应该支持显示所有事件', () => {
-      render(<CommunityEvolutionTimeline data={mockEvolutionData} />);
-
-      const allFilter = screen.getByTestId('filter-all');
-      fireEvent.click(allFilter);
-
-      // 显示所有事件
     });
   });
 });

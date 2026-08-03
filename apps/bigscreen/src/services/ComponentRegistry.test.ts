@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
 import { renderHook } from '@testing-library/react';
 import {
   componentRegistry,
@@ -9,6 +8,13 @@ import {
   useComponent,
   getComponentSafely,
 } from './ComponentRegistry';
+import {
+  createTestComponent,
+  createConfig,
+  createConfig1,
+  createConfig2,
+  analyticsConfig,
+} from './ComponentRegistry.fixtures';
 
 // Mock logger
 vi.mock('@sker/core', () => ({
@@ -26,17 +32,8 @@ describe('ComponentRegistry', () => {
 
   describe('componentRegistry', () => {
     it('should register a component successfully', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
+      const config = createConfig();
 
       componentRegistry.register('TestComponent', TestComponent, config);
 
@@ -49,17 +46,8 @@ describe('ComponentRegistry', () => {
     });
 
     it('should warn when registering duplicate component', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
+      const config = createConfig();
 
       componentRegistry.register('TestComponent', TestComponent, config);
       // Should not throw, but should warn
@@ -69,7 +57,7 @@ describe('ComponentRegistry', () => {
     });
 
     it('should validate component configuration', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
+      const TestComponent = createTestComponent('Test');
       const invalidConfig = {
         // Missing required fields
         category: 'test',
@@ -81,59 +69,27 @@ describe('ComponentRegistry', () => {
     });
 
     it('should get all registered components', () => {
-      const TestComponent1 = () => React.createElement('div', null, 'Test1');
-      const TestComponent2 = () => React.createElement('div', null, 'Test2');
-      
-      const config1 = {
-        displayName: 'Test Component 1',
-        category: 'test',
-        description: 'First test component',
-        icon: '1️⃣',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent1 = createTestComponent('Test1');
+      const TestComponent2 = createTestComponent('Test2');
 
-      const config2 = {
-        displayName: 'Test Component 2',
-        category: 'analytics',
-        description: 'Second test component',
-        icon: '2️⃣',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
-
-      componentRegistry.register('TestComponent1', TestComponent1, config1);
-      componentRegistry.register('TestComponent2', TestComponent2, config2);
+      componentRegistry.register('TestComponent1', TestComponent1, createConfig1());
+      componentRegistry.register('TestComponent2', TestComponent2, createConfig2());
 
       const allComponents = componentRegistry.list();
       expect(allComponents).toHaveLength(2);
-      
+
       const componentNames = allComponents.map(c => c.name);
       expect(componentNames).toContain('TestComponent1');
       expect(componentNames).toContain('TestComponent2');
     });
 
     it('should get components by category', () => {
-      const TestComponent1 = () => React.createElement('div', null, 'Test1');
-      const TestComponent2 = () => React.createElement('div', null, 'Test2');
-      const TestComponent3 = () => React.createElement('div', null, 'Test3');
-      
-      const testConfig = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'Test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent1 = createTestComponent('Test1');
+      const TestComponent2 = createTestComponent('Test2');
+      const TestComponent3 = createTestComponent('Test3');
 
-      const analyticsConfig = {
+      const testConfig = createConfig();
+      const analyticsCfg = {
         ...testConfig,
         category: 'analytics',
         displayName: 'Analytics Component',
@@ -142,31 +98,22 @@ describe('ComponentRegistry', () => {
 
       componentRegistry.register('TestComponent1', TestComponent1, testConfig);
       componentRegistry.register('TestComponent2', TestComponent2, testConfig);
-      componentRegistry.register('AnalyticsComponent', TestComponent3, analyticsConfig);
+      componentRegistry.register('AnalyticsComponent', TestComponent3, analyticsCfg);
 
       const testComponents = componentRegistry.getByCategory('test');
       const analyticsComponents = componentRegistry.getByCategory('analytics');
 
       expect(testComponents).toHaveLength(2);
       expect(analyticsComponents).toHaveLength(1);
-      
+
       expect(testComponents.map(c => c.name)).toContain('TestComponent1');
       expect(testComponents.map(c => c.name)).toContain('TestComponent2');
       expect(analyticsComponents.map(c => c.name)).toContain('AnalyticsComponent');
     });
 
     it('should unregister existing component', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
+      const config = createConfig();
 
       componentRegistry.register('TestComponent', TestComponent, config);
       expect(componentRegistry.has('TestComponent')).toBe(true);
@@ -181,33 +128,11 @@ describe('ComponentRegistry', () => {
     });
 
     it('should get all categories', () => {
-      const TestComponent1 = () => React.createElement('div', null, 'Test1');
-      const TestComponent2 = () => React.createElement('div', null, 'Test2');
-      
-      const config1 = {
-        displayName: 'Test Component 1',
-        category: 'test',
-        description: 'Test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent1 = createTestComponent('Test1');
+      const TestComponent2 = createTestComponent('Test2');
 
-      const config2 = {
-        displayName: 'Analytics Component',
-        category: 'analytics',
-        description: 'Analytics component',
-        icon: '📊',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
-
-      componentRegistry.register('TestComponent1', TestComponent1, config1);
-      componentRegistry.register('TestComponent2', TestComponent2, config2);
+      componentRegistry.register('TestComponent1', TestComponent1, createConfig1());
+      componentRegistry.register('TestComponent2', TestComponent2, analyticsConfig());
 
       const categories = componentRegistry.getCategories();
       expect(categories).toContain('test');
@@ -216,20 +141,10 @@ describe('ComponentRegistry', () => {
     });
 
     it('should clear all registered components', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
 
-      componentRegistry.register('TestComponent1', TestComponent, config);
-      componentRegistry.register('TestComponent2', TestComponent, { ...config, displayName: 'Test 2' });
+      componentRegistry.register('TestComponent1', TestComponent, createConfig());
+      componentRegistry.register('TestComponent2', TestComponent, createConfig({ displayName: 'Test 2' }));
 
       expect(componentRegistry.size()).toBe(2);
 
@@ -242,39 +157,24 @@ describe('ComponentRegistry', () => {
     it('should return correct size', () => {
       expect(componentRegistry.size()).toBe(0);
 
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
 
-      componentRegistry.register('TestComponent', TestComponent, config);
+      componentRegistry.register('TestComponent', TestComponent, createConfig());
       expect(componentRegistry.size()).toBe(1);
     });
   });
 
   describe('registerComponent decorator', () => {
     it('should register component via decorator', () => {
-      const config = {
+      const config = createConfig({
         displayName: 'Decorated Component',
-        category: 'test',
         description: 'A decorated component',
         icon: '✨',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      });
 
       const decorator = registerComponent('DecoratedComponent', config);
-      const TestComponent = () => React.createElement('div', null, 'Decorated');
-      
+      const TestComponent = createTestComponent('Decorated');
+
       const decoratedComponent = decorator(TestComponent);
 
       expect(decoratedComponent).toBe(TestComponent);
@@ -284,37 +184,19 @@ describe('ComponentRegistry', () => {
 
   describe('registerComponents utility', () => {
     it('should register multiple components', () => {
-      const TestComponent1 = () => React.createElement('div', null, 'Test1');
-      const TestComponent2 = () => React.createElement('div', null, 'Test2');
-      
+      const TestComponent1 = createTestComponent('Test1');
+      const TestComponent2 = createTestComponent('Test2');
+
       const components = [
         {
           name: 'TestComponent1',
           component: TestComponent1,
-          config: {
-            displayName: 'Test Component 1',
-            category: 'test',
-            description: 'First test component',
-            icon: '1️⃣',
-            defaultSize: { w: 4, h: 3 },
-            minSize: { w: 2, h: 2 },
-            maxSize: { w: 8, h: 6 },
-            defaultProps: {},
-          },
+          config: createConfig1(),
         },
         {
           name: 'TestComponent2',
           component: TestComponent2,
-          config: {
-            displayName: 'Test Component 2',
-            category: 'test',
-            description: 'Second test component',
-            icon: '2️⃣',
-            defaultSize: { w: 4, h: 3 },
-            minSize: { w: 2, h: 2 },
-            maxSize: { w: 8, h: 6 },
-            defaultProps: {},
-          },
+          config: createConfig2(),
         },
       ];
 
@@ -340,18 +222,9 @@ describe('ComponentRegistry', () => {
 
     it('should work with registry methods', () => {
       const { result } = renderHook(() => useComponentRegistry());
-      
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+
+      const TestComponent = createTestComponent('Test');
+      const config = createConfig();
 
       result.current.register('TestComponent', TestComponent, config);
 
@@ -363,17 +236,8 @@ describe('ComponentRegistry', () => {
 
   describe('useComponent hook', () => {
     it('should get registered component', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
+      const config = createConfig();
 
       componentRegistry.register('TestComponent', TestComponent, config);
 
@@ -392,17 +256,8 @@ describe('ComponentRegistry', () => {
 
   describe('getComponentSafely utility', () => {
     it('should return component for registered name', () => {
-      const TestComponent = () => React.createElement('div', null, 'Test');
-      const config = {
-        displayName: 'Test Component',
-        category: 'test',
-        description: 'A test component',
-        icon: '🧪',
-        defaultSize: { w: 4, h: 3 },
-        minSize: { w: 2, h: 2 },
-        maxSize: { w: 8, h: 6 },
-        defaultProps: {},
-      };
+      const TestComponent = createTestComponent('Test');
+      const config = createConfig();
 
       componentRegistry.register('TestComponent', TestComponent, config);
 

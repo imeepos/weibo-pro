@@ -1,6 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import UserDetection from './UserDetection';
+import {
+  dossierFixture,
+  queuedTaskFixture,
+  completedTaskFixture,
+} from './UserDetection.investigation.test.fixtures';
 
 const createTaskSpy = vi.fn().mockResolvedValue(null);
 const reviewTaskSpy = vi.fn().mockResolvedValue(null);
@@ -32,78 +37,7 @@ vi.mock('@/hooks/useInvestigationQueue', () => ({
 
 vi.mock('@/hooks/useUserDossier', () => ({
   useUserDossier: () => ({
-    dossier: {
-      accountSnapshot: {
-        weiboUserId: '100',
-        screenName: '用户A',
-        displayName: '用户A',
-        avatar: null,
-        description: '简介',
-        location: '陕西',
-        followersCount: 1200,
-        friendsCount: 80,
-        statusesCount: 320,
-        verified: true,
-        verifiedType: 0,
-        verifiedReason: null,
-        creditScore: 80,
-        urisk: 60,
-        createdAt: null,
-      },
-      eventRiskContext: {
-        eventId: null,
-        eventRiskLevel: 'high',
-        eventRiskScore: 92,
-        riskSignals: [],
-        firstSeenAt: null,
-        lastSeenAt: null,
-        eventPostCount: 2,
-        eventInteractionCount: 12,
-      },
-      historyCoverage: {
-        windowDays: 90,
-        collectedPostCount: 20,
-        collectedCommentCount: 0,
-        collectedRepostCount: 3,
-        timeRangeStart: null,
-        timeRangeEnd: null,
-        samplingStrategy: 'recent+spikes',
-      },
-      behaviorTimeline: {
-        postingByDay: [],
-        postingByHour: [],
-        interactionByDay: [],
-        spikeMoments: [],
-        activePeriods: [],
-      },
-      topicAndSentimentProfile: {
-        topicClusters: [],
-        primaryKeywords: [],
-        eventTypes: [],
-        sentimentTrend: [],
-        sentimentDistribution: { positive: 0, negative: 0, neutral: 0 },
-        topicShiftMoments: [],
-      },
-      relationSummary: {
-        topConnectedUsers: [],
-        relationTypes: [],
-        sharedEvents: [],
-        relationClusters: [],
-        suspiciousCoordinationHints: [],
-      },
-      evidenceSamples: {
-        eventSamples: [],
-        historySamples: [],
-        relationSamples: [],
-        nlpSamples: [],
-      },
-      preDistillationSummary: {
-        candidateLabels: [],
-        anomalyHints: [],
-        coverageWarnings: [],
-        humanReviewNeeded: false,
-      },
-    },
+    dossier: dossierFixture,
     isLoading: false,
     error: null,
     refetch: vi.fn(),
@@ -232,26 +166,7 @@ describe('UserDetection investigation mode', () => {
   });
 
   it('refreshes persona data after the last running task completes', async () => {
-    const activeTask = {
-      id: 'task-1',
-      weiboUserId: '100',
-      eventId: null,
-      status: 'queued',
-      historyWindowDays: 90,
-      sourcePostCount: 0,
-      sourceCommentCount: 0,
-      sourceRepostCount: 0,
-      evidenceSampleCount: 0,
-      model: null,
-      promptVersion: null,
-      distilledSummary: null,
-      reviewStatus: null,
-      errorMessage: null,
-      startedAt: null,
-      completedAt: null,
-      createdAt: '2026-04-23T00:00:00.000Z',
-      updatedAt: '2026-04-23T00:00:00.000Z',
-    };
+    const activeTask = queuedTaskFixture;
 
     mockTasksState = {
       ...mockTasksState,
@@ -269,18 +184,7 @@ describe('UserDetection investigation mode', () => {
     evidenceRefetchSpy.mockClear();
     memoryGraphRefetchSpy.mockClear();
 
-    const completedTask = {
-      ...activeTask,
-      status: 'published',
-      sourcePostCount: 20,
-      sourceCommentCount: 2,
-      sourceRepostCount: 3,
-      evidenceSampleCount: 5,
-      distilledSummary: '画像已生成',
-      reviewStatus: 'auto_pass',
-      completedAt: '2026-04-23T00:01:00.000Z',
-      updatedAt: '2026-04-23T00:01:00.000Z',
-    };
+    const completedTask = completedTaskFixture;
 
     mockTasksState = {
       ...mockTasksState,

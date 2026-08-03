@@ -1,6 +1,7 @@
-
 import * as cheerio from 'cheerio';
 import { Injectable } from '@sker/core';
+import { parseTimeText } from './weibo-html-time.util';
+import { extractNextPageLink, extractCurrentPage, extractTotalPage } from './weibo-html-pagination.util';
 
 export interface ParsedSearchResult {
   posts: { mid: string, uid: string, postAt: Date | null }[];
@@ -79,10 +80,10 @@ export class WeiboHtmlParser {
         return post.postAt < earliest ? post.postAt : earliest;
       }, null);
 
-      const totalCount = this.extractTotalCount(postIds);
-      const nextPageLink = this.extractNextPageLink($);
-      const currentPage = this.extractCurrentPage($);
-      const totalPage = this.extractTotalPage($);
+      const totalCount = postIds.length;
+      const nextPageLink = extractNextPageLink($);
+      const currentPage = extractCurrentPage($);
+      const totalPage = extractTotalPage($);
 
       // 修复逻辑：只有在有 posts 且有 nextPageLink 时才认为有下一页
       const hasNextPage = posts.length > 0 && !!nextPageLink && currentPage < totalPage;
@@ -168,7 +169,7 @@ export class WeiboHtmlParser {
 
             // 提取时间信息（从同一个 a 标签的文本）
             const timeText = detailLink.text().trim();
-            const postAt = this.parseTimeText(timeText);
+            const postAt = parseTimeText(timeText);
 
             posts.push({ uid, mid, postAt });
           }
@@ -194,7 +195,7 @@ export class WeiboHtmlParser {
           // 提取时间
           const timeElement = $item.find('div.from > a').first();
           const timeText = timeElement.text().trim();
-          const postAt = this.parseTimeText(timeText);
+          const postAt = parseTimeText(timeText);
 
           posts.push({ uid, mid, postAt });
         }
@@ -204,134 +205,5 @@ export class WeiboHtmlParser {
 
     console.log('[WeiboHtmlParser.extractPostsInfo] 总共提取到帖子数量:', posts.length);
     return posts;
-  }
-
-  private parseTimeText(timeText: string): Date | null {
-    if (!timeText) {
-      return null;
-    }
-
-    const now = new Date();
-
-    // 处理 "N分钟前"
-    if (timeText.includes('分钟前')) {
-      const minutes = Number.parseInt(timeText, 10);
-      if (Number.isFinite(minutes)) {
-        return new Date(now.getTime() - minutes * 60 * 1000);
-      }
-    }
-
-    // 处理 "N小时前"
-    if (timeText.includes('小时前')) {
-      const hours = Number.parseInt(timeText, 10);
-      if (Number.isFinite(hours)) {
-        return new Date(now.getTime() - hours * 60 * 60 * 1000);
-      }
-    }
-
-    // 处理 "今天 HH:MM"
-    if (timeText.includes('今天')) {
-      const match = timeText.match(/(\d{1,2}):(\d{2})/);
-      if (match && match[1] && match[2]) {
-        const result = new Date(now);
-        result.setHours(Number.parseInt(match[1], 10));
-        result.setMinutes(Number.parseInt(match[2], 10));
-        result.setSeconds(0);
-        result.setMilliseconds(0);
-        return result;
-      }
-    }
-
-    // 处理 "昨天 HH:MM"
-    if (timeText.includes('昨天')) {
-      const match = timeText.match(/(\d{1,2}):(\d{2})/);
-      if (match && match[1] && match[2]) {
-        const result = new Date(now);
-        result.setDate(result.getDate() - 1);
-        result.setHours(Number.parseInt(match[1], 10));
-        result.setMinutes(Number.parseInt(match[2], 10));
-        result.setSeconds(0);
-        result.setMilliseconds(0);
-        return result;
-      }
-    }
-
-    // 处理 "10月27日 21:24" 格式（带时间）
-    if (timeText.includes('月') && timeText.includes('日')) {
-      const match = timeText.match(/(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})/);
-      if (match && match[1] && match[2]) {
-        const month = Number.parseInt(match[1], 10);
-        const day = Number.parseInt(match[2], 10);
-        const hour = match[3] ? Number.parseInt(match[3], 10) : 0;
-        const minute = match[4] ? Number.parseInt(match[4], 10) : 0;
-
-        const result = new Date(now.getFullYear(), month - 1, day, hour, minute, 0, 0);
-
-        // 如果日期是未来的（比如在12月解析1月的日期），说明是去年的
-        if (result > now) {
-          result.setFullYear(now.getFullYear() - 1);
-        }
-
-        return result;
-      }
-    }
-
-    // 处理 ISO 格式日期
-    const isoMatch = timeText.match(/\d{4}-\d{2}-\d{2}/);
-    if (isoMatch) {
-      return new Date(isoMatch[0]);
-    }
-
-    return null;
-  }
-
-  private extractTotalCount(postIds: string[]): number {
-    // 直接返回当前页抓取到的数量
-    return postIds.length;
-  }
-
-  private extractNextPageLink($: cheerio.CheerioAPI): string | undefined {
-    // 从 a.next 提取下一页链接
-    const nextLink = $('div.m-page a.next').attr('href');
-    if (nextLink) {
-      return nextLink.startsWith('http') ? nextLink : `https://s.weibo.com${nextLink}`;
-    }
-    return undefined;
-  }
-
-  private extractCurrentPage($: cheerio.CheerioAPI): number {
-    // 方法1：从 .pagenum 提取
-    const pageText = $('div.m-page .pagenum').first().text();
-    const match = pageText.match(/第(\d+)页/);
-    if (match && match[1]) {
-      return Number.parseInt(match[1], 10);
-    }
-
-    // 方法2：从 .s-scroll 中查找 .cur 类
-    const curPageText = $('div.m-page .s-scroll li.cur a').text();
-    const curMatch = curPageText.match(/第(\d+)页/);
-    if (curMatch && curMatch[1]) {
-      return Number.parseInt(curMatch[1], 10);
-    }
-
-    return 1; // 默认第1页
-  }
-
-  private extractTotalPage($: cheerio.CheerioAPI): number {
-    let maxPage = 0;
-
-    // 从分页列表中提取所有页码
-    $('div.m-page .s-scroll li a').each((_i: number, link: any) => {
-      const text = $(link).text().trim();
-      const match = text.match(/第(\d+)页/);
-      if (match && match[1]) {
-        const page = Number.parseInt(match[1], 10);
-        if (page > maxPage) {
-          maxPage = page;
-        }
-      }
-    });
-
-    return maxPage;
   }
 }

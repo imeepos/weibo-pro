@@ -3,8 +3,7 @@ import type { UserRelationNode, UserRelationEdge } from '@sker/sdk';
 import type { InterCommunityRelation } from './CommunityDetector.inter';
 import { analyzeInterCommunityRelations } from './CommunityDetector.inter';
 
-export type { InterCommunityRelation };
-export { analyzeInterCommunityRelations };
+export { analyzeInterCommunityRelations, type InterCommunityRelation };
 
 export interface Community {
   id: number;
