@@ -63,17 +63,6 @@ export const availableComponents: ComponentOption[] = [
     minSize: { w: 3, h: 2 }
   },
   {
-    id: 'geographic-map',
-    name: '地理分布图',
-    category: 'map',
-    description: '地理位置数据可视化',
-    icon: <Map className="w-5 h-5" />,
-    tags: ['地图', '地理', '分布'],
-    dataTypes: ['geographic', 'location'],
-    size: 'large',
-    minSize: { w: 3, h: 3 }
-  },
-  {
     id: 'GeographicChart',
     name: '地理图表',
     category: 'map',

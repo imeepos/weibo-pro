@@ -1,18 +1,13 @@
 import React from "react";
-import StatsOverview from "../ui/StatsOverview";
 import SentimentTrendChart from "../charts/SentimentTrendChart";
 import WordCloudChart from "../charts/WordCloudChart";
 import GeographicChart from "../charts/GeographicChart";
 import HotEventsList from "../charts/HotEventsList";
-import { componentWrappers, WordCloudProvider } from "./LayoutComponentProvider.wrappers";
-import { generateComponentData } from "./LayoutComponentProvider.data";
+import { componentWrappers, WordCloudProvider, StatsOverviewProvider } from "./LayoutComponentProvider.wrappers";
 
 // 为 LayoutEditor 使用的组件映射（向后兼容）
 export const legacyComponentMap: Record<string, React.ComponentType<any>> = {
-  StatsOverview: () => {
-    const { statsData } = generateComponentData();
-    return <StatsOverview data={statsData} className="flex-1" />;
-  },
+  StatsOverview: () => <StatsOverviewProvider className="flex-1" />,
   SentimentTrendChart: () => <SentimentTrendChart className="flex-1" />,
   WordCloudChart: () => {
     return (

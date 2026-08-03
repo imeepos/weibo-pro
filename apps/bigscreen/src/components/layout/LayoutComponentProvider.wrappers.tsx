@@ -1,6 +1,6 @@
 import React from "react";
-import { TrendingUp } from "lucide-react";
-import { useWordCloudData } from "@/hooks/useChartData";
+import { useWordCloudData, useEventCountSeries, usePostCountSeries } from "@/hooks/useChartData";
+import { useOverviewData } from "@/hooks/useOverviewData";
 
 // Charts 组件
 import StatsOverview from "../ui/StatsOverview";
@@ -12,7 +12,6 @@ import SimpleSentimentPieChart from "../charts/SimpleSentimentPieChart";
 import EmotionCurveChart from "../charts/EmotionCurveChart";
 import EventTypeBarChart from "../charts/EventTypeBarChart";
 import MiniTrendChart from "../charts/MiniTrendChart";
-import LocationHeatMap from "../charts/LocationHeatMap";
 import AgeDistributionChart from "../charts/AgeDistributionChart";
 import EventCountChart from "../charts/EventCountChart";
 import EventDevelopmentChart from "../charts/EventDevelopmentChart";
@@ -28,14 +27,10 @@ import SimpleNetworkFlow from "../charts/SimpleNetworkFlow";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 
 // UI 组件
-import { CountUp } from "@sker/ui/components/ui/count-up";
 import FullscreenIndicator from "../ui/FullscreenIndicator";
 import { Spinner } from "@sker/ui/components/ui/spinner";
-import { MetricCard } from "@sker/ui/components/ui/metric-card";
 import NavigationMenu from "../ui/NavigationMenu";
 import SentimentOverview from "../ui/SentimentOverview";
-
-import { generateComponentData } from "./LayoutComponentProvider.data";
 
 // 词云数据提供者组件（用于在工厂函数中使用 hooks）
 export const WordCloudProvider: React.FC<{ children: React.ReactNode; maxWords?: number }> = ({
@@ -50,6 +45,45 @@ export const WordCloudProvider: React.FC<{ children: React.ReactNode; maxWords?:
     ...child.props,
     data: wordCloudData
   });
+};
+
+// 数据提供者：KPI 统计（真实数据 + 真实事件/帖子趋势 sparkline）
+export const StatsOverviewProvider: React.FC<{ className?: string }> = ({ className }) => {
+  const { statsOverviewData, loading } = useOverviewData();
+  const eventSeries = useEventCountSeries(7);
+  const postSeries = usePostCountSeries(7);
+  const trendData = {
+    event: eventSeries.data?.map((p) => p.value) ?? [],
+    post: postSeries.data?.map((p) => p.value) ?? [],
+  };
+  return (
+    <StatsOverview
+      data={statsOverviewData}
+      loading={loading}
+      trendData={trendData}
+      className={className}
+    />
+  );
+};
+
+// 数据提供者：情感概览（真实数据）
+const SentimentOverviewProvider: React.FC<{ className?: string }> = ({ className }) => {
+  const { sentimentData, loading } = useOverviewData();
+  const data = sentimentData
+    ? {
+        positive: sentimentData.positive,
+        negative: sentimentData.negative,
+        neutral: sentimentData.neutral,
+      }
+    : null;
+  return <SentimentOverview data={data} loading={loading} className={className} />;
+};
+
+// 数据提供者：事件数量趋势（真实数据，用于用户行为图）
+const MiniTrendProvider: React.FC = () => {
+  const { data } = useEventCountSeries(7);
+  const trend = data?.map((p) => p.value) ?? [];
+  return <MiniTrendChart data={trend} color="#8b5cf6" type="line" />;
 };
 
 // 组件包装器 - 为每个组件提供适当的数据和配置
@@ -73,12 +107,6 @@ export const componentWrappers = {
     );
   },
 
-  // 地理分布图
-  "geographic-map": (timeRange?: string) => {
-    const { locationData } = generateComponentData(timeRange);
-    return <LocationHeatMap data={locationData} className="w-full h-full flex-1" />;
-  },
-
   // 事件时间线（使用热点事件列表）
   "event-timeline": () => {
     return <HotEventsList className="w-full h-full flex-1" />;
@@ -89,23 +117,9 @@ export const componentWrappers = {
     return <HotEventsList className="w-full h-full flex-1" />;
   },
 
-  // 用户行为图表
-  "user-behavior-chart": (timeRange?: string) => {
-    const multipliers = {
-      today: 1,
-      yesterday: 0.95,
-      thisWeek: 7.2,
-      lastWeek: 6.8,
-      thisMonth: 31,
-      lastMonth: 29,
-      thisQuarter: 92,
-      thisYear: 370,
-      all: 730,
-    };
-    const multiplier = multipliers[timeRange as keyof typeof multipliers] || 1;
-    const baseTrendData = [120, 145, 180, 165, 190, 175, 200];
-    const trendData = baseTrendData.map(val => Math.floor(val * multiplier * (0.85 + Math.random() * 0.3)));
-    return <MiniTrendChart data={trendData} color="#8b5cf6" type="line" />;
+  // 用户行为图表（真实事件序列）
+  "user-behavior-chart": () => {
+    return <MiniTrendProvider />;
   },
 
   // 活动热力图（使用事件类型柱状图）
@@ -113,10 +127,9 @@ export const componentWrappers = {
     return <EventTypeBarChart className="w-full h-full flex-1" />;
   },
 
-  // KPI指标
-  "kpi-metrics": (timeRange?: string) => {
-    const { statsData } = generateComponentData(timeRange);
-    return <StatsOverview data={statsData} className="w-full h-full flex-1" />;
+  // KPI指标（真实统计）
+  "kpi-metrics": () => {
+    return <StatsOverviewProvider className="w-full h-full flex-1" />;
   },
 
   // 数据表格（使用热点事件列表代替）
@@ -203,8 +216,7 @@ export const componentWrappers = {
 
   // 添加直接的组件名称映射（用于向后兼容）
   "StatsOverview": () => {
-    const { statsData } = generateComponentData();
-    return <StatsOverview data={statsData} className="w-full h-full flex-1" />;
+    return <StatsOverviewProvider className="w-full h-full flex-1" />;
   },
 
   "SentimentTrendChart": () => {
@@ -229,11 +241,6 @@ export const componentWrappers = {
 
   // UI 组件包装器
 
-  // 计数器
-  "count-up": () => {
-    return <CountUp end={1234} className="w-full h-full flex-1" />;
-  },
-
   // 全屏指示器
   "fullscreen-indicator": () => {
     return <FullscreenIndicator className="w-full h-full flex-1" />;
@@ -244,31 +251,13 @@ export const componentWrappers = {
     return <Spinner className="w-full h-full flex-1" />;
   },
 
-  // 指标卡片
-  "metric-card": () => {
-    return <MetricCard
-      title="示例指标"
-      value={1234}
-      change={12.5}
-      icon={TrendingUp}
-      color="blue"
-      className="w-full h-full flex-1"
-    />;
-  },
-
   // 导航菜单
   "navigation-menu": () => {
     return <NavigationMenu className="w-full h-full flex-1" />;
   },
 
-  // 情感概览
+  // 情感概览（真实数据）
   "sentiment-overview": () => {
-    // 创建默认情感数据
-    const sentimentData = {
-      positive: 1234,
-      negative: 456,
-      neutral: 890
-    };
-    return <SentimentOverview data={sentimentData} className="w-full h-full flex-1" />;
+    return <SentimentOverviewProvider className="w-full h-full flex-1" />;
   },
 };

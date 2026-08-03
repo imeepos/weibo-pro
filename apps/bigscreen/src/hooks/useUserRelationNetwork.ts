@@ -76,8 +76,12 @@ export function useUserRelationNetwork(params: UseUserRelationNetworkParams) {
 
   useEffect(() => {
     if (!enabled) return;
+    // 注意：deps 不含 network——请求成功后 setNetwork 会改变 network 引用，
+    // 若加入 deps 会导致 effect 每次请求返回后重跑，形成无限请求循环。
+    // 只在参数或 enabled 变化时请求一次。
     fetchNetwork(!!network);
-  }, [enabled, fetchNetwork, network]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, fetchNetwork]);
 
   return { network, isLoading, isRefreshing, error, refetch };
 }

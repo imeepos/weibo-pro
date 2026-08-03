@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { FileText, MessageCircle, Users, ThumbsUp } from 'lucide-react';
 import { MetricCard } from '@sker/ui/components/ui/metric-card';
 import MiniTrendChart from '@/components/charts/MiniTrendChart';
@@ -10,16 +10,24 @@ interface StatsData {
   interactions: { value: number; change: number };
 }
 
+// 真实趋势数据（仅事件/帖子有真实序列 API；用户/互动无序列则无 sparkline）
+interface StatsTrendData {
+  event?: number[];
+  post?: number[];
+}
+
 interface StatsOverviewProps {
   data: StatsData | null;
   loading?: boolean;
   className?: string;
+  trendData?: StatsTrendData;
 }
 
 const StatsOverview: React.FC<StatsOverviewProps> = ({
   data,
   loading = false,
-  className = ''
+  className = '',
+  trendData
 }) => {
   // 数据为空时的默认值
   const defaultData: StatsData = {
@@ -49,15 +57,8 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
   const postsMetric = formatMetric(statsData.posts.value);
   const interactionsMetric = formatMetric(statsData.interactions.value);
 
-  // 使用静态趋势数据
-  const trendData = useMemo(() => ({
-    eventTrendData: [120, 145, 180, 165, 190, 175, 200],
-    postTrendData: [1200, 1450, 1800, 1650, 1900, 1750, 2000],
-    userTrendData: [680, 720, 850, 780, 920, 860, 950],
-    interactionTrendData: [3200, 3800, 4500, 4200, 4800, 4600, 5000]
-  }), []);
-
-  const { eventTrendData, postTrendData, userTrendData, interactionTrendData } = trendData;
+  // 只渲染真实趋势数据；用户/互动无真实序列 API，不渲染 sparkline
+  const { event: eventTrendData = [], post: postTrendData = [] } = trendData ?? {};
 
 
   return (
@@ -70,7 +71,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
         color="blue"
         loading={loading}
         suffix={eventsMetric.suffix}
-        chartComponent={<MiniTrendChart data={eventTrendData} color="#3b82f6" type="line" height={20} />}
+        chartComponent={eventTrendData.length > 0 ? <MiniTrendChart data={eventTrendData} color="#3b82f6" type="line" height={20} /> : undefined}
         className="relative"
       />
 
@@ -82,7 +83,7 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
         color="green"
         loading={loading}
         suffix={postsMetric.suffix}
-        chartComponent={<MiniTrendChart data={postTrendData} color="#10b981" type="line" height={20} />}
+        chartComponent={postTrendData.length > 0 ? <MiniTrendChart data={postTrendData} color="#10b981" type="line" height={20} /> : undefined}
         className="relative"
       />
 
@@ -93,7 +94,6 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
         icon={Users}
         color="purple"
         loading={loading}
-        chartComponent={<MiniTrendChart data={userTrendData} color="#8b5cf6" type="line" height={20} />}
         className="relative"
       />
 
@@ -105,7 +105,6 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({
         color="red"
         loading={loading}
         suffix={interactionsMetric.suffix}
-        chartComponent={<MiniTrendChart data={interactionTrendData} color="#ef4444" type="line" height={20} />}
         className="relative"
       />
     </div>

@@ -5,6 +5,8 @@ import { useAppStore } from '@/stores/useAppStore';
 import { createLogger } from '@sker/core';
 
 const DEFAULT_REFRESH_INTERVAL_MS = 10_000;
+// 请求超时：防止请求悬挂导致 isFetchingRef 永为 true、轮询被永久冻结
+const REQUEST_TIMEOUT_MS = 10_000;
 
 const logger = createLogger('useIndexRealtimeSnapshot');
 
@@ -44,7 +46,13 @@ export function useIndexRealtimeSnapshot(refreshInterval = DEFAULT_REFRESH_INTER
     });
 
     try {
-      const snapshot = await OverviewAPI.getRealtimeSnapshot(selectedTimeRange);
+      // 超时保护：请求悬挂时不冻结轮询（isFetchingRef 始终复位）
+      const snapshot = await Promise.race([
+        OverviewAPI.getRealtimeSnapshot(selectedTimeRange),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('请求超时')), REQUEST_TIMEOUT_MS);
+        }),
+      ]);
 
       if (requestId !== requestIdRef.current) return;
 
@@ -97,6 +105,10 @@ export function useIndexRealtimeSnapshot(refreshInterval = DEFAULT_REFRESH_INTER
     return () => {
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // 使在途请求结果失效（requestId 校验失败），并复位互斥锁，
+      // 避免 timeRange 切换时旧请求把过期数据写进 state
+      requestIdRef.current += 1;
+      isFetchingRef.current = false;
     };
   }, [fetchSnapshot, refreshInterval]);
 
