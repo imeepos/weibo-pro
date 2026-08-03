@@ -43,6 +43,8 @@ import { EventUserRiskService } from './event-user-risk.service';
 import { useEntityManager, EventEntity } from '@sker/entities';
 import { KOLAnalysisService } from '../kol-analysis.service';
 import type { KOLAnalysisResult } from './types';
+import { buildEventDetail } from './events.detail';
+import { buildEventCacheKeys } from './events.cache';
 
 @Injectable({ providedIn: 'root' })
 export class EventsService {
@@ -96,52 +98,7 @@ export class EventsService {
   }
 
   async getEventDetail(id: string): Promise<EventDetail> {
-    const event = await this.queryService.getEventById(id);
-
-    if (!event) {
-      throw new Error(`事件不存在`)
-    }
-
-    const latestStats = await this.queryService.getLatestStatistics(id);
-    const statistics = await this.queryService.getAllEventStatistics(id);
-    const keywordsData = await this.queryService.getEventKeywords(id);
-
-    const timeline = this.timelineBuilder.buildTimeline(event, statistics);
-    const propagationPath = await this.analyticsService.buildPropagationPath(id);
-    const keyNodes = this.timelineBuilder.buildKeyNodes(timeline);
-
-    const trend =
-      statistics.length >= 2 && statistics[0] && statistics[1]
-        ? statistics[0].hotness > statistics[1].hotness
-          ? 'up'
-          : statistics[0].hotness < statistics[1].hotness
-            ? 'down'
-            : 'stable'
-        : ('stable' as const);
-
-    // 如果 stats 的 sentiment 是默认值且没有实际数据，fallback 到 event.sentiment
-    const hasValidSentiment = latestStats?.sentiment && latestStats.sentiment.positive + latestStats.sentiment.negative > 0.01;
-    const sentiment = hasValidSentiment
-      ? latestStats!.sentiment
-      : event.sentiment || { positive: 0, negative: 0, neutral: 0 };
-
-    return {
-      id: event.id,
-      title: event.title,
-      description: event.description || '',
-      postCount: latestStats?.post_count || 0,
-      userCount: latestStats?.user_count || 0,
-      sentiment,
-      hotness: event.hotness,
-      trend,
-      category: event.category?.name || '未分类',
-      keywords: keywordsData.map((kw) => String(kw.keyword)).filter(k => k && k !== 'undefined' && k !== 'null'),
-      createdAt: event.created_at.toISOString(),
-      lastUpdate: event.updated_at.toISOString(),
-      timeline,
-      propagationPath,
-      keyNodes,
-    };
+    return buildEventDetail(this.queryService, this.analyticsService, this.timelineBuilder, id);
   }
 
   async getEventTimeSeries(id: string): Promise<TimeSeriesData> {
@@ -281,53 +238,10 @@ export class EventsService {
   }
 
   async refreshCache(eventId: string): Promise<{ success: boolean; clearedKeys: string[] }> {
-    // 获取所有与该事件相关的缓存键
-    const cacheKeys = [
-      // 事件详情相关缓存
-      `events:detail:${eventId}`,
-      `event:timeseries:${eventId}`,
-      `event:trend:${eventId}`,
-      `event:influence_users:${eventId}`,
-      `event:geographic:${eventId}`,
-      `event:keywords:${eventId}`,
-      `event:sentiment_hotness:${eventId}`,
-      `event:sentiment_distribution:${eventId}`,
-      `event:keywords_timeseries:${eventId}`,
-      `event:keywords_by_sentiment:${eventId}`,
-      `event:negative_keywords:${eventId}`,
-      `event:event_types:${eventId}`,
-      `event:engagement_trend:${eventId}`,
-      `event:anomalies:${eventId}`,
-      `event:peaks:${eventId}`,
-      `event:user-relations:${eventId}`,
-      // 事件列表缓存（需要清除所有可能的列表缓存）
-      `events:detail:list:all:1:10::::0.05`,
-      `events:detail:list:all:1:10:::all::0.05`,
-      `events:detail:list:24h:1:10::::0.05`,
-      `events:detail:list:24h:1:10:::all::0.05`,
-      `events:detail:list:7d:1:10::::0.05`,
-      `events:detail:list:7d:1:10:::all::0.05`,
-      `events:detail:list:30d:1:10::::0.05`,
-      `events:detail:list:30d:1:10:::all::0.05`,
-      // 更多可能的列表缓存组合
-      `events:detail:list:all:1:10::test::0.05`,
-      `events:detail:list:24h:1:10::test::0.05`,
-      `events:detail:list:7d:1:10::test::0.05`,
-      `events:detail:list:30d:1:10::test::0.05`,
-      `events:detail:list:all:1:20::::0.05`,
-      `events:detail:list:24h:1:20::::0.05`,
-      `events:detail:list:7d:1:20::::0.05`,
-      `events:detail:list:30d:1:20::::0.05`,
-      `events:detail:list:all:1:20:::all::0.05`,
-      `events:detail:list:24h:1:20:::all::0.05`,
-      `events:detail:list:7d:1:20:::all::0.05`,
-      `events:detail:list:30d:1:20:::all::0.05`
-    ];
-
     const clearedKeys: string[] = [];
 
     // 逐个清除缓存
-    for (const key of cacheKeys) {
+    for (const key of buildEventCacheKeys(eventId)) {
       try {
         await this.queryService.clearCacheByPattern(key);
         clearedKeys.push(key);

@@ -1,5 +1,5 @@
 /**
- * EventDispatcherAstVisitor 简化版本测试
+ * EventDispatcherAstVisitor 简化版本测试 - 基础机制
  *
  * 测试目标：
  * 1. 验证简化后的实现直接选择第一个事件
@@ -12,58 +12,19 @@
  * - 移除提示词构建
  * - 直接选择第一个事件（已按 last_crawl_at 排序）
  * - 保留 last_crawl_at 更新机制实现轮换
+ *
+ * Mock 数据与排序函数抽取到 src/test/helpers/event-dispatcher-simplified.ts。
+ * 边界情况/性能改进/集成场景见 EventDispatcherAstVisitor.simplified.edge.test.ts。
  */
 
-import { describe, it, expect, } from 'vitest';
-import type { EventEntity, EventCategoryEntity, } from '@sker/entities';
+import { describe, it, expect } from 'vitest';
+import type { EventEntity } from '@sker/entities';
+import {
+  createMockCategory,
+  createMockEvent,
+  sortEventsByLastCrawlAt,
+} from './test/helpers/event-dispatcher-simplified';
 
-/**
- * Mock 数据创建函数
- */
-
-const createMockCategory = (id: string, name: string): EventCategoryEntity => ({
-  id,
-  code: name.toLowerCase(),
-  name,
-  name_en: name,
-  description: `${name}类事件`,
-  icon: 'test',
-  color: '#000000',
-  sort: 1,
-  status: 'active' as const,
-  created_at: new Date('2024-01-01T00:00:00Z'),
-  updated_at: new Date('2024-01-01T00:00:00Z'),
-  deleted_at: null
-});
-
-const createMockEvent = (
-  id: string,
-  title: string,
-  categoryId: string,
-  lastCrawlAt: Date | null = null
-): EventEntity => ({
-  id,
-  title,
-  description: `${title}描述`,
-  category_id: categoryId,
-  sentiment: { positive: 0.5, negative: 0.3, neutral: 0.2 },
-  hotness: 80.0,
-  status: 'active' as const,
-  seed_url: `https://example.com/${id}`,
-  occurred_at: new Date('2024-01-15T10:00:00Z'),
-  peak_at: new Date('2024-01-15T14:00:00Z'),
-  keywords: ['test'],
-  created_at: new Date('2024-01-01T00:00:00Z'),
-  updated_at: new Date('2024-01-01T00:00:00Z'),
-  deleted_at: null,
-  crawl_end_reason: null,
-  last_crawl_at: lastCrawlAt,
-  category: createMockCategory(categoryId, '测试分类')
-});
-
-/**
- * 测试：事件轮换机制
- */
 describe('EventDispatcherAstVisitor - 简化版本 - 事件轮换机制', () => {
   describe('last_crawl_at 更新逻辑', () => {
     it('应该更新选中事件的 last_crawl_at 为当前时间', async () => {
@@ -95,18 +56,7 @@ describe('EventDispatcherAstVisitor - 简化版本 - 事件轮换机制', () => 
       let events = [eventA, eventB, eventC];
 
       // 模拟排序：按 last_crawl_at ASC NULLS FIRST
-      const sortEvents = (eventList: EventEntity[]) => {
-        return [...eventList].sort((a, b) => {
-          // NULL 排最前面
-          if (a.last_crawl_at === null && b.last_crawl_at === null) {
-            return a.id.localeCompare(b.id);
-          }
-          if (a.last_crawl_at === null) return -1;
-          if (b.last_crawl_at === null) return 1;
-          // 已爬取的按时间升序
-          return a.last_crawl_at.getTime() - b.last_crawl_at.getTime();
-        });
-      };
+      const sortEvents = sortEventsByLastCrawlAt;
 
       // 第1次执行：选择 A（NULL 排最前）
       events = sortEvents(events);
@@ -160,14 +110,7 @@ describe('EventDispatcherAstVisitor - 简化版本 - 事件轮换机制', () => 
       const eventC = createMockEvent('event-c', '事件C', category.id, twoDaysAgo);
 
       // 排序：NULL 排最前，然后按时间升序
-      const events = [eventA, eventB, eventC].sort((a, b) => {
-        if (a.last_crawl_at === null && b.last_crawl_at === null) {
-          return a.id.localeCompare(b.id);
-        }
-        if (a.last_crawl_at === null) return -1;
-        if (b.last_crawl_at === null) return 1;
-        return a.last_crawl_at.getTime() - b.last_crawl_at.getTime();
-      });
+      const events = sortEventsByLastCrawlAt([eventA, eventB, eventC]);
 
       // 应该选择事件 A（从未爬取）
       const selectedEvent = events[0];
@@ -192,14 +135,7 @@ describe('EventDispatcherAstVisitor - 简化版本 - 事件轮换机制', () => 
       const events = [eventA, eventB, eventC, eventD];
 
       // 排序
-      const sorted = [...events].sort((a, b) => {
-        if (a.last_crawl_at === null && b.last_crawl_at === null) {
-          return a.id.localeCompare(b.id);
-        }
-        if (a.last_crawl_at === null) return -1;
-        if (b.last_crawl_at === null) return 1;
-        return a.last_crawl_at.getTime() - b.last_crawl_at.getTime();
-      });
+      const sorted = sortEventsByLastCrawlAt(events);
 
       // 顺序应该是：NULL 事件（按 ID），然后按时间升序
       expect(sorted[0].id).toBe('event-a'); // NULL
@@ -287,182 +223,4 @@ describe('EventDispatcherAstVisitor - 简化版本 - 事件轮换机制', () => 
       expect(limitedEvents.length).toBe(2);
     });
   });
-
-  describe('边界情况', () => {
-    it('应该处理空事件列表', () => {
-      const events: EventEntity[] = [];
-
-      expect(() => {
-        const selectedEvent = events[0];
-        if (!selectedEvent) {
-          throw new Error('没有可选中事件');
-        }
-      }).toThrowError('没有可选中事件');
-    });
-
-    it('应该处理只有一个事件的情况', () => {
-      const category = createMockCategory('category-1', '测试分类');
-      const events = [createMockEvent('event-1', '事件1', category.id, null)];
-
-      const selectedEvent = events[0];
-
-      expect(selectedEvent.id).toBe('event-1');
-    });
-
-    it('应该处理所有事件都未爬取的情况', () => {
-      const category = createMockCategory('category-1', '测试分类');
-
-      const events = [
-        createMockEvent('event-1', '事件1', category.id, null),
-        createMockEvent('event-2', '事件2', category.id, null),
-        createMockEvent('event-3', '事件3', category.id, null)
-      ];
-
-      // 所有事件都是 null，按 ID 排序
-      const sorted = [...events].sort((a, b) => a.id.localeCompare(b.id));
-
-      expect(sorted[0].id).toBe('event-1');
-      expect(sorted[1].id).toBe('event-2');
-      expect(sorted[2].id).toBe('event-3');
-    });
-
-    it('应该处理所有事件都已爬取的情况', () => {
-      const category = createMockCategory('category-1', '测试分类');
-
-      const now = new Date();
-      const events = [
-        createMockEvent('event-1', '事件1', category.id, new Date(now.getTime() - 3000)), // 3秒前
-        createMockEvent('event-2', '事件2', category.id, new Date(now.getTime() - 2000)), // 2秒前
-        createMockEvent('event-3', '事件3', category.id, new Date(now.getTime() - 1000))  // 1秒前
-      ];
-
-      // 按时间升序排序
-      const sorted = [...events].sort((a, b) =>
-        a.last_crawl_at!.getTime() - b.last_crawl_at!.getTime()
-      );
-
-      expect(sorted[0].id).toBe('event-1'); // 最早爬取
-      expect(sorted[1].id).toBe('event-2');
-      expect(sorted[2].id).toBe('event-3');
-    });
-  });
-
-  describe('性能改进验证', () => {
-    it('简化后不需要查询 WeiboPostEntity', () => {
-      // 验证：不再需要查询帖子时间范围
-      // 这节省了数据库查询和处理时间
-
-      const needsPostQuery = false; // 旧实现：true
-      expect(needsPostQuery).toBe(false);
-    });
-
-    it('简化后不需要调用 LLM', () => {
-      // 验证：不再需要 LLM API 调用
-      // 这消除了网络延迟和 API 成本
-
-      const needsLlmCall = false; // 旧实现：true
-      expect(needsLlmCall).toBe(false);
-    });
-
-    it('简化后不需要构建复杂提示词', () => {
-      // 验证：不再需要构建 150+ 行的提示词
-      // 这减少了代码复杂度和维护成本
-
-      const needsPromptBuilding = false; // 旧实现：true
-      expect(needsPromptBuilding).toBe(false);
-    });
-
-    it('简化后代码行数大幅减少', () => {
-      // 旧实现：约 350 行
-      // 新实现：约 133 行
-      // 减少：约 62%
-
-      const oldLineCount = 350;
-      const newLineCount = 133;
-      const reduction = ((oldLineCount - newLineCount) / oldLineCount) * 100;
-
-      expect(reduction).toBeGreaterThan(60);
-      expect(newLineCount).toBeLessThan(150);
-    });
-  });
-
-  describe('集成测试场景', () => {
-    it('场景1：首次执行，所有事件都未爬取', async () => {
-      const category = createMockCategory('category-1', '测试分类');
-
-      const events = [
-        createMockEvent('event-a', '事件A', category.id, null),
-        createMockEvent('event-b', '事件B', category.id, null),
-        createMockEvent('event-c', '事件C', category.id, null)
-      ];
-
-      // 第1次：选择 A
-      const selectedEvent1 = events[0];
-      expect(selectedEvent1.id).toBe('event-a');
-      selectedEvent1.last_crawl_at = new Date();
-    });
-
-    it('场景2：部分事件已爬取，优先选择未爬取的', async () => {
-      const category = createMockCategory('category-1', '测试分类');
-
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const events = [
-        createMockEvent('event-a', '事件A', category.id, yesterday), // 已爬取
-        createMockEvent('event-b', '事件B', category.id, null),       // 未爬取
-        createMockEvent('event-c', '事件C', category.id, null)        // 未爬取
-      ];
-
-      // 排序后 NULL 在前
-      const sorted = events.sort((a, b) => {
-        if (a.last_crawl_at === null && b.last_crawl_at === null) {
-          return a.id.localeCompare(b.id);
-        }
-        if (a.last_crawl_at === null) return -1;
-        if (b.last_crawl_at === null) return 1;
-        return a.last_crawl_at.getTime() - b.last_crawl_at.getTime();
-      });
-
-      const selectedEvent = sorted[0];
-      expect(selectedEvent.id).toBe('event-b'); // NULL 中 ID 较小的
-      expect(selectedEvent.last_crawl_at).toBeNull();
-    });
-
-    it('场景3：所有事件都已爬取，选择最早爬取的', async () => {
-      const category = createMockCategory('category-1', '测试分类');
-
-      const now = new Date();
-      const events = [
-        createMockEvent('event-a', '事件A', category.id, new Date(now.getTime() - 3000)),
-        createMockEvent('event-b', '事件B', category.id, new Date(now.getTime() - 1000)),
-        createMockEvent('event-c', '事件C', category.id, new Date(now.getTime() - 2000))
-      ];
-
-      // 按时间升序排序
-      const sorted = events.sort((a, b) =>
-        a.last_crawl_at!.getTime() - b.last_crawl_at!.getTime()
-      );
-
-      const selectedEvent = sorted[0];
-      expect(selectedEvent.id).toBe('event-a'); // 最早爬取
-    });
-  });
 });
-
-/**
- * 测试总结
- *
- * 简化后的实现：
- * ✅ 直接选择第一个事件（简单高效）
- * ✅ 保留轮换机制（通过 last_crawl_at 更新）
- * ✅ 移除 LLM 依赖（降低成本和复杂度）
- * ✅ 移除时间范围查询（提升性能）
- * ✅ 代码量减少 62%（从 350 行降至 133 行）
- *
- * 轮换机制验证：
- * ✅ 从未爬取事件优先（NULL 排最前）
- * ✅ 按爬取时间升序（最久未爬的排前面）
- * ✅ 更新后自动轮换到队列末尾
- * ✅ 实现公平的事件分配
- */
