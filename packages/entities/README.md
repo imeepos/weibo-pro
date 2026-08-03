@@ -1,137 +1,80 @@
 # @sker/entities
 
-TypeORM 实体与数据访问层。
+TypeORM 实体与数据访问层，集中承载微博数据、舆情事件、工作流、LLM/Prompt、记忆系统等全部数据库表结构、查询构建器与订阅器。
 
-## 核心理念
+## 核心职责
 
-**代码即文档** - 实体定义本身即完整的数据模型说明
-**类型即契约** - TypeScript 类型系统保障数据完整性
-**查询即逻辑** - 将复杂查询封装为可复用的函数
+- **实体定义**：以 TypeORM 实体类定义全部数据库表结构（微博、事件、工作流、LLM、Prompt、记忆等）
+- **查询构建器**：将复杂查询封装为可复用的函数（`queries/`）
+- **数据源管理**：`useDataSource` / `useEntityManager` 封装数据源与事务
+- **订阅器与派生逻辑**：`subscribers/` 自动维护快照、小时级统计、用户关系统计与工作流调度
+- **种子数据**：`seeds/` 预置 AI 角色（女娲、编程助手、内容审核员、数据验证员等）
+- **服务与工具**：`services/`（传播速度、事件小时统计）、`utils/`（用户分类器等）、迁移脚本 `migrations/`
 
-## 架构
+## 目录结构
 
 ```
 src/
-├── *.entity.ts          # 实体定义
-├── queries/             # 查询构建器
-├── transformers/        # 数据转换器
-├── utils/               # 工具函数
-├── types/               # 类型定义
-├── decorator.ts         # 自定义装饰器
-└── utils.ts            # 数据源管理
+├── index.ts                              # 统一导出（含 typeorm 的 DataSource/EntityManager/Repository）
+├── decorator.ts                          # 自定义实体装饰器（DI 自动注册）
+├── *.entity.ts                           # 实体定义（见下方分组）
+├── queries/                              # 查询构建器
+│   ├── event.queries.ts                  # 事件查询（findHotEvents、findEventList 等）
+│   ├── weibo-post.queries.ts             # 帖子查询
+│   ├── weibo-comment.queries.ts          # 评论查询
+│   ├── weibo-user.queries.ts             # 用户查询
+│   ├── overview-statistics.queries.ts    # 概览统计查询
+│   └── index.ts
+├── subscribers/                          # 订阅器 / 派生逻辑
+│   ├── post-snapshot.helper.ts           # 帖子快照维护
+│   ├── hourly-statistics.helper.ts       # 小时级统计
+│   ├── user-relation-statistics.helper.ts# 用户关系统计
+│   └── workflow-schedule.subscriber.ts   # 工作流调度订阅器
+├── services/                             # 业务服务
+│   ├── event-hourly-statistics.service.ts# 事件小时统计服务
+│   └── propagation-velocity.service.ts   # 传播速度服务
+├── transformers/                         # 数据转换器（如 boolean→smallint）
+├── seeds/                                # 种子数据（AI 角色预设）
+├── migrations/                           # 数据库迁移脚本
+├── utils/                                # 工具（pure、user-category-classifier）
+└── types/                                # 类型定义（sentiment 等）
 ```
 
-## 实体模型
+### 实体分组
 
-### 微博数据
-- `WeiboUserEntity` - 用户信息
-- `WeiboPostEntity` - 微博内容
-- `WeiboCommentEntity` - 评论
-- `WeiboLikeEntity` - 点赞
-- `WeiboRepostEntity` - 转发
-- `WeiboPostSnapshotEntity` - 内容快照
-
-### 事件分析
-- `EventEntity` - 事件主体
-- `EventCategoryEntity` - 事件分类
-- `EventTagEntity` - 事件标签
-- `EventTagRelationEntity` - 标签关联
-- `EventStatisticsEntity` - 统计快照
-
-### 工作流
-- `WorkflowEntity` - 流程定义
-- `WorkflowScheduleEntity` - 调度配置
-- `WorkflowRunEntity` - 执行记录
-- `WorkflowRunLogEntity` - 执行日志
-
-### 分类系统
-- `WeiboUserCategoryEntity` - 用户分类定义
-- `WeiboUserCategoryRelationEntity` - 分类关联
-- `PostNlpResultEntity` - NLP 分析结果
+- **微博数据**：`WeiboUserEntity`、`WeiboPostEntity`、`WeiboCommentEntity`、`WeiboLikeEntity`、`WeiboRepostEntity`、`WeiboPostSnapshotEntity`、`WeiboAccountEntity`、`WeiboUserCategoryEntity`、`WeiboUserCategoryRelationEntity`
+- **事件分析**：`EventEntity`、`EventCategoryEntity`、`EventTagEntity`、`EventTagRelationEntity`、`EventHourlyStatisticsEntity`、`OverviewStatisticsEntity`
+- **工作流**：`WorkflowEntity`、`WorkflowScheduleEntity`、`WorkflowRunEntity`、`WorkflowRunLogEntity`
+- **LLM**：`LlmProvider`、`LlmModel`、`LlmModelProvider`、`LlmChatLog`
+- **Prompt 管理**：`PromptRoleEntity`、`PromptSkillEntity`、`PromptRoleSkillRefEntity`、`PromptVersionEntity`、`PromptOptimizationTaskEntity`
+- **记忆系统**：`MemoryEntity`、`MemoryRelationEntity`、`MemoryClosureEntity`、`MemoryEvidenceEntity`、`PersonaEntity`
+- **用户画像蒸馏**：`UserProfileDistillationTaskEntity`、`UserProfileSourcePostEntity`、`UserProfilePostExtractionEntity`、`WeiboUserPersonaLinkEntity`、`UserRelationStatisticsEntity`
 
 ## 数据访问
 
-### DataSource 管理
-
 ```typescript
-import { useDataSource, useEntityManager } from '@sker/entities';
+import { useDataSource, useEntityManager, findHotEvents, findEventList } from '@sker/entities';
 
-// 获取数据源
+// 获取数据源 / 使用实体管理器
 const ds = await useDataSource();
+await useEntityManager(async (m) => m.find(EventEntity));
 
-// 使用实体管理器
-await useEntityManager(async (m) => {
-  return m.find(EventEntity);
-});
-```
-
-### 查询构建器
-
-```typescript
-import { findHotEvents, findEventList } from '@sker/entities';
-
-// 获取热门事件
+// 查询构建器
 const hotEvents = await findHotEvents('today', 10);
-
-// 查询事件列表
-const events = await findEventList('thisWeek', {
-  category: '社会',
-  search: '关键词',
-  limit: 20
-});
+const events = await findEventList('thisWeek', { category: '社会', search: '关键词', limit: 20 });
 ```
 
-### 时间范围查询
+支持的时间范围：`today` / `yesterday` / `thisWeek` / `lastWeek` / `thisMonth` / `lastMonth` / `thisQuarter` / `lastQuarter` / `halfYear` / `lastHalfYear` / `thisYear` / `lastYear` / `all`。
 
-支持的时间范围：
-- `today` / `yesterday`
-- `thisWeek` / `lastWeek`
-- `thisMonth` / `lastMonth`
-- `thisQuarter` / `lastQuarter`
-- `halfYear` / `lastHalfYear`
-- `thisYear` / `lastYear`
-- `all`
-
-## 依赖注入
-
-通过 `@sker/core` 实现实体的自动注册：
-
-```typescript
-import { Entity } from './decorator';
-
-@Entity('table_name')
-export class MyEntity {
-  // ...
-}
-```
-
-装饰器会自动将实体注册到依赖注入容器。
-
-## 数据库配置
-
-通过 `DATABASE_URL` 环境变量配置数据库连接：
+数据库连接通过 `DATABASE_URL` 环境变量配置：
 
 ```bash
 DATABASE_URL=postgres://user:pass@host:5432/dbname
 ```
 
-## 开发
+## 边界
 
-```bash
-# 构建
-pnpm build
-
-# 开发模式（带热重载）
-pnpm dev
-
-# 类型检查
-pnpm check-types
-```
-
-## 设计原则
-
-1. **单一职责** - 每个实体仅关注自身数据模型
-2. **关注分离** - 查询逻辑独立于实体定义
-3. **函数式思维** - 使用 `useEntityManager` 包装异步操作
-4. **类型安全** - 充分利用 TypeScript 类型推导
-5. **代码即文档** - 通过清晰的命名和结构表达意图
+- **✅ 负责**：数据库表结构与实体定义；数据访问（查询/订阅器/服务）；种子数据与迁移；为上层业务提供类型化的数据模型与查询能力
+- **❌ 不负责**：不包含 API 路由与控制器（见 `@sker/sdk` / `apps/api`）；不负责 DI 容器本身（见 `@sker/core`）；不包含前端状态管理（见 `@sker/store`）
+- **对外依赖**：`@sker/core`（实体 DI 自动注册）、`@sker/redis`；外部依赖 `typeorm`、`reflect-metadata`、`pg`
+- **被谁依赖**：`apps/api`、`apps/bigscreen`、`apps/crawler`；`packages/agent`、`packages/crawler-core`、`packages/sdk`（dev）、`packages/workflow-ast`、`packages/workflow-run`、`packages/workflow-ui`

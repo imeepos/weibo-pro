@@ -1,8 +1,64 @@
 # @sker/workflow
 
-> 最小、优雅的工作流引擎与编排系统
+工作流引擎核心包：基于 AST（抽象语法树）+ 访问者模式 + RxJS 响应式流的最小优雅工作流编排引擎。
 
-一个极简的工作流执行框架，通过访问者模式（Visitor Pattern）和图形计算实现灵活的任务编排。每行代码都有其存在的必要性。
+## 核心职责
+
+- **AST 模型**：`Ast` 基类与 `WorkflowGraphAst` 容器；节点即类、节点平等（图本身也是节点，可递归执行）
+- **装饰器系统**：`@Node` / `@Input` / `@Output` / `@State` / `@Handler` / `@Render` 声明节点身份、数据流端口与执行绑定
+- **执行调度**：`NodeExecutor` / `executeAst` / `executeWorkflow`，基于依赖分析与边模式（数据/条件/循环）调度节点，支持并行执行
+- **事件模型**：`node_runing` / `node_emit` / `node_success` / `node_fail` 等 RxJS 事件流，节点可多次发射值，支持流式数据处理
+- **序列化**：`toJson` / `fromJson` 自动提取装饰器元数据，支持工作流状态持久化与恢复
+- **内置基础节点**：文本/日期/布尔/图像/音视频输入、Mq、Store、Collector、Loop、Filter、Merge、Switch、PassThrough 等
+- **编译能力**：`Compiler` 将 AST 实例编译为 `INode`（固化装饰器元数据，供 UI/运行时使用）
+- **运行时设施**：`EdgeModeStrategy` 边模式策略、`event-store` 事件存储、`runtime` 运行时、`crawler-scheduler` 爬虫调度器
+
+## 目录结构
+
+```
+packages/workflow/src/
+├── index.ts                      # 公共 API 入口（统一导出所有核心能力）
+├── ast.ts                        # AST 核心：Ast 基类、WorkflowGraphAst、createWorkflowGraphAst
+├── decorator.ts                  # 装饰器系统：@Node/@Input/@Output/@State/@Handler/@Render/@Setting/@Preview
+├── types.ts                      # 类型定义：INode、IEdge、EdgeMode、节点状态、编译后元数据
+├── executor.ts                   # 执行器入口：NodeExecutor、executeAst/executeWorkflow 等便捷函数
+├── generate.ts                   # 序列化/反序列化：fromJson、toJson
+├── ast-utils.ts                  # AST 工具：节点/边管理、图操作、错误设置
+├── utils.ts                      # 通用工具：ID 生成、clone、isObservable 等
+├── errors.ts                     # NoRetryError 等错误定义
+├── defaultVisitor.ts             # 默认访问者（DEFAULT_VISITOR）：无 @Handler 时的回退执行器
+├── WorkflowGraphAstVisitor.ts    # 图节点访问者：递归执行子图节点
+├── dynamic-node-registry.ts      # 动态节点注册表（运行时注册新节点类型）
+├── edge-transform.ts             # 边（Edge）转换工具
+├── execution/                    # 执行层
+│   ├── visitor-executor.ts       # 访问者执行器：查找并调用 @Handler
+│   ├── events.ts                 # 节点事件类型：node_runing/node_emit/node_success/node_fail
+│   ├── error-handler.ts          # 错误处理策略：retry、skip、fail、abort
+│   ├── EdgeCombiner.ts           # 边合并器
+│   ├── EdgeStreamBuilder.ts      # 边流构建器
+│   ├── EdgeModeStrategy.ts       # 边模式策略（EDGE_MODE_STRATEGY providers）
+│   ├── ExecutionContext.ts       # 节点执行上下文
+│   ├── NodeInputBuilder.ts       # 节点输入构建
+│   ├── StreamMerger.ts           # 流合并
+│   ├── WorkflowEventMerger.ts    # 工作流事件合并
+├── compiler/index.ts             # 编译器：AST 实例 → INode（提取装饰器元数据）
+├── event-store/                  # 事件存储：memory、event-stream、types
+├── runtime/                      # 工作流运行时（workflow-runtime）
+├── schedulers/crawler-scheduler.ts # 爬虫调度器（crawlerScheduler / ConcurrencyScheduler）
+├── operators/                    # RxJS 自定义操作符：concat_latest_from、map-response、tap-response
+└── 内置基础节点                  # TextAreaAst / MarkdownAst / DateAst / MqAst / StoreAst
+                                  # CollectorAst / LoopAst / FilterAst / MergeAst / SwitchAst
+                                  # ImageAst / AudioAst / VideoAst / BooleanAst / NotAst / PassThroughAst
+```
+
+## 边界
+
+- **✅ 负责**：引擎核心（AST 模型、装饰器、执行调度、事件流、序列化）、内置通用基础节点、边模式策略、事件存储与运行时基础设施
+- **❌ 不负责**：具体业务节点定义（属于 `@sker/workflow-ast`）、后端真实执行逻辑（属于 `@sker/workflow-run`）、浏览器端执行（属于 `@sker/workflow-browser`）、前端可视化渲染（属于 `@sker/workflow-ui`）、DSL 源码编译（属于 `@sker/workflow-compiler`）
+- **对外依赖**：`@sker/core`（DI 容器与装饰器元数据存储）、rxjs、xstate、zod、dayjs、json-schema
+- **被谁依赖**：`@sker/workflow-ast`、`@sker/workflow-run`、`@sker/workflow-browser`、`@sker/workflow-compiler`、`@sker/workflow-ui`、`@sker/ui`、`@sker/sdk`、`@sker/crawler-core`、`@sker/agent`；apps：`api`、`crawler`、`bigscreen`、`storybook`
+
+---
 
 ## 核心设计理念
 
@@ -189,70 +245,9 @@ interface Visitor {
      running（仍有待执行节点）
 ```
 
-## 模块结构
-
-### `/src/decorator.ts` - 元数据系统
-- `@Node(options)`：声明节点类型
-- `@Input(options)`：标记输入属性，支持 `isMulti` 多值聚合
-- `@Output(options)`：标记输出属性
-- `@Handler(AstType)`：绑定访问者处理器
-
-通过 `@sker/core` 的依赖注入容器存储和检索元数据。
-
-### `/src/types.ts` - 类型定义
-- `INode`：节点接口（type、id、state）
-- `IDataEdge`：数据流边，支持嵌套属性路径
-- `IControlEdge`：控制流边，支持条件判断
-- `IAstStates`：节点状态类型
-
-### `/src/ast.ts` - AST基础设施
-- `Ast`：所有节点的基类
-- `WorkflowGraphAst`：工作流容器
-
-### `/src/generate.ts` - 序列化/反序列化
-- `toJson(ast)`：节点→JSON序列化
-- `fromJson(json)`：JSON→节点反序列化
-
-自动提取 `@Input`、`@Output` 标记的属性，支持状态持久化。
-
-### `/src/execution/scheduler.ts` - 调度引擎
-`WorkflowScheduler` 是核心编排器：
-- 初始化输入节点
-- 迭代调用 `DependencyAnalyzer` 找可执行节点
-- 并行执行节点
-- 合并状态直到完成
-
-### `/src/execution/dependency-analyzer.ts` - 依赖分析
-`DependencyAnalyzer` 计算节点执行就绪条件：
-- **可达性分析**：从起点出发找所有可能执行的节点
-- **就绪条件检查**：
-  - 所有无条件输入的源节点必须 `success`
-  - 条件边的源节点满足条件时才解锁
-  - 多源汇聚：等待最后一个源完成
-- **完成判断**：所有可达节点都已完成（success | fail）
-
-### `/src/execution/data-flow-manager.ts` - 数据流管理
-`DataFlowManager` 处理节点间的数据传递：
-- **属性映射**：支持嵌套属性路径 `user.profile.name`
-- **多值聚合**：`@Input({ mode: IS_MULTI })` 属性汇聚多个源的数据
-- **权重排序**：多源数据按 `weight` 排序合并
-- **上下文初始化**：从外部 context 注入初始数据
-- **输出提取**：提取节点的 `@Output` 属性供下游使用
-
-### `/src/execution/visitor-executor.ts` - 访问者执行
-`VisitorExecutor` 路由节点到对应的处理器：
-- 查询注册的 `@Handler` 装饰器
-- 调用访问者的 `visit()` 方法
-- 统一错误处理（支持 `NoRetryError` 快速失败）
-
-### `/src/execution/state-merger.ts` - 状态合并
-`StateMerger` 将批次执行结果合并回工作流状态，保证节点状态一致性。
-
 ## 高级用法
 
 ### 多输入节点的数据汇聚
-
-支持一个输入属性接收多个源的数据：
 
 ```typescript
 @Node({ title: '数据融合' })
@@ -265,22 +260,11 @@ export class MergeAst extends Ast {
 
   type: 'MergeAst' = 'MergeAst';
 }
-
-// 三个源节点的输出都汇聚到 items
-const edges = [
-  { from: 'source1', to: 'merge', toProperty: 'items' },
-  { from: 'source2', to: 'merge', toProperty: 'items' },
-  { from: 'source3', to: 'merge', toProperty: 'items', weight: 0 }  // 优先处理
-];
 ```
 
 ### 条件分支与动态流程
 
-基于节点的某个属性值决定后续流程：
-
 ```typescript
-// 节点A根据检查结果设置 approved 状态
-// 节点B只在 approved === true 时执行
 const conditionalEdge: IControlEdge = {
   from: 'checkNode',
   to: 'approveNode',
@@ -289,13 +273,9 @@ const conditionalEdge: IControlEdge = {
     value: true
   }
 };
-
-// 如果检查失败，approveNode 永远不会被调度
 ```
 
 ### 嵌套属性映射
-
-数据传递时自动解析嵌套属性：
 
 ```typescript
 const edge: IDataEdge = {
@@ -304,17 +284,9 @@ const edge: IDataEdge = {
   to: 'emailSender',
   toProperty: 'recipient'
 };
-
-// userFetcher 输出：
-// { user: { profile: { contacts: { email: 'user@example.com' } } } }
-//
-// emailSender 输入：
-// { recipient: 'user@example.com' }
 ```
 
 ### 持久化与恢复
-
-将工作流状态保存到数据库或文件：
 
 ```typescript
 import { toJson, fromJson } from '@sker/workflow';
@@ -329,204 +301,26 @@ const resumedAst = fromJson(savedState);
 const finalResult = await execute(resumedAst, context);
 ```
 
-## 实际应用示例
-
-### 微博爬虫工作流
-
-来自项目中的真实应用（`@sker/workflow-ast`）：
-
-```typescript
-// 1. 定义节点
-@Node({ title: '微博关键词搜索' })
-export class WeiboKeywordSearchAst extends Ast {
-  @Input() keyword: string;
-  @Input() startDate: Date;
-  @Input() endDate: Date;
-  @Input() page: number = 1;
-
-  @Output() posts: WeiboPost[];
-  @Output() hasMore: boolean;
-
-  type: 'WeiboKeywordSearchAst' = 'WeiboKeywordSearchAst';
-}
-
-// 2. 实现处理器
-@Injectable()
-@Handler(WeiboKeywordSearchAst)
-export class WeiboKeywordSearchVisitor {
-  constructor(private weiboClient: WeiboClient) {}
-
-  async visit(ast: WeiboKeywordSearchAst, ctx: any) {
-    ast.state = 'running';
-    try {
-      const result = await this.weiboClient.search({
-        keyword: ast.keyword,
-        startDate: ast.startDate,
-        endDate: ast.endDate,
-        page: ast.page
-      });
-      ast.posts = result.posts;
-      ast.hasMore = result.hasMore;
-      ast.state = 'success';
-    } catch (error) {
-      ast.state = 'fail';
-      ast.error = error;
-    }
-    return ast;
-  }
-}
-
-// 3. 在 NestJS 控制器中使用
-@Controller('workflow')
-export class WorkflowController {
-  @Post('search-weibo')
-  async searchWeibo(@Body() body: { keyword: string; startDate: string }) {
-    const searchAst = new WeiboKeywordSearchAst();
-    searchAst.keyword = body.keyword;
-    searchAst.startDate = new Date(body.startDate);
-    
-    // 完整执行工作流直到完成
-    const result = await execute(searchAst, {});
-    return { posts: result.posts };
-  }
-}
-```
-
-### NLP 分析工作流
-
-后处理微博帖子进行情感分析和事件识别：
-
-```typescript
-@Node({ title: '帖子 NLP 分析' })
-export class PostNLPAnalyzerAst extends Ast {
-  @Input() post: WeiboPost;
-  @Input() comments: WeiboComment[];
-  
-  @Output() nlpResult: {
-    sentiment: SentimentScore;
-    keywords: string[];
-    event: { type: string; confidence: number };
-  };
-
-  type: 'PostNLPAnalyzerAst' = 'PostNLPAnalyzerAst';
-}
-
-@Handler(PostNLPAnalyzerAst)
-export class PostNLPAnalyzerVisitor {
-  constructor(private nlpService: NLPService) {}
-
-  async visit(ast: PostNLPAnalyzerAst, ctx: any) {
-    ast.state = 'running';
-    try {
-      const result = await this.nlpService.analyzePost({
-        text: ast.post.text,
-        comments: ast.comments.map(c => c.text)
-      });
-      ast.nlpResult = result;
-      ast.state = 'success';
-    } catch (error) {
-      ast.state = 'fail';
-      ast.error = error;
-    }
-    return ast;
-  }
-}
-
-// 多步工作流：搜索 → NLP分析 → 事件创建
-const workflow = createWorkflowGraphAst({
-  name: '完整分析流程',
-  nodes: [searchAst, nlpAst, eventAst],
-  edges: [
-    { from: 'search', fromProperty: 'posts', to: 'nlp', toProperty: 'post' },
-    { from: 'nlp', fromProperty: 'nlpResult', to: 'event', toProperty: 'nlpResult' }
-  ]
-});
-```
-
 ## API 参考
 
 ### 核心函数
 
-#### `execute(state, context, visitor?)`
-```typescript
-async execute<S extends INode>(
-  state: S,
-  context: any,
-  visitor?: Visitor
-): Promise<S>
-```
-**功能**：完整执行工作流直到 `success` 或 `fail` 状态。
-
-**参数**：
-- `state`: 初始工作流图或节点
-- `context`: 外部上下文，可被节点访问
-- `visitor`: 自定义访问者（默认使用 `defaultVisitorExecutor`）
-
-**返回**：最终状态的工作流
-
-#### `executeAst(state, context, visitor?)`
-```typescript
-function executeAst<S extends INode>(
-  state: S,
-  context: any,
-  visitor?: Visitor
-): Promise<S>
-```
-**功能**：执行一次迭代，返回迭代后的状态（可能仍在 `running`）。
+- `execute(state, context, visitor?)`：完整执行工作流直到 `success` 或 `fail`
+- `executeAst(state, context, visitor?)`：执行一次迭代，返回迭代后的状态（可能仍在 `running`）
 
 ### 工作流构建
 
-#### `createWorkflowGraphAst(options)`
-```typescript
-function createWorkflowGraphAst({
-  name: string;
-  nodes: INode[];
-  edges: IEdge[];
-  id?: string;
-  state?: IAstStates;
-}): WorkflowGraphAst
-```
-
-#### `fromJson(json)` / `toJson(ast)`
-序列化与反序列化，支持工作流状态的持久化。
+- `createWorkflowGraphAst({ name, nodes, edges, id?, state? })`：创建工作流容器节点
+- `fromJson(json)` / `toJson(ast)`：序列化与反序列化
 
 ### 装饰器
 
-#### `@Node(options?)`
-在节点类上使用，注册为工作流节点类型。
-
-#### `@Input(options?)`
-```typescript
-interface InputOptions {
-  title?: string;        // UI展示用标题
-  type?: string;         // 字段类型提示
-  isMulti?: boolean;     // 是否多值聚合（默认 false）
-}
-```
-
-#### `@Output(options?)`
-```typescript
-interface OutputOptions {
-  title?: string;        // UI展示用标题
-}
-```
-
-#### `@Handler(AstType)`
-在访问者类或方法上使用，绑定节点的处理实现。
-
-```typescript
-// 类级别
-@Handler(MyAst)
-export class MyVisitor {
-  async visit(ast: MyAst, ctx: any) { ... }
-}
-
-// 方法级别
-export class MyVisitors {
-  @Handler(MyAst)
-  async handleMyAst(ast: MyAst, ctx: any) { ... }
-}
-```
+- `@Node(options?)`：在节点类上使用，注册为工作流节点类型
+- `@Input(options?)`：标记输入属性（`title`、`type`、`mode: IS_MULTI/IS_BUFFER` 等）
+- `@Output(options?)`：标记输出属性（支持 `isRouter` 路由、`condition` 条件输出）
+- `@State(options?)`：标记内部状态（不参与数据流传递）
+- `@Handler(AstType)`：在访问者类或方法上绑定节点的执行实现
+- `@Render(AstType)`：绑定节点的前端渲染器（供 `@sker/workflow-ui` 使用）
 
 ## 设计模式
 
@@ -543,8 +337,6 @@ export class MyVisitors {
 - **数据边**：对象属性间的值传递
 - **控制边**：执行顺序与条件分支
 
-这种分离使流程定义更清晰、更容易理解和维护。
-
 ## 与其他包的集成
 
 ### @sker/core
@@ -552,65 +344,19 @@ export class MyVisitors {
 - 类型系统：`Type<T>`, `InjectionToken`
 
 ### @sker/workflow-ast
-包含具体的业务节点定义（微博爬虫、NLP分析等）
+包含具体的业务节点定义（微博爬虫、LLM、舆情分析等）
 
 ### @sker/workflow-run
-实现访问者处理器，连接到实际API和数据库
+实现访问者处理器，连接到实际 API 和数据库（后端运行时）
+
+### @sker/workflow-browser
+浏览器端执行层，通过远程代理模式委托后端执行
+
+### @sker/workflow-ui
+可视化编辑与节点渲染，通过 `@Render` 装饰器映射
 
 ### @sker/entities
 定义数据模型（WeiboPost、Event 等）
-
-## 性能考量
-
-### 并行执行
-每个调度轮次中，所有就绪的节点会通过 `Promise.all()` 并行执行：
-```typescript
-const promises = executableNodes.map(node => executeAst(node, ctx));
-const results = await Promise.all(promises);
-```
-
-### 增量数据流
-数据通过边传递时支持嵌套属性提取，避免复制整个对象：
-```typescript
-// 只传递需要的属性
-{ from: 'source', fromProperty: 'result.user.email', to: 'target', toProperty: 'email' }
-```
-
-### 节点的幂等性
-推荐设计访问者为幂等的，使其支持重试：
-```typescript
-@Handler(MyAst)
-export class MyVisitor {
-  async visit(ast: MyAst, ctx: any) {
-    // 设计为幂等的，重复执行结果相同
-    const result = await fetchAndCache(ast.id);
-    ast.output = result;
-    ast.state = 'success';
-    return ast;
-  }
-}
-```
-
-## 故障排查
-
-### 节点永不执行
-检查：
-1. 输入边是否正确连接
-2. 条件分支的源节点是否 `success` 且条件是否满足
-3. 依赖节点是否存在 `fail` 状态
-
-### 数据未传递
-检查：
-1. 源节点输出属性是否用 `@Output` 标记
-2. 目标节点输入属性是否用 `@Input` 标记
-3. 嵌套属性路径是否正确（如 `user.profile.email`）
-4. 数据类型是否兼容
-
-### 访问者未调用
-检查：
-1. 访问者类是否用 `@Handler(NodeType)` 装饰
-2. 节点类是否用 `@Node()` 装饰
-3. 节点的 `type` 属性是否与类名匹配
 
 ## 最佳实践
 

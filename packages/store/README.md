@@ -1,244 +1,86 @@
 # @sker/store
 
-框架无关的状态管理库，基于 NgRx Store 核心逻辑，完全剥离 Angular 依赖，可运行于任何 JavaScript 环境。
+框架无关的响应式状态管理库，基于 NgRx Store 核心逻辑，完全剥离 Angular 依赖，可运行于任何 JavaScript 环境。
 
-## 特性
+## 核心职责
 
-✅ **零 Angular 依赖** - 可在 Node.js、浏览器、任何框架中使用
-✅ **类型安全** - 完整的 TypeScript 类型支持
-✅ **记忆化选择器** - 高性能状态派生
-✅ **Redux 风格** - 熟悉的 Action/Reducer 模式
-✅ **轻量级** - 仅 ~8KB (gzipped)
+- **Redux 风格状态管理**：Action / Reducer / Selector 模式，可预测的状态变更
+- **框架无关**：零 Angular 依赖，可运行于 Node.js、浏览器、React/Vue 等任何环境
+- **响应式 Store**：基于 RxJS 的 `Store` 类，状态变化通过 Observable 流传播
+- **记忆化选择器**：`createSelector` / `createFeatureSelector` 高性能状态派生
+- **Action 工具链**：`createAction` / `createActionGroup` 类型安全地定义 Action 与 payload
+- **运行时检查**：不可变性检查、序列化检查（meta-reducers）
+- **轻量级**：仅 ~8KB (gzipped)，不含 Effects 与 DevTools
 
-## 安装
+## 目录结构
 
-```bash
-pnpm add @sker/store
+```
+src/
+├── index.ts                    # 统一导出
+├── models.ts                   # 核心类型定义（Action、ActionReducer、MetaReducer 等）
+├── store.ts                    # Store 类（响应式状态容器，含 select）
+├── create-store.ts             # createStore 工厂函数（含 StoreConfig）
+├── actions-subject.ts          # ActionsSubject / INIT（Action 流）
+├── state.ts                    # State / StateObservable / ScannedActionsSubject（状态流管理）
+├── reducer-manager.ts          # ReducerManager / UPDATE（动态 Reducer 管理）
+├── action-creator.ts           # createAction / props / union 工厂
+├── action-group-creator.ts     # createActionGroup 批量创建
+├── reducer-creator.ts          # createReducer + on
+├── selector.ts                 # createSelector / createFeatureSelector / 记忆化
+├── feature-creator.ts          # createFeature（自动生成 Feature Selectors）
+├── runtime-checks.ts           # 运行时检查配置与 meta-reducer 创建
+├── meta-reducers/              # 内置 MetaReducers
+│   ├── immutability-reducer.ts # 不可变性检查
+│   ├── serialization-reducer.ts# 序列化检查
+│   └── utils.ts                # 运行时检查工具
+├── utils.ts                    # combineReducers、compose 等工具
+├── helpers.ts                  # capitalize、uncapitalize、assertDefined
+└── *.test.ts                   # 各模块测试
 ```
 
 ## 快速开始
 
-### 1. 定义 Action
-
 ```typescript
-import { createAction, props } from '@sker/store';
+import { createAction, props, createReducer, on, createSelector, createFeatureSelector } from '@sker/store';
 
+// 1. 定义 Action
 export const increment = createAction('[Counter] Increment');
-export const decrement = createAction('[Counter] Decrement');
-export const setValue = createAction(
-  '[Counter] Set Value',
-  props<{ value: number }>()
-);
-```
+export const setValue = createAction('[Counter] Set Value', props<{ value: number }>());
 
-### 2. 创建 Reducer
-
-```typescript
-import { createReducer, on } from '@sker/store';
-
-interface CounterState {
-  count: number;
-}
-
-const initialState: CounterState = { count: 0 };
-
-export const counterReducer = createReducer(
+// 2. 创建 Reducer
+const initialState = { count: 0 };
+const counterReducer = createReducer(
   initialState,
   on(increment, (state) => ({ count: state.count + 1 })),
-  on(decrement, (state) => ({ count: state.count - 1 })),
   on(setValue, (state, { value }) => ({ count: value }))
 );
+
+// 3. 创建记忆化 Selector
+const selectCounter = createFeatureSelector<typeof initialState>('counter');
+const selectCount = createSelector(selectCounter, (state) => state.count);
 ```
 
-### 3. 创建选择器
+### 使用 Store
 
 ```typescript
-import { createSelector, createFeatureSelector } from '@sker/store';
+import { createStore } from '@sker/store';
 
-// Feature Selector
-const selectCounter = createFeatureSelector<CounterState>('counter');
-
-// 记忆化选择器
-const selectCount = createSelector(
-  selectCounter,
-  (state) => state.count
-);
-
-const selectDoubleCount = createSelector(
-  selectCount,
-  (count) => count * 2 // 只有 count 变化时才重新计算
-);
-```
-
-### 4. 使用 Reducer
-
-```typescript
-let state = counterReducer(undefined, { type: '@@INIT' });
-console.log(state); // { count: 0 }
-
-state = counterReducer(state, increment());
-console.log(state); // { count: 1 }
-
-state = counterReducer(state, setValue({ value: 100 }));
-console.log(state); // { count: 100 }
+const store = createStore(counterReducer, { name: 'counter' });
+store.dispatch(increment());
+store.select(selectCount).subscribe((count) => console.log(count));
 ```
 
 ## 核心 API
 
-### Action Creator
+- **Action**：`createAction(type)` / `createAction(type, props<T>())` / `createActionGroup(...)` / `union()`
+- **Reducer**：`createReducer(initialState, on(action, reducer))`
+- **Selector**：`createSelector(...inputs, projectFn)` / `createFeatureSelector<T>(name)` / `createSelectorFactory` / `defaultMemoize`
+- **Store**：`createStore(reducer, config?)`、`store.dispatch(action)`、`store.select(selector)`、`Store` 类、`select` 操作符
+- **MetaReducer**：`immutabilityCheckMetaReducer` / `serializationCheckMetaReducer`
 
-```typescript
-// 无参数 Action
-const logout = createAction('[Auth] Logout');
+## 边界
 
-// 带参数 Action
-const login = createAction(
-  '[Auth] Login',
-  props<{ username: string; password: string }>()
-);
-
-// 自定义函数
-const loadUsers = createAction(
-  '[Users] Load',
-  (page: number) => ({ payload: { page } })
-);
-```
-
-### Reducer Creator
-
-```typescript
-const reducer = createReducer(
-  initialState,
-  on(action1, action2, (state, action) => {
-    // 处理多个 action
-    return newState;
-  }),
-  on(action3, (state) => {
-    // 处理单个 action
-    return newState;
-  })
-);
-```
-
-### Selector
-
-```typescript
-// 基础选择器
-const selectUser = (state: AppState) => state.user;
-
-// 组合选择器
-const selectUserName = createSelector(
-  selectUser,
-  (user) => user.name
-);
-
-// 多输入选择器
-const selectFullName = createSelector(
-  selectUserName,
-  selectLastName,
-  (first, last) => `${first} ${last}`
-);
-
-// Feature 选择器
-const selectAuthFeature = createFeatureSelector<AuthState>('auth');
-```
-
-## 与 NgRx Store 的区别
-
-| 特性 | NgRx Store | @sker/store |
-|-----|-----------|------------|
-| Angular 依赖 | ✅ 必须 | ❌ 无 |
-| DI 系统 | Angular DI | 无（需自己实现） |
-| Store 类 | ✅ | ❌（待实现） |
-| Effects | ✅ | ❌（不包含） |
-| DevTools | ✅ | ❌（不包含） |
-| Action/Reducer | ✅ | ✅ |
-| Selector | ✅ | ✅ |
-| 类型安全 | ✅ | ✅ |
-
-## 迁移指南
-
-### 从 NgRx Store 迁移
-
-```typescript
-// Before (NgRx)
-import { createAction, createReducer, createSelector } from '@ngrx/store';
-
-// After (@sker/store)
-import { createAction, createReducer, createSelector } from '@sker/store';
-```
-
-核心 API 完全兼容，只需修改 import 路径即可！
-
-### 从原生 Redux 迁移
-
-```typescript
-// Before (Redux)
-const increment = () => ({ type: 'INCREMENT' });
-const reducer = (state = 0, action) => {
-  switch (action.type) {
-    case 'INCREMENT': return state + 1;
-    default: return state;
-  }
-};
-
-// After (@sker/store)
-const increment = createAction('[Counter] Increment');
-const reducer = createReducer(
-  0,
-  on(increment, (state) => state + 1)
-);
-```
-
-## 高级用法
-
-### 自定义记忆化策略
-
-```typescript
-import { createSelectorFactory, defaultMemoize } from '@sker/store';
-
-// 深度比较
-const deepEqualSelector = createSelectorFactory(
-  (projectionFn) => defaultMemoize(projectionFn, deepEqual, deepEqual)
-);
-```
-
-### Meta Reducer
-
-```typescript
-import { ActionReducer, Action } from '@sker/store';
-
-export function logger<T>(reducer: ActionReducer<T>): ActionReducer<T> {
-  return (state, action) => {
-    console.log('state before:', state);
-    console.log('action:', action);
-    const nextState = reducer(state, action);
-    console.log('state after:', nextState);
-    return nextState;
-  };
-}
-
-// 使用
-const wrappedReducer = logger(counterReducer);
-```
-
-## 运行测试
-
-```bash
-pnpm test
-```
-
-## 验证示例
-
-```bash
-pnpm build
-node -r tsx/cjs src/verify.ts
-```
-
-## 许可证
-
-MIT
-
-## 致谢
-
-本库基于 [NgRx Store](https://ngrx.io/guide/store) 核心逻辑，感谢 NgRx 团队的出色工作。
+- **✅ 负责**：Action / Reducer / Selector 核心状态管理原语；响应式 Store 与状态流；记忆化派生与 Feature 管理；运行时不可变/序列化检查
+- **❌ 不负责**：不含 Effects（副作用编排）；不含 DevTools；不含框架绑定（React/Vue 适配）；依赖注入由外部（`@sker/core`）配合
+- **对外依赖**：外部依赖 `rxjs`、`tslib`；无 `@sker/*` 运行时依赖
+- **被谁依赖**：`packages/aui`（UI 组件库的状态管理）

@@ -1,31 +1,69 @@
 # @sker/ip-proxy
 
-IP 代理池工具库，支持 HTTP 客户端代理和浏览器代理，基于 Redis 缓存实现智能轮询分配。
+IP 代理池工具库，基于 Redis 缓存实现智能轮询分配，支持 HTTP 客户端（Axios）代理与浏览器（Playwright）代理。
 
-## 特性
+## 核心职责
 
-- ✅ **HTTP 客户端代理** - Axios 自动代理注入
-- ✅ **浏览器代理** - Playwright 代理配置支持
-- ✅ **Redis 缓存** - 基于 Sorted Set 的轮询分配策略
-- ✅ **批量异步验证** - 并发验证代理 IP 有效性
-- ✅ **自动刷新** - 过期检测与自动重新获取
-- ✅ **时间缓冲** - 提前 30 秒判定过期，避免临界失败
-- ✅ **DI 集成** - 完全集成 @sker/core 依赖注入容器
-- ✅ **类型安全** - 完整的 TypeScript 类型定义
+- 代理池管理：`ProxyPool` 基于 Redis Sorted Set（`proxy_url -> use_count`）实现最少使用次数的轮询分配
+- 代理获取与验证：批量异步验证（`ProxyValidator`，`Promise.all` 并发）、健康检查（`ProxyHealthChecker`）、评分（`ProxyScorer`）
+- 过期管理：提前 30 秒判定过期（时间缓冲），自动刷新过期代理
+- 接入层：`ProxyInterceptor`（Axios 自动代理注入）、`ProxyBrowserLauncher`（Playwright 浏览器代理）
+- 提供商接入：`KuaidailiProvider`（快代理）+ `BaseProxyProvider` 抽象，便于扩展更多提供商
+- 依赖注入：`createProxyProviders` 生成 Provider 数组，注册到 `@sker/core` DI 容器；同时提供 Hook API（`useProxy`）
 
-## 安装
+## 目录结构
 
-```bash
-pnpm add @sker/ip-proxy
 ```
+packages/ip-proxy/
+├── src/
+│   ├── index.ts                       # 导出入口 + createProxyProviders() 组装 DI Provider
+│   ├── core/
+│   │   ├── proxy-cache.ts             # 代理缓存（基于 @sker/redis）
+│   │   ├── proxy-pool.ts              # 代理池：轮询分配 / 释放 / 刷新
+│   │   ├── proxy-validator.ts         # 代理有效性验证
+│   │   ├── proxy-health-checker.ts    # 健康检查
+│   │   └── proxy-scorer.ts            # 代理评分
+│   ├── providers/
+│   │   ├── base-provider.ts           # BaseProxyProvider 抽象基类
+│   │   ├── kuaidaili-provider.ts      # 快代理提供商（KUAIDAILI_CONFIG）
+│   │   └── index.ts                   # 提供商导出
+│   ├── interceptors/
+│   │   ├── axios-interceptor.ts       # ProxyInterceptor：Axios 自动代理注入
+│   │   └── browser-launcher.ts        # ProxyBrowserLauncher：Playwright 代理启动
+│   ├── hooks/
+│   │   └── use-proxy.ts               # useProxy Hook（ProxyManager）
+│   ├── constants/
+│   │   └── cache-keys.ts              # Redis 缓存键枚举（CacheKeys）
+│   ├── errors/
+│   │   └── proxy-errors.ts            # ProxyError 系列错误类
+│   ├── types/
+│   │   ├── index.ts                   # 类型导出
+│   │   ├── proxy.types.ts             # ProxyInfo / ValidationResult 等
+│   │   ├── provider.types.ts          # 提供商配置类型
+│   │   └── axios.d.ts                 # Axios 类型扩展
+│   └── utils/
+│       ├── proxy-url-parser.ts        # 代理 URL 解析
+│       └── time.ts                    # 时间工具
+├── examples/
+│   └── usage.ts                       # 使用示例
+├── __tests__ / vitest.config.ts       # Vitest 测试
+├── package.json
+├── tsconfig.json
+└── tsup.config.ts                     # 构建配置
+```
+
+## 边界
+
+- **✅ 负责**：代理 IP 的获取、验证、健康检查、评分、轮询分配与过期刷新；Axios/Playwright 接入；多提供商抽象
+- **❌ 不负责**：具体业务请求的重试与降级策略（由调用方在拦截器外层实现）；代理商的账号管理/计费；非 HTTP(S) 协议的代理（如 SOCKS 场景需扩展）
+- **对外依赖**：`@sker/core`（DI、Logger、AppError）、`@sker/redis`（缓存）；外部：`axios`；peer（可选）：`playwright`
+- **被谁依赖**：`apps/api`、`packages/workflow-run`（`ProxyAutoSelectAstVisitor`）、`packages/nlp`（通过 `@sker/nlp` 依赖链使用代理客户端）
 
 ## 快速开始
 
-### 1. 配置依赖注入
-
 ```typescript
-import { root } from '@sker/core'
-import { createProxyProviders } from '@sker/ip-proxy'
+import { root } from '@sker/core';
+import { createProxyProviders, useProxy } from '@sker/ip-proxy';
 
 root.set(
   createProxyProviders({
@@ -35,180 +73,40 @@ root.set(
       username: process.env.KUAIDAILI_USERNAME!,
       password: process.env.KUAIDAILI_PASSWORD!,
     },
-    validator: {
-      testUrl: 'https://httpbin.org/ip',
-      timeout: 5000,
-    },
+    validator: { testUrl: 'https://httpbin.org/ip', timeout: 5000 },
   })
-)
+);
+await root.init();
 
-await root.init()
+const proxy = useProxy();
+const proxyInfo = await proxy.getProxy();
+console.log('代理URL:', proxyInfo.url);
+
+// HTTP 客户端代理
+const axiosWithProxy = proxy.createAxios({ baseURL: 'https://api.weibo.com' });
+const res = await axiosWithProxy.get('/v2/search/topics');
+
+// 浏览器代理
+const browser = await proxy.launchBrowser('chromium', { headless: true });
+await browser.close();
 ```
 
-### 2. 使用 Hook API
+## API
 
-```typescript
-import { useProxy } from '@sker/ip-proxy'
+### ProxyManager（`useProxy()`）
 
-const proxy = useProxy()
-
-// 获取代理 IP
-const proxyInfo = await proxy.getProxy()
-console.log('代理URL:', proxyInfo.url)
-console.log('过期时间:', new Date(proxyInfo.expiresAt))
-
-// 释放代理（减少使用计数）
-await proxy.releaseProxy(proxyInfo.url)
-```
-
-### 3. HTTP 客户端代理
-
-```typescript
-const axiosWithProxy = proxy.createAxios({
-  baseURL: 'https://api.weibo.com',
-  timeout: 10000,
-})
-
-// 自动使用代理发送请求
-const response = await axiosWithProxy.get('/v2/search/topics')
-```
-
-### 4. 浏览器代理
-
-```typescript
-const browser = await proxy.launchBrowser('chromium', {
-  headless: true,
-})
-
-const page = await browser.newPage()
-await page.goto('https://weibo.com')
-
-await browser.close()
-```
-
-## API 文档
-
-### `useProxy(options?: ProxyOptions): ProxyManager`
-
-创建代理管理器实例。
-
-#### 返回值 `ProxyManager`
-
-| 方法                                              | 说明                           |
-| ------------------------------------------------- | ------------------------------ |
-| `getProxy(): Promise<ProxyInfo>`                  | 获取可用代理（自动刷新过期）   |
-| `getProxies(count: number): Promise<ProxyInfo[]>` | 批量获取代理                   |
-| `releaseProxy(url: string): Promise<void>`        | 释放代理（减少使用计数）       |
-| `refreshExpired(): Promise<void>`                 | 手动刷新所有过期代理           |
-| `createAxios(config?): AxiosInstance`             | 创建带自动代理注入的 Axios实例 |
+| 方法 | 说明 |
+| --- | --- |
+| `getProxy(): Promise<ProxyInfo>` | 获取可用代理（自动刷新过期） |
+| `getProxies(count: number): Promise<ProxyInfo[]>` | 批量获取代理 |
+| `releaseProxy(url: string): Promise<void>` | 释放代理（减少使用计数） |
+| `refreshExpired(): Promise<void>` | 手动刷新所有过期代理 |
+| `createAxios(config?): AxiosInstance` | 创建带自动代理注入的 Axios 实例 |
 | `launchBrowser(type, options?): Promise<Browser>` | 启动带代理的 Playwright 浏览器 |
 
-### `createProxyProviders(config): Provider[]`
+### 错误类（继承 `@sker/core` 的 `AppError`）
 
-创建代理提供商 Providers，用于注册到 DI 容器。
-
-#### 配置项
-
-```typescript
-interface ProxyProvidersConfig {
-  // 快代理配置
-  kuaidaili: {
-    secretId: string // 快代理 secret_id
-    secretKey: string // 快代理 secret_key
-    username: string // 快代理认证用户名
-    password: string // 快代理认证密码
-  }
-
-  // 验证器配置（可选）
-  validator?: {
-    testUrl?: string // 验证代理的测试URL，默认 https://httpbin.org/ip
-    timeout?: number // 验证超时时间（毫秒），默认 5000
-  }
-}
-```
-
-## 类型定义
-
-### `ProxyInfo`
-
-```typescript
-interface ProxyInfo {
-  url: string // 代理URL，格式：http://user:pass@ip:port
-  expiresAt: number // 过期时间戳（毫秒）
-  provider: string // 提供商名称
-  createdAt: number // 创建时间戳（毫秒）
-}
-```
-
-### `ValidationResult`
-
-```typescript
-interface ValidationResult {
-  proxyUrl: string // 代理URL
-  valid: boolean // 是否有效
-  latency: number // 延迟（毫秒）
-  error: string | null // 错误信息
-}
-```
-
-## 核心设计
-
-### 轮询分配策略
-
-使用 Redis Sorted Set 存储 `proxy_url -> use_count`，每次获取使用次数最少的代理：
-
-- 获取代理：`ZRANGE ip_proxy:use_counts 0 0`
-- 使用后：`ZINCRBY ip_proxy:use_counts 1 proxy_url`
-- 释放后：`ZINCRBY ip_proxy:use_counts -1 proxy_url`
-
-### 时间缓冲机制
-
-提前 30 秒判定代理过期，避免临界时间使用导致请求失败：
-
-```typescript
-const now = Date.now()
-const isExpired = now >= proxyInfo.expiresAt - 30000 // 提前30秒
-```
-
-### 批量异步验证
-
-使用 `Promise.all` 并发验证代理 IP，大幅提升初始化速度：
-
-```typescript
-const results = await Promise.all(proxies.map((p) => validateProxy(p)))
-```
-
-## 错误处理
-
-所有错误继承自 `@sker/core` 的 `AppError`：
-
-| 错误类                    | 说明                   |
-| ------------------------- | ---------------------- |
-| `ProxyError`              | 代理相关的基础错误     |
-| `ProxyFetchError`         | 从提供商获取代理失败   |
-| `ProxyValidationError`    | 代理验证失败           |
-| `ProxyPoolExhaustedError` | 代理池耗尽，无可用代理 |
-
-## 相比 MediaCrawler 的改进
-
-| 改进点           | MediaCrawler（Python）    | @sker/ip-proxy（TypeScript）        |
-| ---------------- | ------------------------- | ----------------------------------- |
-| 分配策略         | 随机选择 + 一次性消费     | 基于使用次数的轮询分配              |
-| 验证方式         | 串行验证，阻塞初始化      | 批量异步验证，并发执行              |
-| 缓存键管理       | 硬编码字符串              | 枚举统一管理                        |
-| 类型安全         | 无类型检查                | 完整 TypeScript 类型定义            |
-| 依赖注入         | 无                        | 完全集成 @sker/core DI 容器         |
-| API 设计         | 类方法调用                | Hook API（useProxy）+ 类方法双模式 |
-| 浏览器代理支持   | 仅 Playwright CDP         | Playwright 完整支持                 |
-| 时间缓冲         | 提前 5 秒（单层）         | 提前 30 秒（双层缓冲）              |
-| 错误处理         | 通用 Exception            | 专用错误类 + ErrorFactory           |
-
-## 依赖
-
-- `@sker/core` - 依赖注入容器和日志系统
-- `@sker/redis` - Redis 客户端
-- `axios` - HTTP 客户端
-- `playwright` - 浏览器自动化（可选）
+`ProxyError` / `ProxyFetchError` / `ProxyValidationError` / `ProxyPoolExhaustedError`
 
 ## License
 

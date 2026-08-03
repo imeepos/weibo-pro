@@ -1,147 +1,72 @@
 # @sker/aui
 
-AI-first UI system where UI itself is AI context.
+AI-first UI 系统：UI 本身就是 AI 的上下文（UI as Context），组件自动序列化为 AI 可理解的结构化数据。
 
-## 核心理念
+## 核心职责
 
-**UI 即上下文 (UI as Context)**
-- UI 节点自动序列化为 AI 可理解的结构化数据
-- 组件状态、属性、层级关系都成为 AI 的输入
-- 无需手动编写上下文描述，UI 本身就是最准确的上下文
+- UI 节点自动序列化为结构化数据：组件状态、属性、层级关系成为 AI 输入，无需手写上下文描述
+- 类型安全的序列化器注册表（`AuiContextSerializer`），支持内置组件描述器与自定义序列化策略
+- 基于 RxJS 的响应式状态管理（`AuiStore`，BehaviorSubject），组件卸载自动清理
+- React 集成：`AuiProvider` + 3 个核心 Hook（`useAui` / `useAuiNode` / `useAuiContext`）
+- 组件装饰器 `withAui` / `createAuiSerializer`，渐进式增强，零运行时开销
+- Task UI 系统：`TaskStore` / `TaskProvider` / `useTask` / `useTool` / `useTaskContext`，将任务流也暴露给 AI
+- AI 工具执行器：`AuiToolExecutor` 从 UI 节点声明中提取工具定义并执行
 
-**极简设计 (Minimal Design)**
-- 核心代码 < 200 行
-- 零运行时开销（可选注册）
-- 类型安全的序列化器系统
-
-## 架构
+## 目录结构
 
 ```
-@sker/aui
-├── types.ts        # 核心类型定义（AuiNode, AuiSerializer）
-├── store.ts        # 状态管理（基于 RxJS）
-├── serializer.ts   # 序列化器注册表
-├── react.tsx       # React 集成（Provider, Hooks）
-└── decorators.ts   # 组件装饰器
+packages/aui/
+├── src/
+│   ├── index.ts                       # 导出入口
+│   ├── types.ts                       # AuiNode / AuiMetadata / AuiSerializer / ToolDefinition 等核心类型
+│   ├── store.ts                       # AuiStore：基于 RxJS BehaviorSubject 的节点状态管理
+│   ├── serializer.ts                  # AuiContextSerializer 注册表 + 内置组件描述器（Button/Form/Input...）
+│   ├── react.tsx                      # React 集成：AuiProvider / useAui / useAuiNode / useAuiContext
+│   ├── decorators.ts                  # withAui HOC + createAuiSerializer 工厂
+│   ├── tool.ts                        # AuiToolExecutor：从节点声明中执行 AI 工具
+│   ├── task-types.ts                  # Task / Tool / TaskStatus 任务类型
+│   ├── task-store.ts                  # TaskStore：任务树与工具注册（RxJS）
+│   └── task-react.tsx                 # TaskProvider / useTask / useTool / useTaskContext / useTaskActions
+├── example*.tsx / example-*.ts        # 使用示例
+├── MIGRATION.md                       # 迁移说明
+├── TASK-README.md                     # Task UI 系统说明
+├── package.json
+├── tsconfig.json
+└── tsup.config.ts                     # 构建配置
 ```
+
+## 边界
+
+- **✅ 负责**：UI 节点到 AI 上下文的序列化；响应式状态管理；React 绑定与 Hooks；任务流/Task UI 的 AI 暴露；AI 工具执行
+- **❌ 不负责**：与具体 LLM 提供商的网络通信；组件样式/主题体系；跨框架渲染器（Vue/Svelte 适配器为未来规划）
+- **对外依赖**：`@sker/store`（状态管理）；外部：`rxjs`；peer：`react`（^19）
+- **被谁依赖**：当前未被其他 `@sker/*` 包/应用引用（仅包内示例使用；作为 UI 侧通用库供上层应用接入）
 
 ## 使用示例
 
-### 1. 基础设置
-
 ```tsx
-import { AuiProvider } from '@sker/aui';
+import { AuiProvider, useAuiNode, useAuiContext } from '@sker/aui';
 
 function App() {
   return (
     <AuiProvider>
-      <YourApp />
+      <Button label="登录" />
     </AuiProvider>
   );
 }
-```
 
-### 2. 注册 UI 节点
-
-```tsx
-import { useAuiNode } from '@sker/aui';
-
-function Button({ label, onClick }) {
-  useAuiNode('button-1', 'Button', { label }, {
-    importance: 'high',
-    description: '主要操作按钮'
-  });
-
-  return <button onClick={onClick}>{label}</button>;
+function Button({ label }) {
+  useAuiNode('button-1', 'Button', { label }, { importance: 'high', description: '主要操作按钮' });
+  return <button>{label}</button>;
 }
-```
-
-### 3. 获取 AI 上下文
-
-```tsx
-import { useAuiContext } from '@sker/aui';
 
 function AiAssistant() {
-  const context = useAuiContext({ page: 'dashboard' });
-
-  // context 是 JSON 字符串，可直接发送给 AI
-  const response = await sendToAI(context);
-
-  return <div>{response}</div>;
+  const context = useAuiContext({ page: 'dashboard' }); // JSON 字符串，可直接发给 AI
+  return <div>{context}</div>;
 }
-```
-
-### 4. 自定义序列化器
-
-```tsx
-import { createAuiSerializer, contextSerializer } from '@sker/aui';
-
-const formSerializer = createAuiSerializer(
-  (form) => ({
-    id: form.id,
-    type: 'Form',
-    props: {
-      fields: form.fields.map(f => f.name),
-      values: form.values,
-    },
-    metadata: {
-      importance: 'high',
-      description: `表单：${form.title}`,
-    },
-  })
-);
-
-contextSerializer.register('Form', formSerializer);
-```
-
-### 5. 组件装饰器
-
-```tsx
-import { withAui, createAuiSerializer } from '@sker/aui';
-
-const DataTable = withAui(
-  ({ data, columns }) => {
-    return <table>...</table>;
-  },
-  {
-    type: 'DataTable',
-    serializer: createAuiSerializer((props) => ({
-      id: 'data-table',
-      type: 'DataTable',
-      props: {
-        rowCount: props.data.length,
-        columns: props.columns.map(c => c.key),
-      },
-    })),
-  }
-);
 ```
 
 ## API
-
-### Types
-
-```typescript
-interface AuiNode {
-  id: string;
-  type: string;
-  props?: Record<string, unknown>;
-  children?: AuiNode[];
-  metadata?: AuiMetadata;
-}
-
-interface AuiMetadata {
-  label?: string;
-  description?: string;
-  importance?: 'high' | 'medium' | 'low';
-  context?: Record<string, unknown>;
-}
-
-interface AuiSerializer<T> {
-  serialize(node: T): AuiNode | null;
-  deserialize?(node: AuiNode): T | null;
-}
-```
 
 ### Hooks
 
@@ -149,45 +74,9 @@ interface AuiSerializer<T> {
 - `useAuiNode(id, type, props?, metadata?)` - 注册 UI 节点
 - `useAuiContext(metadata?)` - 获取序列化的 AI 上下文
 
-### Store
-
-```typescript
-class AuiStore {
-  state: AuiState;
-  state$: Observable<AuiState>;
-
-  registerNode(node: AuiNode, parentId?: string): void;
-  unregisterNode(id: string): void;
-  updateNode(id: string, updates: Partial<AuiNode>): void;
-  getNode(id: string): AuiNode | undefined;
-  getRootNodes(): AuiNode[];
-  clear(): void;
-  toContext(metadata?: Record<string, unknown>): AuiContext;
-}
-```
-
-### Serializer
-
-```typescript
-class AuiContextSerializer {
-  register<T>(type: string, serializer: AuiSerializer<T>): void;
-  unregister(type: string): void;
-  serialize(type: string, value: unknown): AuiNode | null;
-  deserialize<T>(node: AuiNode): T | null;
-  serializeContext(nodes: AuiNode[], metadata?: Record<string, unknown>): string;
-  deserializeContext(json: string): AuiContext | null;
-}
-```
-
-## 设计原则
+### 设计原则
 
 1. **存在即合理** - 每个 API 都有不可替代的用途
 2. **优雅即简约** - 代码自解释，无冗余功能
 3. **类型即契约** - 完整的 TypeScript 类型推导
 4. **性能即艺术** - 基于 RxJS 的响应式架构，零不必要的重渲染
-
-## 依赖
-
-- `@sker/store` - 状态管理
-- `rxjs` - 响应式编程
-- `react` (peer) - UI 框架

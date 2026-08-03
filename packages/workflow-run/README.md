@@ -1,25 +1,60 @@
 # @sker/workflow-run
 
-工作流运行时执行层 - 将抽象的 AST 节点转换为具体的业务逻辑。
+工作流后端运行时执行层：包含全部业务节点的 Visitor 实现（72 个），将抽象的 AST 节点转换为真实业务逻辑（微博 API、LLM、舆情、调度等）。
 
-## 核心理念
+## 核心职责
 
-**Visitor 即执行器** - 每个 AST 节点对应一个 Visitor，通过装饰器自动路由
-**服务即能力** - 账号管理、浏览器实例、解析器作为可注入服务复用
-**快照即增量** - 通过快照差值精确统计事件热度变化
+- **节点执行器**：为 `@sker/workflow-ast` 中每个节点实现对应 `*AstVisitor`（72 个），通过 `@Handler` 装饰器自动路由执行
+- **服务层**：微博 API 客户端、账号池管理/监控、Playwright 浏览器自动化、HTML 解析、限流/延迟、NLP 处理、Cron 调度等可注入服务（38 个）
+- **LLM 能力**：`llm-client` 客户端工厂、`StreamingLlmInvoker` 流式调用、`ChatAgent` 对话代理
+- **事件持久化**：`DatabaseEventStore` 基于数据库的事件存储；`ProcessSubject` 进程内响应式主体
+- **调度与执行服务**：`CronSchedulerService` 定时调度、`WorkflowExecutionService` 工作流执行编排
+- **多模态支持**：图/视频/音频/文生图等多模态 LLM 节点执行器
 
-## 架构
+## 目录结构
 
 ```
-src/
-├── Weibo*AstVisitor.ts      # 微博 API 调用 Visitor (9个)
-├── Post*Visitor.ts           # NLP 处理管道 Visitor (3个)
-├── post-nlp-agent.consumer.ts # 消息队列消费者
-├── PlaywrightService.ts      # 共享浏览器服务
-├── WeiboAccountService.ts    # 账号池管理服务
-├── ParsedSearchResult.ts     # HTML 解析器
-└── weibo-*.ts                # 请求构建器、错误处理器
+packages/workflow-run/src/
+├── index.ts                      # 公共 API 入口（导出所有 Visitor 与服务）
+├── main.ts                       # 开发/调试入口（tsx 运行）
+├── *AstVisitor.ts                # 节点执行器（顶层 72 个）：Weibo*Visitor、Llm*Visitor、
+│                                 #   KeywordAgentAstVisitor、MergeAstVisitor、StoreAstVisitor、
+│                                 #   MqAstVisitor、ScheduledWorkflowVisitor、ClaudeCodeAstVisitor 等
+├── llm-client.ts                 # LLM 客户端工厂（useLlmModel）
+├── chat/                         # ChatAgent：对话代理（index.ts、ChatAgent.ts）
+├── core/                         # ProcessSubject（响应式进程主体）
+├── event-store/                  # 数据库事件存储：DatabaseEventStore（database.ts、index.ts）
+├── services/                     # 服务层（38 个）
+│   ├── weibo-api-client.base.ts  # 微博 API 客户端基类
+│   ├── weibo-account.service.ts  # 微博账号池管理
+│   ├── weibo-auth.service.ts     # 微博认证服务
+│   ├── weibo-error.handler.ts    # 微博错误处理器
+│   ├── weibo-request-header.builder.ts / weibo-referer.builder.ts  # 请求头/Referer 构造器
+│   ├── weibo-account-monitor.service.ts  # 账号监控（健康分/告警/快照）
+│   ├── weibo-worker-proxy.service.ts     # Worker 代理
+│   ├── PlaywrightService.ts      # 共享浏览器自动化服务
+│   ├── WeiboHtmlParser.ts        # 微博 HTML 解析器
+│   ├── IncrementalPostDetector.ts# 增量帖子检测
+│   ├── delay.service.ts          # 延迟服务（退避策略）
+│   ├── rate-limiter.service.ts   # 速率限制服务
+│   ├── CronSchedulerService.ts   # Cron 调度服务
+│   ├── WorkflowExecutionService.ts # 工作流执行服务
+│   ├── LlmInvoker.ts / StreamingLlmInvoker.ts / PromptBuilder.ts  # LLM 调用
+│   ├── SmartToolsFactory.ts / StoryToolsFactory.ts  # 工具工厂
+│   ├── claude-code.service.ts    # Claude Code 服务
+│   └── ...
+├── utils/                        # abort-helper.ts、retry-on-network-error.ts
+└── __tests__/                    # 测试文件（*Visitor.test.ts 等）
 ```
+
+## 边界
+
+- **✅ 负责**：后端节点真实执行（微博 API 调用、账号池、浏览器自动化、LLM 调用、消息队列、SQL 等）、事件持久化、Cron 定时调度、NLP 处理管道、工作流执行服务
+- **❌ 不负责**：引擎核心与装饰器（属于 `@sker/workflow`）、节点定义（属于 `@sker/workflow-ast`）、浏览器端执行（属于 `@sker/workflow-browser`）、前端可视化渲染（属于 `@sker/workflow-ui`）
+- **对外依赖**：`@sker/workflow`、`@sker/workflow-ast`、`@sker/core`、`@sker/entities`、`@sker/ip-proxy`、`@sker/json-harmony`、`@sker/mq`、`@sker/nlp`、`@sker/redis`、`@sker/sdk`；外部：langchain、@langchain/openai、playwright、typeorm、node-schedule、cron-parser、cheerio、exceljs、marked、execa、deepagents、reflect-metadata、zod、rxjs
+- **被谁依赖**：`@sker/agent`；apps：`api`、`crawler`
+
+---
 
 ## 核心模块
 
@@ -65,8 +100,6 @@ await accountService.decreaseHealthScore(selection.id, 1);
 消息队列驱动的三阶段处理：
 
 ```typescript
-startPostNLPConsumer(); // 启动消费者
-
 // 管道：收集上下文 → NLP 分析 → 自动创建事件
 PostContextCollectorAst → PostNLPAnalyzerAst → EventAutoCreatorAst
 ```
@@ -78,25 +111,12 @@ PostContextCollectorAst → PostNLPAnalyzerAst → EventAutoCreatorAst
 
 ### 4. 事件统计快照增量法
 
-核心创新：通过快照差值统计事件热度变化
-
-```typescript
-// 保存当前快照
-const snapshot = { post_id, comments_count, reposts_count, ... };
-
-// 计算与上次快照的增量
-const deltaComments = current.comments_count - lastSnapshot.comments_count;
-
-// 增量计入当前小时的统计
-stats.comment_count += deltaComments;
-```
+通过快照差值统计事件热度变化：`deltaComments = current.comments_count - lastSnapshot.comments_count`，增量计入当前小时统计。
 
 **优势**：
 - 精确反映"今天新增的互动"而非累积总量
 - 可检测旧帖子突然爆火（一年前的帖子今天评论激增）
 - 统计时间线清晰：统计时间 = 数据变化时间
-
-参见 `EventAutoCreatorVisitor.ts:19-35` 的详细说明。
 
 ## 微博 API Visitor
 
@@ -115,29 +135,15 @@ stats.comment_count += deltaComments;
 ## 基础设施服务
 
 ### PlaywrightService
-
 共享浏览器实例，降低资源消耗：
-
-```typescript
-const html = await playwright.getHtml(url, cookieHeader, userAgent);
-```
-
-**特性**：
 - 全局单例浏览器进程
 - 自动健康检查和重连
 - Cookie 自动注入
 
 ### WeiboAccountService
-
 账号池管理服务：
-
-```typescript
-// 自动选择最优账号并注入 Cookie
-const selection = await accountService.injectCookies(request);
-
-// 获取带 XSRF-TOKEN 的账号（用于 POST 请求）
-const withToken = await accountService.selectBestAccountWithToken();
-```
+- 自动选择最优账号并注入 Cookie
+- 获取带 XSRF-TOKEN 的账号（用于 POST 请求）
 
 ## 依赖注入
 
@@ -153,32 +159,13 @@ root.set([
 ]);
 ```
 
-## 使用示例
+## 设计原则
 
-### 启动 NLP 消费者
-
-```typescript
-import { startPostNLPConsumer } from '@sker/workflow-run';
-
-const consumer = startPostNLPConsumer();
-
-// 优雅停止
-process.on('SIGTERM', () => consumer.stop());
-```
-
-### 执行工作流
-
-```typescript
-import { execute } from '@sker/workflow';
-import { WeiboKeywordSearchAst } from '@sker/workflow-ast';
-
-const searchAst = new WeiboKeywordSearchAst();
-searchAst.keyword = '热点话题';
-searchAst.startDate = new Date('2025-01-01');
-searchAst.endDate = new Date('2025-01-07');
-
-await execute({ nodes: [searchAst], edges: [] }, {});
-```
+1. **Visitor 即职责** - 每个 Visitor 只负责一个 AST 节点的执行
+2. **服务即复用** - 账号、浏览器、解析器作为服务共享
+3. **快照即真相** - 通过数据快照精确反映变化
+4. **队列即异步** - 消息队列解耦数据采集和分析
+5. **依赖注入即灵活** - 通过 DI 实现松耦合和可测试性
 
 ## 开发
 
@@ -191,15 +178,10 @@ pnpm dev
 
 # 类型检查
 pnpm check-types
+
+# 测试
+pnpm test
 ```
-
-## 设计原则
-
-1. **Visitor 即职责** - 每个 Visitor 只负责一个 AST 节点的执行
-2. **服务即复用** - 账号、浏览器、解析器作为服务共享
-3. **快照即真相** - 通过数据快照精确反映变化
-4. **队列即异步** - 消息队列解耦数据采集和分析
-5. **依赖注入即灵活** - 通过 DI 实现松耦合和可测试性
 
 ---
 
