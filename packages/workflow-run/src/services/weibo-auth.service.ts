@@ -1,22 +1,25 @@
 import { Inject, Injectable, OnDestroy } from "@sker/core";
-import { chromium, Browser, BrowserContext, Page, Cookie } from "playwright";
+import { Browser } from "playwright";
 import { RedisClient } from "@sker/redis";
-import { WeiboAccountEntity, WeiboAccountStatus, useEntityManager } from "@sker/entities";
-import {
-  WeiboLoginEvent,
-  LoginSession,
-  WeiboUserInfo,
-  WeiboLoginConfig,
-  WeiboLoginSessionSnapshot
-} from "./weibo-login.types";
-import { Subscriber } from 'rxjs'
-import { generateId, NodeEvent } from "@sker/workflow";
 import { WeiboLoginAst } from "@sker/workflow-ast";
+import { Subscriber } from 'rxjs'
+import { NodeEvent } from "@sker/workflow";
+import { LoginSession, WeiboLoginConfig } from "./weibo-login.types";
+import { launchBrowser } from "./weibo-auth.browser";
+import { createSessionInRedis, updateSessionStatusInRedis } from "./weibo-auth.redis";
+import { setupResponseListeners, setupNavigationListeners } from "./weibo-auth.listeners";
 
 /**
  * 微博登录认证服务
  * 使用 Playwright 控制浏览器完成扫码登录流程
  * 提供 RxJS 事件流接口供外部调用者订阅处理
+ *
+ * 职责拆分：
+ * - 浏览器启动：weibo-auth.browser.ts
+ * - Redis 会话存储：weibo-auth.redis.ts
+ * - 用户信息提取：weibo-auth.user-info.ts
+ * - 账号保存：weibo-auth.account.ts
+ * - 页面监听器：weibo-auth.listeners.ts
  */
 @Injectable()
 export class WeiboAuthService implements OnDestroy {
@@ -50,14 +53,7 @@ export class WeiboAuthService implements OnDestroy {
    */
   private async initBrowser(): Promise<void> {
     try {
-      this.browser = await chromium.launch({
-        headless: this.config.headless,
-        args: [
-          '--disable-blink-features=AutomationControlled',
-          '--disable-dev-shm-usage',
-          '--no-sandbox',
-        ],
-      });
+      this.browser = await launchBrowser(this.config.headless);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn(`Playwright 浏览器初始化失败: ${errorMessage}. 微博登录功能将不可用。`);
@@ -88,7 +84,7 @@ export class WeiboAuthService implements OnDestroy {
     }
 
     // 首先在 Redis 中创建会话记录
-    const sessionData = await this.createSessionInRedis(ast.id);
+    const sessionData = await createSessionInRedis(this.redis, ast.id, this.config.sessionTimeout);
     const { sessionId, expiresAt } = sessionData;
 
     const context = await this.browser.newContext({
@@ -122,8 +118,11 @@ export class WeiboAuthService implements OnDestroy {
     session.timer = timer;
 
     // 设置事件监听器
-    this.setupResponseListeners(page, ast, obs);
-    this.setupNavigationListeners(page, context, ast, obs);
+    setupResponseListeners(page, ast, obs);
+    setupNavigationListeners(page, context, ast, obs, {
+      redis: this.redis,
+      cleanupSession: (id) => this.cleanupSession(id),
+    });
 
     // 启动登录流程
     setImmediate(async () => {
@@ -144,252 +143,6 @@ export class WeiboAuthService implements OnDestroy {
         await this.cleanupSession(sessionId);
       }
     });
-  }
-
-  /**
-   * 设置 Response 监听器
-   * 监听二维码生成和状态检查接口
-   */
-  private setupResponseListeners(
-    page: Page,
-    ast: WeiboLoginAst,
-    obs: Subscriber<NodeEvent>
-  ) {
-    page.on('response', async (response) => {
-      const url = response.url();
-
-      try {
-        // 监听二维码生成接口
-        if (url.includes('qrcode/image')) {
-          const data = await response.json();
-
-          if (data.data?.image) {
-            const apiBase = process.env.API_BASE_URL || 'http://localhost:8089';
-            const proxyUrl = `${apiBase}/api/auth/proxy/qrcode?url=${encodeURIComponent(data.data.image)}`;
-            ast.qrcode = proxyUrl;
-            // 只发射 qrcode，让 ImageAst 节点显示二维码
-            obs.next({ type: 'node_emit', id: ast.id, data: { qrcode: ast.qrcode } })
-            // 不发射 account 事件，直到登录成功
-          }
-        }
-
-        // 监听状态检查接口
-        if (url.includes('qrcode/check')) {
-          try {
-            const data = await response.json();
-            // 50114001: 未使用 (等待扫码)
-            if (data.retcode === 50114001) {
-              // 等待扫码状态
-            }
-            // 50114002: 已扫码,等待手机确认
-            else if (data.retcode === 50114002) {
-              ast.message = `请在手机点击确认以登录`
-              obs.next({ type: 'node_emit', id: ast.id, data: { message: ast.message } })
-              obs.next({ type: 'node_runing', id: ast.id })
-            }
-            // 50114003: 二维码过期，自动刷新
-            else if (data.retcode === 50114003) {
-              ast.message = `二维码已过期，正在刷新...`
-              obs.next({ type: 'node_emit', id: ast.id, data: { message: ast.message } })
-              obs.next({ type: 'node_runing', id: ast.id })
-              page.reload({ waitUntil: 'networkidle' }).catch(() => {});
-            }
-          } catch (_e) {
-            // 响应为空或无法解析，可能是登录成功后的空响应
-          }
-        }
-      } catch (_error) {
-        // 忽略响应处理错误
-      }
-    });
-  }
-
-  /**
-   * 设置页面导航监听器
-   * 检测登录成功后的页面跳转
-   */
-  private setupNavigationListeners(
-    page: Page,
-    context: BrowserContext,
-    ast: WeiboLoginAst,
-    obs: Subscriber<NodeEvent>
-  ) {
-    page.on('framenavigated', async (frame) => {
-      if (frame !== page.mainFrame()) return;
-      const url = frame.url();
-      // 检测登录成功: 页面跳转到微博首页
-      if (url.startsWith('https://weibo.com/')) {
-        try {
-          // 提取 Cookie
-          const cookies = await context.cookies();
-
-          // 提取用户信息
-          const userInfo = await this.extractUserInfo(page);
-
-          // 保存到数据库
-          const account = await this.saveAccount(ast.id, cookies, userInfo);
-
-          ast.account = account;
-          ast.state = 'success'
-          obs.next({ type: 'node_emit', id: ast.id, data: { account: ast.account } })
-          obs.next({ type: 'node_success', id: ast.id })
-          obs.complete()
-          await this.cleanupSession(ast.id);
-        } catch (_error) {
-          ast.state = 'fail';
-          ast.message = `保存账号信息失败`
-          obs.next({ type: 'node_emit', id: ast.id, data: { message: ast.message } })
-          obs.next({ type: 'node_fail', id: ast.id, error: ast.error?.message })
-          obs.complete();
-          await this.cleanupSession(ast.id);
-        }
-      }
-    });
-  }
-
-  /**
-   * 从页面提取微博用户信息
-   * 从 window.$CONFIG.user 获取用户数据
-   */
-  private async extractUserInfo(page: Page): Promise<WeiboUserInfo> {
-    // 等待页面完全加载
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
-      // 忽略超时
-    });
-
-    // 等待一小段时间让 JS 执行
-    await page.waitForTimeout(2000);
-
-    // 尝试多种方式获取用户信息
-    const userInfo = await page.evaluate(() => {
-      type WeiboUserSnapshot = {
-        id?: number;
-        idstr?: string;
-        screen_name?: string;
-        avatar_hd?: string;
-      };
-
-      type WeiboGlobal = typeof window & {
-        $CONFIG?: { user?: WeiboUserSnapshot };
-        $render_data?: { user?: WeiboUserSnapshot };
-      };
-
-      const globalWindow = window as WeiboGlobal;
-
-      // 方式1: window.$CONFIG
-      const config = globalWindow.$CONFIG;
-      if (config?.user?.id) {
-        return {
-          id: config.user.id,
-          idstr: config.user.idstr,
-          screen_name: config.user.screen_name,
-          avatar_hd: config.user.avatar_hd,
-          source: '$CONFIG'
-        };
-      }
-
-      // 方式2: window.$render_data
-      const renderData = globalWindow.$render_data;
-      if (renderData?.user?.id) {
-        return {
-          id: renderData.user.id,
-          idstr: renderData.user.idstr,
-          screen_name: renderData.user.screen_name,
-          avatar_hd: renderData.user.avatar_hd,
-          source: '$render_data'
-        };
-      }
-
-      // 方式3: localStorage
-      try {
-        const storageUser = localStorage.getItem('weiboUserInfo');
-        if (storageUser) {
-          const user = JSON.parse(storageUser);
-          if (user.id) {
-            return {
-              id: user.id,
-              idstr: user.idstr,
-              screen_name: user.screen_name,
-              avatar_hd: user.avatar_hd,
-              source: 'localStorage'
-            };
-          }
-        }
-      } catch (_e) {
-        // 忽略解析失败
-      }
-
-      // 方式4: 从页面元素提取
-      const avatarImg = document.querySelector('[class*="AvatarImg"]') as HTMLImageElement;
-      const nicknameEl = document.querySelector('[class*="nick_name"]');
-
-      return {
-        id: null,
-        idstr: null,
-        screen_name: nicknameEl?.textContent || null,
-        avatar_hd: avatarImg?.src || null,
-        source: 'dom'
-      };
-    });
-
-    if (!userInfo.id) {
-      throw new Error(`无法提取用户信息`);
-    }
-
-    return {
-      uid: userInfo.idstr || userInfo.id.toString(),
-      nickname: userInfo.screen_name || `微博用户_${userInfo.idstr}`,
-      avatar: userInfo.avatar_hd || '',
-    };
-  }
-
-  /**
-   * 保存微博账号到数据库
-   */
-  private async saveAccount(
-    userId: string,
-    cookies: Cookie[],
-    userInfo: WeiboUserInfo,
-  ): Promise<WeiboAccountEntity> {
-    const savedAccount = await useEntityManager(async (m) => {
-      const repo = m.getRepository(WeiboAccountEntity);
-
-      // 检查是否已存在
-      const existing = await repo.findOne({
-        where: { weiboUid: userInfo.uid },
-      });
-
-      let savedAccount: WeiboAccountEntity;
-
-      if (existing) {
-        // 更新现有账号
-        existing.weiboNickname = userInfo.nickname;
-        existing.weiboAvatar = userInfo.avatar;
-        existing.cookies = JSON.stringify(cookies);
-        existing.status = WeiboAccountStatus.ACTIVE;
-        existing.lastCheckAt = new Date();
-
-        savedAccount = await repo.save(existing);
-      } else {
-        // 创建新账号
-        const account = repo.create({
-          weiboUid: userInfo.uid,
-          weiboNickname: userInfo.nickname,
-          weiboAvatar: userInfo.avatar,
-          cookies: JSON.stringify(cookies),
-          status: WeiboAccountStatus.ACTIVE,
-          lastCheckAt: new Date(),
-        });
-
-        savedAccount = await repo.save(account);
-      }
-
-      return savedAccount;
-    });
-
-    await this.redis.zadd('weibo:account:health', 10000, savedAccount.id.toString());
-
-    return savedAccount;
   }
 
   /**
@@ -440,7 +193,7 @@ export class WeiboAuthService implements OnDestroy {
 
     // 更新 Redis 中的会话状态
     try {
-      await this.updateSessionStatusInRedis(sessionId, 'completed');
+      await updateSessionStatusInRedis(this.redis, sessionId, 'completed');
     } catch (_error) {
       // 忽略更新错误
     }
@@ -459,45 +212,6 @@ export class WeiboAuthService implements OnDestroy {
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
-    }
-  }
-
-  /**
-   * Redis 会话存储方法
-   */
-  private async createSessionInRedis(userId: string): Promise<{ sessionId: string; expiresAt: Date }> {
-    const sessionId = generateId();
-    const expiresAt = new Date(Date.now() + this.config.sessionTimeout);
-
-    const sessionData = {
-      userId,
-      expiresAt: expiresAt.toISOString(),
-      status: 'active',
-      createdAt: new Date().toISOString()
-    };
-
-    await this.redis.set(`weibo_session:${sessionId}`, sessionData, Math.ceil(this.config.sessionTimeout / 1000));
-
-    return { sessionId, expiresAt };
-  }
-
-  private async updateSessionEventInRedis(sessionId: string, event: WeiboLoginEvent): Promise<void> {
-    const key = `weibo_session:${sessionId}`;
-    const sessionData = await this.redis.get<WeiboLoginSessionSnapshot>(key);
-
-    if (sessionData) {
-      sessionData.lastEvent = event;
-      await this.redis.set(key, sessionData);
-    }
-  }
-
-  private async updateSessionStatusInRedis(sessionId: string, status: string): Promise<void> {
-    const key = `weibo_session:${sessionId}`;
-    const sessionData = await this.redis.get<WeiboLoginSessionSnapshot>(key);
-
-    if (sessionData) {
-      sessionData.status = status as any;
-      await this.redis.set(key, sessionData);
     }
   }
 }

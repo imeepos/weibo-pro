@@ -55,34 +55,49 @@ import {
 } from '../message-types';
 
 describe('消息类型守卫', () => {
+  // 守卫入参类型为 JsonRpcMessage：用变量承载夹具，避免对象字面量的多余属性检查，
+  // 同时保持 JSON-RPC 消息的完整形态（id / method / result / error）。
+  const fixtures = {
+    request: { jsonrpc: '2.0' as const, id: 1, method: 'ping' },
+    requestWithParams: { jsonrpc: '2.0' as const, id: 'abc', method: 'initialize', params: {} },
+    notification: { jsonrpc: '2.0' as const, method: 'notifications/initialized' },
+    progress: {
+      jsonrpc: '2.0' as const,
+      method: 'notifications/progress',
+      params: { progressToken: 1, progress: 50 },
+    },
+    success: { jsonrpc: '2.0' as const, id: 1, result: 'ok' },
+    error: { jsonrpc: '2.0' as const, id: 1, error: { code: -32600, message: 'bad' } },
+  };
+
   it('isRequest 识别 JSON-RPC 请求（含 id + method）', () => {
-    expect(isRequest({ jsonrpc: '2.0', id: 1, method: 'ping' })).toBe(true);
-    expect(isRequest({ jsonrpc: '2.0', id: 'abc', method: 'initialize', params: {} })).toBe(true);
+    expect(isRequest(fixtures.request)).toBe(true);
+    expect(isRequest(fixtures.requestWithParams)).toBe(true);
     // 通知（无 id）不是请求
-    expect(isRequest({ jsonrpc: '2.0', method: 'notifications/initialized' })).toBe(false);
+    expect(isRequest(fixtures.notification)).toBe(false);
     // 响应（有 id 但无 method）不是请求
-    expect(isRequest({ jsonrpc: '2.0', id: 1, result: 'ok' })).toBe(false);
+    expect(isRequest(fixtures.success)).toBe(false);
   });
 
   it('isResponse 识别 JSON-RPC 响应（成功或错误）', () => {
-    expect(isResponse({ jsonrpc: '2.0', id: 1, result: 'ok' })).toBe(true);
-    expect(isResponse({ jsonrpc: '2.0', id: 1, error: { code: -32600, message: 'bad' } })).toBe(true);
-    expect(isResponse({ jsonrpc: '2.0', id: 1, method: 'ping' })).toBe(false);
-    expect(isResponse({ jsonrpc: '2.0', method: 'ping' })).toBe(false);
+    expect(isResponse(fixtures.success)).toBe(true);
+    expect(isResponse(fixtures.error)).toBe(true);
+    expect(isResponse(fixtures.request)).toBe(false);
+    expect(isResponse(fixtures.notification)).toBe(false);
   });
 
   it('isNotification 识别通知（无 id + method）', () => {
-    expect(isNotification({ jsonrpc: '2.0', method: 'notifications/initialized' })).toBe(true);
-    expect(isNotification({ jsonrpc: '2.0', method: 'notifications/progress', params: { progressToken: 1, progress: 50 } })).toBe(true);
-    expect(isNotification({ jsonrpc: '2.0', id: 1, method: 'ping' })).toBe(false);
-    expect(isNotification({ jsonrpc: '2.0', id: 1, result: 'ok' })).toBe(false);
+    expect(isNotification(fixtures.notification)).toBe(true);
+    expect(isNotification(fixtures.progress)).toBe(true);
+    expect(isNotification(fixtures.request)).toBe(false);
+    expect(isNotification(fixtures.success)).toBe(false);
   });
 
   it('isSuccessResponse / isErrorResponse 区分成功与错误响应', () => {
-    expect(isSuccessResponse({ jsonrpc: '2.0', id: 1, result: 'ok' })).toBe(true);
-    expect(isSuccessResponse({ jsonrpc: '2.0', id: 1, error: { code: -32600, message: 'bad' } })).toBe(false);
-    expect(isErrorResponse({ jsonrpc: '2.0', id: 1, error: { code: -32600, message: 'bad' } })).toBe(true);
-    expect(isErrorResponse({ jsonrpc: '2.0', id: 1, result: 'ok' })).toBe(false);
+    expect(isSuccessResponse(fixtures.success)).toBe(true);
+    expect(isSuccessResponse(fixtures.error)).toBe(false);
+    expect(isErrorResponse(fixtures.error)).toBe(true);
+    expect(isErrorResponse(fixtures.success)).toBe(false);
   });
 });
 
