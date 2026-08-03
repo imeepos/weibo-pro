@@ -1,7 +1,6 @@
 import { BaseGeneral } from './BaseGeneral';
 import type { GeneralRole, AgentTask, AgentContext, AgentCapability } from './types';
 import type { StructuredToolInterface } from '@langchain/core/tools';
-import { workflowDSLTools } from './tools/workflow-dsl.tools';
 import { z } from 'zod';
 import { compile } from '@sker/workflow-compiler';
 
@@ -27,10 +26,9 @@ export class WorkflowDSLGeneratorAgent extends BaseGeneral {
   readonly role: GeneralRole = 'yao';
   readonly description = `工作流 DSL 生成专家，负责：
 1. 理解用户的自然语言任务描述
-2. 发现可用的工作流节点类型
-3. 生成符合语法的 DSL 代码
-4. 验证并迭代优化 DSL
-5. 确保 DSL 可成功编译为可执行工作流`;
+2. 生成符合语法的 DSL 代码
+3. 验证并迭代优化 DSL
+4. 确保 DSL 可成功编译为可执行工作流`;
 
   /** 最大重试次数 */
   private readonly MAX_RETRIES = 3;
@@ -50,15 +48,12 @@ export class WorkflowDSLGeneratorAgent extends BaseGeneral {
         name: 'dsl_validation',
         description: '验证 DSL 语法和语义',
       },
-      {
-        name: 'node_discovery',
-        description: '发现和查询可用节点类型',
-      },
     ];
   }
 
   getTools(): StructuredToolInterface[] {
-    return workflowDSLTools;
+    // 工具调用未接入执行循环（模型仅做结构化输出），暂不声明工具
+    return [];
   }
 
   protected buildSystemPrompt(context: AgentContext): string {
@@ -92,17 +87,16 @@ workflow "工作流名称" {
 \`\`\`
 
 ### 2. 工作流程
-1. 使用 \`list_available_nodes\` 发现可用节点
-2. 使用 \`get_node_schema\` 了解节点输入输出
-3. 生成 DSL 代码
-4. 使用 \`validate_dsl\` 验证语法
-5. 如有错误，分析并重新生成（最多 ${this.MAX_RETRIES} 次）
-6. 使用 \`compile_dsl\` 确认编译成功
+1. 分析任务描述，确定需要的节点类型
+2. 生成 DSL 代码
+3. 编译验证语法
+4. 如有错误，分析并重新生成（最多 ${this.MAX_RETRIES} 次）
+5. 确认编译成功
 
 ### 3. 生成原则
 - 节点 ID 使用小写驼峰命名（如 loginNode, searchNode）
 - 节点类型使用准确的类名（如 WeiboLoginAst, WeiboKeywordSearchAst）
-- 连接使用正确的端口名称（通过 get_node_schema 查询）
+- 连接使用正确的端口名称
 - 位置坐标合理分布（x 间隔 200-300，y 根据层级调整）
 - 变量名清晰表达用途
 
@@ -191,10 +185,9 @@ workflow "工作流名称" {
 ${description}
 
 **要求**：
-1. 首先思考需要哪些节点类型（可使用 list_available_nodes 工具查询）
-2. 了解每个节点的输入输出（使用 get_node_schema 工具）
-3. 生成完整的 DSL 代码
-4. 确保语法正确，节点连接合理`;
+1. 首先思考需要哪些节点类型
+2. 生成完整的 DSL 代码
+3. 确保语法正确，节点连接合理`;
 
     if (lastError && attempt > 1) {
       prompt += `
@@ -235,8 +228,7 @@ ${feedback}
 **要求**：
 1. 理解用户的优化需求
 2. 保持原有功能的基础上进行改进
-3. 确保修改后的 DSL 可以成功编译
-4. 如需添加新节点，使用 list_available_nodes 和 get_node_schema 工具`;
+3. 确保修改后的 DSL 可以成功编译`;
 
     const result = await structuredModel.invoke([
       { role: 'system', content: this.buildSystemPrompt(context) },

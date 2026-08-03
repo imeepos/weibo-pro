@@ -6,19 +6,13 @@ import { ChatOpenAI } from '@langchain/openai';
 beforeEach(setupMocks);
 
 describe('WorkflowDSLGeneratorAgent (pure logic)', () => {
-  it('exposes the four DSL tools and DSL capabilities', () => {
+  it('declares no tools and exposes DSL capabilities', () => {
     const agent = new WorkflowDSLGeneratorAgent();
 
-    expect(agent.getTools().map((t) => t.name)).toEqual([
-      'list_available_nodes',
-      'get_node_schema',
-      'validate_dsl',
-      'compile_dsl',
-    ]);
+    expect(agent.getTools()).toEqual([]);
     expect(agent.getCapabilities().map((c) => c.name)).toEqual([
       'dsl_generation',
       'dsl_validation',
-      'node_discovery',
     ]);
   });
 
