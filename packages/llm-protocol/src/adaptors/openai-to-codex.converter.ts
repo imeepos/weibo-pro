@@ -17,6 +17,7 @@ import type {
   CodexParameterProperty,
 } from './types/codex';
 import { CODEX_PROMPT } from './tokens';
+import { convertParameters } from './openai-to-codex-params';
 
 // 简单的 ID 生成器（UUID v4）
 function generateId(): string {
@@ -192,78 +193,8 @@ export class OpenAIToCodexConverter {
       name: tool.function.name,
       description: tool.function.description || '',
       strict: false,
-      parameters: this.convertParameters(tool.function.parameters),
+      parameters: convertParameters(tool.function.parameters),
     }));
-  }
-
-  private convertParameters(
-    parameters?: Record<string, unknown>,
-  ): CodexFunctionParameters {
-    if (!parameters || typeof parameters !== 'object') {
-      return {
-        type: 'object',
-        properties: {},
-      };
-    }
-
-    const props = (parameters.properties as Record<string, any>) || {};
-    const required = (parameters.required as string[]) || [];
-
-    return {
-      type: 'object',
-      properties: this.convertProperties(props),
-      required: required.length > 0 ? required : undefined,
-      additionalProperties: parameters.additionalProperties as boolean | undefined,
-    };
-  }
-
-  private convertProperties(
-    props: Record<string, any>,
-  ): Record<string, CodexParameterProperty> {
-    const result: Record<string, CodexParameterProperty> = {};
-
-    for (const [key, value] of Object.entries(props)) {
-      result[key] = this.convertProperty(value);
-    }
-
-    return result;
-  }
-
-  private convertProperty(prop: any): CodexParameterProperty {
-    const property: CodexParameterProperty = {
-      type: prop.type || 'string',
-    };
-
-    if (prop.description) property.description = prop.description;
-    if (prop.default !== undefined) property.default = prop.default;
-    if (prop.enum) property.enum = prop.enum;
-    if (prop.minimum !== undefined) property.minimum = prop.minimum;
-    if (prop.maximum !== undefined) property.maximum = prop.maximum;
-    if (prop.minLength !== undefined) property.minLength = prop.minLength;
-    if (prop.format) property.format = prop.format;
-    if (prop.title) property.title = prop.title;
-    if (prop.exclusiveMinimum !== undefined) {
-      property.exclusiveMinimum = prop.exclusiveMinimum;
-    }
-    if (prop.exclusiveMaximum !== undefined) {
-      property.exclusiveMaximum = prop.exclusiveMaximum;
-    }
-
-    if (prop.items) {
-      property.items = this.convertProperty(prop.items);
-    }
-
-    if (prop.properties) {
-      property.properties = this.convertProperties(prop.properties);
-      if (prop.required) {
-        property.required = prop.required;
-      }
-      if (prop.additionalProperties !== undefined) {
-        property.additionalProperties = prop.additionalProperties;
-      }
-    }
-
-    return property;
   }
 
   private convertToolChoice(

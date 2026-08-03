@@ -6,34 +6,37 @@
 
 import { z } from 'zod';
 import type { OpenAPISchema } from './openapi.types';
-
-/**
- * Get description from Zod schema definition
- */
-function getDescription(schema: z.ZodTypeAny): string | undefined {
-  return (schema._def as { description?: string })?.description;
-}
-
-/**
- * Apply description to schema if present
- */
-function applyDescription(result: OpenAPISchema, schema: z.ZodTypeAny): OpenAPISchema {
-  const description = getDescription(schema);
-  if (description) {
-    result.description = description;
-  }
-  return result;
-}
-
-/**
- * Get Zod type name from schema
- */
-function getZodTypeName(schema: z.ZodTypeAny): string {
-  // Use _zod.typeName or fallback to constructor name
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const def = schema._def as any;
-  return def.typeName || schema.constructor.name;
-}
+import {
+  getZodTypeName,
+  applyDescription,
+  convertZodObject,
+  convertZodString,
+  convertZodNumber,
+  convertZodBoolean,
+  convertZodDate,
+  convertZodArray,
+  convertZodEnum,
+  convertZodLiteral,
+  convertZodUnion,
+  convertZodDiscriminatedUnion,
+  convertZodIntersection,
+  convertZodRecord,
+  convertZodTuple,
+  convertZodOptional,
+  convertZodNullable,
+  convertZodDefault,
+  convertZodEffects,
+  convertZodNull,
+  convertZodUndefined,
+  convertZodAny,
+  convertZodUnknown,
+  convertZodVoid,
+  convertZodNever,
+  convertZodPromise,
+  convertZodLazy,
+  convertZodBranded,
+  convertZodNativeEnum,
+} from './zod-to-openapi-converters';
 
 /**
  * Convert Zod schema to OpenAPI schema
@@ -46,279 +49,137 @@ export const zodToOpenAPI = (schema: z.ZodTypeAny): OpenAPISchema => {
 
   // ZodObject - object types
   if (schema instanceof z.ZodObject) {
-    const shape = schema.shape;
-    const properties: Record<string, OpenAPISchema> = {};
-    const required: string[] = [];
-
-    for (const key in shape) {
-      const field = shape[key];
-      properties[key] = zodToOpenAPI(field);
-      if (!field.isOptional()) {
-        required.push(key);
-      }
-    }
-
-    result = { type: 'object', properties };
-    if (required.length > 0) {
-      result.required = required;
-    }
+    result = convertZodObject(schema, def, zodToOpenAPI);
   }
 
   // ZodString - string types
   else if (schema instanceof z.ZodString) {
-    result = { type: 'string' };
-
-    // Extract string checks for validation
-    const checks = def.checks || [];
-    for (const check of checks) {
-      switch (check.kind) {
-        case 'min':
-          result.minLength = check.value;
-          break;
-        case 'max':
-          result.maxLength = check.value;
-          break;
-        case 'email':
-          result.format = 'email';
-          break;
-        case 'url':
-          result.format = 'uri';
-          break;
-        case 'uuid':
-          result.format = 'uuid';
-          break;
-        case 'datetime':
-          result.format = 'date-time';
-          break;
-        case 'regex':
-          if (check.regex) {
-            result.pattern = check.regex.source;
-          }
-          break;
-      }
-    }
+    result = convertZodString(schema, def);
   }
 
   // ZodNumber - number types
   else if (schema instanceof z.ZodNumber) {
-    result = { type: 'number' };
-
-    // Check for integer
-    const checks = def.checks || [];
-    for (const check of checks) {
-      switch (check.kind) {
-        case 'int':
-          result.type = 'integer';
-          break;
-        case 'min':
-          if (check.inclusive === false) {
-            result.exclusiveMinimum = check.value;
-          } else {
-            result.minimum = check.value;
-          }
-          break;
-        case 'max':
-          if (check.inclusive === false) {
-            result.exclusiveMaximum = check.value;
-          } else {
-            result.maximum = check.value;
-          }
-          break;
-        case 'multipleOf':
-          result.multipleOf = check.value;
-          break;
-      }
-    }
+    result = convertZodNumber(schema, def);
   }
 
   // ZodBoolean
   else if (schema instanceof z.ZodBoolean) {
-    result = { type: 'boolean' };
+    result = convertZodBoolean();
   }
 
   // ZodDate
   else if (schema instanceof z.ZodDate) {
-    result = { type: 'string', format: 'date-time' };
+    result = convertZodDate();
   }
 
   // ZodArray
   else if (schema instanceof z.ZodArray) {
-    const itemSchema = zodToOpenAPI(schema.element as z.ZodTypeAny);
-    result = { type: 'array', items: itemSchema };
-
-    // Array length constraints
-    if (def.minLength !== undefined) {
-      result.minItems = def.minLength.value;
-    }
-    if (def.maxLength !== undefined) {
-      result.maxItems = def.maxLength.value;
-    }
+    result = convertZodArray(schema, def, zodToOpenAPI);
   }
 
   // ZodEnum - string enums
   else if (schema instanceof z.ZodEnum) {
-    result = {
-      type: 'string',
-      enum: schema.options,
-    };
+    result = convertZodEnum(schema);
   }
 
   // ZodLiteral - literal values
   else if (schema instanceof z.ZodLiteral) {
-    // Zod v4 uses 'values', Zod v3 uses 'value'
-    const value = def.value !== undefined ? def.value : def.values;
-    const type = typeof value;
-
-    if (type === 'string') {
-      result = { type: 'string', const: value };
-    } else if (type === 'number') {
-      result = { type: Number.isInteger(value as number) ? 'integer' : 'number', const: value };
-    } else if (type === 'boolean') {
-      result = { type: 'boolean', const: value };
-    } else {
-      result = { const: value };
-    }
+    result = convertZodLiteral(schema, def);
   }
 
   // ZodUnion - union types
   else if (schema instanceof z.ZodUnion) {
-    const options = (def.options || []).map((opt: z.ZodTypeAny) => zodToOpenAPI(opt));
-    result = { oneOf: options };
+    result = convertZodUnion(schema, def, zodToOpenAPI);
   }
 
   // ZodDiscriminatedUnion - discriminated unions
   else if (typeName === 'ZodDiscriminatedUnion') {
-    let opts: z.ZodTypeAny[] = [];
-    if (def.options instanceof Map) {
-      opts = Array.from(def.options.values());
-    } else if (Array.isArray(def.options)) {
-      opts = def.options;
-    } else if (def.optionsMap instanceof Map) {
-      opts = Array.from(def.optionsMap.values());
-    }
-    result = { oneOf: opts.map(zodToOpenAPI) };
+    result = convertZodDiscriminatedUnion(schema, def, zodToOpenAPI);
   }
 
   // ZodIntersection - intersection types
   else if (schema instanceof z.ZodIntersection) {
-    const left = zodToOpenAPI(def.left as z.ZodTypeAny);
-    const right = zodToOpenAPI(def.right as z.ZodTypeAny);
-    result = { allOf: [left, right] };
+    result = convertZodIntersection(schema, def, zodToOpenAPI);
   }
 
   // ZodRecord - dictionary/map types
   else if (schema instanceof z.ZodRecord) {
-    const valueSchema = zodToOpenAPI(def.valueType as z.ZodTypeAny);
-    result = {
-      type: 'object',
-      additionalProperties: valueSchema,
-    };
+    result = convertZodRecord(schema, def, zodToOpenAPI);
   }
 
   // ZodTuple - tuple types
   else if (schema instanceof z.ZodTuple) {
-    const items = (def.items || []).map((item: z.ZodTypeAny) => zodToOpenAPI(item));
-    result = {
-      type: 'array',
-      prefixItems: items,
-      minItems: items.length,
-      maxItems: items.length,
-    };
+    result = convertZodTuple(schema, def, zodToOpenAPI);
   }
 
   // ZodOptional - optional wrapper
   else if (schema instanceof z.ZodOptional) {
-    result = zodToOpenAPI(schema.unwrap() as z.ZodTypeAny);
+    result = convertZodOptional(schema, def, zodToOpenAPI);
   }
 
   // ZodNullable - nullable wrapper
   else if (schema instanceof z.ZodNullable) {
-    const inner = zodToOpenAPI(schema.unwrap() as z.ZodTypeAny);
-    result = { ...inner, nullable: true };
+    result = convertZodNullable(schema, def, zodToOpenAPI);
   }
 
   // ZodDefault - default value wrapper
   else if (schema instanceof z.ZodDefault) {
-    const innerType = def.innerType || def.type;
-    if (innerType) {
-      result = zodToOpenAPI(innerType);
-    }
-    if (typeof def.defaultValue === 'function') {
-      result.default = def.defaultValue();
-    }
+    result = convertZodDefault(schema, def, zodToOpenAPI);
   }
 
   // ZodEffects - transformed/refined types (check by typeName)
   else if (typeName === 'ZodEffects' || typeName === 'ZodPipeline') {
-    const innerSchema = def.schema || def.innerType || def.in;
-    if (innerSchema) {
-      result = zodToOpenAPI(innerSchema);
-    }
+    result = convertZodEffects(schema, def, zodToOpenAPI);
   }
 
   // ZodNull
   else if (schema instanceof z.ZodNull) {
-    result = { type: 'null' };
+    result = convertZodNull();
   }
 
   // ZodUndefined - treated as optional
   else if (schema instanceof z.ZodUndefined) {
-    result = {};
+    result = convertZodUndefined();
   }
 
   // ZodAny - any type
   else if (schema instanceof z.ZodAny) {
-    result = {}; // No constraints
+    result = convertZodAny();
   }
 
   // ZodUnknown - unknown type
   else if (schema instanceof z.ZodUnknown) {
-    result = {}; // No constraints
+    result = convertZodUnknown();
   }
 
   // ZodVoid - void type
   else if (schema instanceof z.ZodVoid) {
-    result = {};
+    result = convertZodVoid();
   }
 
   // ZodNever - never type
   else if (schema instanceof z.ZodNever) {
-    result = { not: {} }; // OpenAPI way to express "never"
+    result = convertZodNever();
   }
 
   // ZodPromise - unwrap promise
   else if (schema instanceof z.ZodPromise) {
-    const innerType = def.type;
-    if (innerType && typeof innerType !== 'string') {
-      result = zodToOpenAPI(innerType);
-    }
+    result = convertZodPromise(schema, def, zodToOpenAPI);
   }
 
   // ZodLazy - lazy evaluation
   else if (schema instanceof z.ZodLazy) {
-    if (typeof def.getter === 'function') {
-      result = zodToOpenAPI(def.getter());
-    }
+    result = convertZodLazy(schema, def, zodToOpenAPI);
   }
 
   // ZodBranded - branded types (check by typeName)
   else if (typeName === 'ZodBranded') {
-    const innerType = def.type;
-    if (innerType) {
-      result = zodToOpenAPI(innerType);
-    }
+    result = convertZodBranded(schema, def, zodToOpenAPI);
   }
 
   // ZodNativeEnum - native enums (check by typeName)
   else if (typeName === 'ZodNativeEnum') {
-    if (def.values) {
-      const enumValues = Object.values(def.values);
-      const isNumberEnum = enumValues.every(v => typeof v === 'number');
-      result = {
-        type: isNumberEnum ? 'integer' : 'string',
-        enum: enumValues,
-      };
-    }
+    result = convertZodNativeEnum(schema, def);
   }
 
   // Fallback for unhandled types
