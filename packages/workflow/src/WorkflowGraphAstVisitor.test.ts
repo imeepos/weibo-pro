@@ -9,7 +9,7 @@ import { WorkflowGraphAstVisitor } from './WorkflowGraphAstVisitor';
 import { NodeExecutor } from './executor';
 import { VisitorExecutor } from './execution/visitor-executor';
 import { Compiler } from './compiler';
-import { SourceAst, SourceVisitor, ProcessorVisitor } from './WorkflowGraphAstVisitor.fixtures';
+import { SourceAst, ProcessorAst, SourceVisitor, ProcessorVisitor } from './WorkflowGraphAstVisitor.fixtures';
 
 describe('WorkflowGraphAstVisitor - 边连接问题复现', () => {
   beforeAll(() => {
