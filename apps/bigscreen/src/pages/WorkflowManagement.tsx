@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { root } from '@sker/core'
-import {
-  WorkflowController,
-  type WorkflowSummary,
-  type WorkflowScheduleEntity,
-  type WorkflowRunEntity
-} from '@sker/sdk'
 import { Spinner } from '@sker/ui/components/ui/spinner'
 import { Card, CardHeader, CardTitle, CardContent } from '@sker/ui/components/ui/card'
 import { Input } from '@sker/ui/components/ui/input'
@@ -22,175 +15,44 @@ import {
 import { Label } from '@sker/ui/components/ui/label'
 import { Textarea } from '@sker/ui/components/ui/textarea'
 import { PlusIcon } from 'lucide-react'
-import {
-  WorkflowList,
-} from '@sker/ui/components/blocks/workflow-list'
-import {
-  WorkflowRunList
-} from '@sker/ui/components/blocks/workflow-run-list'
-import {
-  WorkflowScheduleList,
-} from '@sker/ui/components/blocks/workflow-schedule-list'
+import { WorkflowList } from '@sker/ui/components/blocks/workflow-list'
+import { WorkflowRunList } from '@sker/ui/components/blocks/workflow-run-list'
+import { WorkflowScheduleList } from '@sker/ui/components/blocks/workflow-schedule-list'
 import { HomeIcon, SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useWorkflowManagement } from './WorkflowManagement.hooks'
 
 export default function WorkflowManagement() {
   const navigate = useNavigate()
-  const workflowCtrl = root.get(WorkflowController)
-
-  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([])
-  const [filteredWorkflows, setFilteredWorkflows] = useState<WorkflowSummary[]>([])
-  const [paginatedWorkflows, setPaginatedWorkflows] = useState<WorkflowSummary[]>([])
-  const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowSummary | null>(null)
-  const [schedules, setSchedules] = useState<WorkflowScheduleEntity[]>([])
-  const [runs, setRuns] = useState<WorkflowRunEntity[]>([])
-  const [runsTotal, setRunsTotal] = useState(0)
-  const [runsPage, setRunsPage] = useState(1)
-  const [workflowPage, setWorkflowPage] = useState(1)
-  const [workflowPageSize] = useState(10)
-  const [loading, setLoading] = useState(true)
-  const [searchKeyword, setSearchKeyword] = useState('')
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogType, setDialogType] = useState<'schedules' | 'runs' | 'create'>('schedules')
-  const [newWorkflowName, setNewWorkflowName] = useState('')
-  const [newWorkflowDescription, setNewWorkflowDescription] = useState('')
-
-  useEffect(() => {
-    loadWorkflows()
-  }, [])
-
-  useEffect(() => {
-    if (searchKeyword.trim()) {
-      const filtered = workflows.filter((wf) =>
-        wf.name.toLowerCase().includes(searchKeyword.toLowerCase())
-      )
-      setFilteredWorkflows(filtered)
-    } else {
-      setFilteredWorkflows(workflows)
-    }
-    setWorkflowPage(1)
-  }, [searchKeyword, workflows])
-
-  useEffect(() => {
-    const startIndex = (workflowPage - 1) * workflowPageSize
-    const endIndex = startIndex + workflowPageSize
-    setPaginatedWorkflows(filteredWorkflows.slice(startIndex, endIndex))
-  }, [filteredWorkflows, workflowPage, workflowPageSize])
-
-  const loadWorkflows = async () => {
-    setLoading(true)
-    try {
-      const data = await workflowCtrl.listWorkflows()
-      setWorkflows(data)
-      setFilteredWorkflows(data)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadSchedules = async (workflowName: string) => {
-    try {
-      const data = await workflowCtrl.listSchedules(workflowName)
-      setSchedules(data)
-    } catch (error) {
-      console.error('加载调度失败:', error)
-    }
-  }
-
-  const loadRuns = async (workflowId: string, page: number = 1) => {
-    try {
-      const data = await workflowCtrl.listRuns({
-        workflowId,
-        page,
-        pageSize: 20
-      })
-      setRuns(data.runs)
-      setRunsTotal(data.total)
-      setRunsPage(page)
-    } catch (error) {
-      console.error('加载执行记录失败:', error)
-    }
-  }
-
-  const handleViewSchedules = (workflow: WorkflowSummary) => {
-    setSelectedWorkflow(workflow)
-    setDialogType('schedules')
-    setDialogOpen(true)
-    loadSchedules(workflow.name)
-  }
-
-  const handleViewRuns = (workflow: WorkflowSummary) => {
-    setSelectedWorkflow(workflow)
-    setDialogType('runs')
-    setDialogOpen(true)
-    setRunsPage(1)
-    loadRuns(workflow.id, 1)
-  }
-
-  const handleTriggerSchedule = async (schedule: WorkflowScheduleEntity) => {
-    try {
-      await workflowCtrl.triggerSchedule(schedule.id, {})
-      alert('调度已触发')
-      if (selectedWorkflow) {
-        loadRuns(selectedWorkflow.id)
-      }
-    } catch (error) {
-      console.error('触发调度失败:', error)
-      alert('触发调度失败')
-    }
-  }
-
-  const handleToggleScheduleStatus = async (schedule: WorkflowScheduleEntity) => {
-    try {
-      if (schedule.status === 'enabled') {
-        await workflowCtrl.disableSchedule(schedule.id)
-      } else {
-        await workflowCtrl.enableSchedule(schedule.id)
-      }
-      if (selectedWorkflow) {
-        loadSchedules(selectedWorkflow.name)
-      }
-    } catch (error) {
-      console.error('切换调度状态失败:', error)
-      alert('切换调度状态失败')
-    }
-  }
-
-  const handleCancelRun = async (run: WorkflowRunEntity) => {
-    try {
-      await workflowCtrl.cancelRun({ runId: run.id })
-      alert('运行已取消')
-      if (selectedWorkflow) {
-        loadRuns(selectedWorkflow.id, runsPage)
-      }
-    } catch (error) {
-      console.error('取消运行失败:', error)
-      alert('取消运行失败')
-    }
-  }
-
-  const handleCreateWorkflow = () => {
-    if (!newWorkflowName.trim()) {
-      alert('请输入工作流名称')
-      return
-    }
-    navigate(`/workflow-editor/${encodeURIComponent(newWorkflowName)}`)
-    setDialogOpen(false)
-    setNewWorkflowName('')
-    setNewWorkflowDescription('')
-  }
-
-  const handleOpenCreateDialog = () => {
-    setDialogType('create')
-    setDialogOpen(true)
-  }
-
-  const handleDialogClose = (open: boolean) => {
-    if (!open) {
-      setNewWorkflowName('')
-      setNewWorkflowDescription('')
-    }
-    setDialogOpen(open)
-  }
+  const {
+    filteredWorkflows,
+    paginatedWorkflows,
+    selectedWorkflow,
+    schedules,
+    runs,
+    runsTotal,
+    runsPage,
+    workflowPage,
+    workflowPageSize,
+    loading,
+    searchKeyword,
+    dialogOpen,
+    dialogType,
+    newWorkflowName,
+    newWorkflowDescription,
+    setSearchKeyword,
+    setWorkflowPage,
+    setNewWorkflowName,
+    setNewWorkflowDescription,
+    handleViewSchedules,
+    handleViewRuns,
+    handleTriggerSchedule,
+    handleToggleScheduleStatus,
+    handleCancelRun,
+    handleCreateWorkflow,
+    loadRuns,
+    handleOpenCreateDialog,
+    handleDialogClose,
+  } = useWorkflowManagement()
 
   if (loading) {
     return (
@@ -199,6 +61,8 @@ export default function WorkflowManagement() {
       </div>
     )
   }
+
+  const totalPages = Math.ceil(filteredWorkflows.length / workflowPageSize)
 
   return (
     <div className="h-full overflow-auto p-6 space-y-6">
@@ -242,7 +106,7 @@ export default function WorkflowManagement() {
           {filteredWorkflows.length > workflowPageSize && (
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                共 {filteredWorkflows.length} 个工作流，第 {workflowPage} / {Math.ceil(filteredWorkflows.length / workflowPageSize)} 页
+                共 {filteredWorkflows.length} 个工作流，第 {workflowPage} / {totalPages} 页
               </div>
               <div className="space-x-2">
                 <Button
@@ -257,7 +121,7 @@ export default function WorkflowManagement() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={workflowPage >= Math.ceil(filteredWorkflows.length / workflowPageSize)}
+                  disabled={workflowPage >= totalPages}
                   onClick={() => setWorkflowPage(workflowPage + 1)}
                 >
                   下一页

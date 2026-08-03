@@ -1,41 +1,25 @@
 import { Injectable, Inject } from '@sker/core';
 import { useEntityManager, } from '@sker/entities';
 import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache.service';
+import type {
+  SystemStatus,
+  SystemPerformance,
+  SystemHealth,
+} from './system.types';
+import {
+  checkDatabaseHealth,
+  checkRedisHealth,
+  checkDiskSpaceHealth,
+  checkWorkflowEngineHealth,
+} from './system.health';
 
-interface ComponentStatus {
-  name: string;
-  status: string;
-  uptime: string;
-}
-
-export interface SystemStatus {
-  status: string;
-  uptime: string;
-  lastUpdate: string;
-  components: ComponentStatus[];
-}
-
-export interface SystemPerformance {
-  cpuUsage: number;
-  memoryUsage: number;
-  diskUsage: number;
-  networkTraffic: number;
-  responseTime: number;
-  requestsPerSecond: number;
-  errorRate: number;
-}
-
-export interface HealthCheck {
-  name: string;
-  status: string;
-  message: string;
-}
-
-export interface SystemHealth {
-  overall: string;
-  checks: HealthCheck[];
-  timestamp: string;
-}
+export type {
+  ComponentStatus,
+  SystemStatus,
+  SystemPerformance,
+  HealthCheck,
+  SystemHealth,
+} from './system.types';
 
 @Injectable({ providedIn: 'root' })
 export class SystemService {
@@ -181,19 +165,12 @@ export class SystemService {
   }
 
   private async fetchHealth(): Promise<SystemHealth> {
-    const checks: HealthCheck[] = [];
-
-    const dbCheck = await this.checkDatabase();
-    checks.push(dbCheck);
-
-    const redisCheck = await this.checkRedis();
-    checks.push(redisCheck);
-
-    const diskCheck = await this.checkDiskSpace();
-    checks.push(diskCheck);
-
-    const workflowCheck = await this.checkWorkflowEngine();
-    checks.push(workflowCheck);
+    const checks = [
+      await checkDatabaseHealth(),
+      await checkRedisHealth(this.cacheService),
+      await checkDiskSpaceHealth(),
+      await checkWorkflowEngineHealth(),
+    ];
 
     const allHealthy = checks.every(c => c.status === '健康');
 
@@ -202,129 +179,6 @@ export class SystemService {
       checks,
       timestamp: new Date().toISOString()
     };
-  }
-
-  private async checkDatabase(): Promise<HealthCheck> {
-    try {
-      await useEntityManager(async (manager) => {
-        await manager.query('SELECT 1');
-      });
-      return {
-        name: '数据库连接',
-        status: '健康',
-        message: '连接正常'
-      };
-    } catch (error) {
-      return {
-        name: '数据库连接',
-        status: '异常',
-        message: error instanceof Error ? error.message : '连接失败'
-      };
-    }
-  }
-
-  private async checkRedis(): Promise<HealthCheck> {
-    try {
-      await this.cacheService.set('__health_check__', { ok: true }, 10);
-      const result = await this.cacheService.get<{ ok: boolean }>('__health_check__');
-      if (result?.ok) {
-        return {
-          name: '缓存服务',
-          status: '健康',
-          message: '响应正常'
-        };
-      }
-      return {
-        name: '缓存服务',
-        status: '异常',
-        message: '数据不一致'
-      };
-    } catch (error) {
-      return {
-        name: '缓存服务',
-        status: '异常',
-        message: error instanceof Error ? error.message : '连接失败'
-      };
-    }
-  }
-
-  private async checkDiskSpace(): Promise<HealthCheck> {
-    try {
-      return useEntityManager(async (manager) => {
-        const result = await manager.query(`
-          SELECT pg_database_size(current_database()) as db_size
-        `);
-        const dbSizeMB = parseInt(result[0]?.db_size || '0') / (1024 * 1024);
-        const totalDiskMB = 100 * 1024;
-        const usagePercent = (dbSizeMB / totalDiskMB) * 100;
-
-        if (usagePercent > 90) {
-          return {
-            name: '磁盘空间',
-            status: '异常',
-            message: `使用率过高: ${usagePercent.toFixed(1)}%`
-          };
-        }
-
-        return {
-          name: '磁盘空间',
-          status: '健康',
-          message: `使用率: ${usagePercent.toFixed(1)}%`
-        };
-      });
-    } catch (error) {
-      return {
-        name: '磁盘空间',
-        status: '异常',
-        message: error instanceof Error ? error.message : '检查失败'
-      };
-    }
-  }
-
-  private async checkWorkflowEngine(): Promise<HealthCheck> {
-    try {
-      return useEntityManager(async (manager) => {
-        const result = await manager.query(`
-          SELECT
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
-          FROM workflow_runs
-          WHERE created_at >= NOW() - INTERVAL '1 hour'
-        `);
-
-        const total = parseInt(result[0]?.total || '0');
-        const failed = parseInt(result[0]?.failed || '0');
-
-        if (total === 0) {
-          return {
-            name: '工作流引擎',
-            status: '健康',
-            message: '无活动任务'
-          };
-        }
-
-        const failureRate = (failed / total) * 100;
-        if (failureRate > 50) {
-          return {
-            name: '工作流引擎',
-            status: '异常',
-            message: `失败率过高: ${failureRate.toFixed(1)}%`
-          };
-        }
-
-        return {
-          name: '工作流引擎',
-          status: '健康',
-          message: `运行正常 (${total} 个任务)`
-        };
-      });
-    } catch (error) {
-      return {
-        name: '工作流引擎',
-        status: '异常',
-        message: error instanceof Error ? error.message : '检查失败'
-      };
-    }
   }
 
   private formatUptime(seconds: number): string {

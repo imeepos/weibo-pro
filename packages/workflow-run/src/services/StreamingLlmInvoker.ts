@@ -1,80 +1,42 @@
 import { Injectable } from '@sker/core';
 import { Observable, Subject, from, of, throwError, forkJoin } from 'rxjs';
 import { concatMap, expand, map, catchError, finalize } from 'rxjs/operators';
-import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
-import { Runnable } from '@langchain/core/runnables';
-import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
 import { AIMessageChunk } from '@langchain/core/messages';
-import { StructuredToolInterface } from '@langchain/core/tools';
+import {
+  ChatModel,
+  MessageContent,
+  LlmResponse,
+  ToolCall,
+  ToolMessage,
+  RoundState,
+  StreamChunk,
+  ToolDefinition,
+} from './streaming-llm.types';
+import { LlmRetryInvoker } from './llm-retry.invoker';
 
-interface MessageContent {
-  role: string;
-  content: string;
-}
-
-interface ToolCall {
-  id: string;
-  name: string;
-  args: Record<string, unknown>;
-}
-
-interface LlmResponse {
-  content: string;
-  tool_calls?: ToolCall[];
-  [key: string]: unknown;
-}
-
-interface ToolMessage {
-  role: 'tool';
-  content: string;
-  tool_call_id: string;
-  name: string;
-}
-
-interface RoundState {
-  messages: Array<MessageContent | LlmResponse | ToolMessage>;
-  round: number;
-  isDone: boolean;
-}
-
-export interface StreamChunk {
-  type: 'delta' | 'complete' | 'tool_call' | 'tool_progress' | 'tool_result'
-  delta?: string
-  fullText?: string
-  toolCalls?: ToolCall[]
-  toolProgress?: {
-    round: number
-    totalRounds?: number
-    currentTool: string
-    status: 'executing' | 'completed'
-    message: string
-  }
-  toolResult?: {
-    toolName: string
-    resultSummary: string
-    resultLength: number
-  }
-}
-
-const MAX_RETRIES = 3
-const RETRY_DELAY_MS = 1000
+// 类型再导出：保持既有导入路径兼容
+export type { ChatModel, MessageContent, ToolCall, ToolMessage, RoundState, StreamChunk };
 
 /**
  * 通用流式 LLM 调用器
  * 职责：支持实时流式响应和工具调用的混合模式
+ *
+ * 类型定义见 streaming-llm.types.ts；批量调用重试逻辑见 llm-retry.invoker.ts。
  */
 @Injectable()
 export class StreamingLlmInvoker {
+  private retryInvoker = new LlmRetryInvoker();
+
   /**
    * 流式调用（支持工具）
    * 返回 Observable<StreamChunk>，实时推送文本片段
    */
   streamWithTools(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    model: ChatModel,
     initialMessages: MessageContent[],
     signal: AbortSignal,
     useTools: boolean,
-    tools: StructuredToolInterface[] = []
+    tools: ToolDefinition[] = []
   ): Observable<StreamChunk> {
     if (!useTools || tools.length === 0) {
       return this.streamSimple(model, initialMessages, signal);
@@ -88,7 +50,7 @@ export class StreamingLlmInvoker {
    * 简单流式（无工具）
    */
   private streamSimple(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    model: ChatModel,
     messages: MessageContent[],
     signal: AbortSignal
   ): Observable<StreamChunk> {
@@ -137,10 +99,10 @@ export class StreamingLlmInvoker {
    * 策略：工具调用轮次使用批量模式，最终文本生成使用流式
    */
   private streamWithToolRounds(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    model: ChatModel,
     initialMessages: MessageContent[],
     signal: AbortSignal,
-    tools: StructuredToolInterface[]
+    tools: ToolDefinition[]
   ): Observable<StreamChunk> {
     const toolMap = new Map(tools.map(tool => [tool.name, tool]));
     const subject = new Subject<StreamChunk>();
@@ -152,7 +114,7 @@ export class StreamingLlmInvoker {
             return of();
           }
 
-          return from(this.invokeModel(model, state.messages, signal)).pipe(
+          return from(this.retryInvoker.invokeModel(model, state.messages, signal)).pipe(
             concatMap((response: LlmResponse) => {
               if (response.tool_calls && response.tool_calls.length > 0) {
                 subject.next({ type: 'tool_call', toolCalls: response.tool_calls });
@@ -193,86 +155,10 @@ export class StreamingLlmInvoker {
   }
 
   /**
-   * 调用模型（批量）- 带重试逻辑
-   */
-  private async invokeModel(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
-    messages: Array<MessageContent | LlmResponse | ToolMessage>,
-    signal: AbortSignal
-  ): Promise<LlmResponse> {
-    let lastError: Error | null = null
-
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      if (signal.aborted) {
-        throw new Error('请求已取消')
-      }
-
-      try {
-        const response = await (model.invoke as any)(messages, { signal })
-        return response as LlmResponse
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error))
-        const isRetryable = this.isRetryableError(lastError)
-
-        // 增强 LangChain 错误信息，便于调试
-        const messagesStr = JSON.stringify(messages).slice(0, 200)
-        console.error(`[StreamingLlmInvoker] invokeModel 失败 (尝试 ${attempt + 1}/${MAX_RETRIES}):`)
-        console.error('  消息预览:', messagesStr.length > 200 ? `${messagesStr.slice(0, 100)}...${messagesStr.slice(-100)}` : messagesStr)
-        console.error('  错误:', lastError.message)
-        if (lastError.cause) {
-          console.error('  原因:', lastError.cause)
-        }
-
-        if (!isRetryable || attempt === MAX_RETRIES - 1) {
-          throw lastError
-        }
-
-        // 等待后重试
-        const delay = RETRY_DELAY_MS * Math.pow(2, attempt) // 指数退避
-        console.log(`[StreamingLlmInvoker] ${delay}ms 后重试...`)
-        await this.sleep(delay)
-      }
-    }
-
-    throw lastError || new Error('invokeModel 失败')
-  }
-
-  /**
-   * 判断错误是否可重试
-   */
-  private isRetryableError(error: Error): boolean {
-    const message = error.message || ''
-    // LangChain 内部错误（如 generations 为空）
-    if (message.includes("Cannot read properties of undefined (reading 'message')")) {
-      return true
-    }
-    // 网络错误
-    if (message.includes('fetch failed') || message.includes('ECONNRESET') || message.includes('ETIMEDOUT')) {
-      return true
-    }
-    // 服务端错误
-    if (message.includes('503') || message.includes('502') || message.includes('500')) {
-      return true
-    }
-    // 速率限制
-    if (message.includes('429') || message.includes('rate limit')) {
-      return true
-    }
-    return false
-  }
-
-  /**
-   * 延迟函数
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
-  }
-
-  /**
    * 流式输出最终响应
    */
   private streamFinalResponse(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
+    model: ChatModel,
     messages: Array<MessageContent | LlmResponse | ToolMessage>,
     signal: AbortSignal,
     subject: Subject<StreamChunk>
@@ -307,7 +193,7 @@ export class StreamingLlmInvoker {
   private handleToolCalls(
     response: LlmResponse,
     state: RoundState,
-    toolMap: Map<string, StructuredToolInterface>,
+    toolMap: Map<string, ToolDefinition>,
     subject: Subject<StreamChunk>
   ): Observable<RoundState> {
     const newMessages = [...state.messages, response];

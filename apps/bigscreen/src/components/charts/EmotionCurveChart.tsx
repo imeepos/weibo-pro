@@ -5,7 +5,7 @@ import { useAppStore } from '@/stores/useAppStore';
 import { EChart } from '@sker/ui/components/ui/echart'
 import { CommonAPI } from '@/services/api';
 import { createLogger } from '@/utils';
-import type { EChartsFormatterParams } from '@/types/charts';
+import { emotionTypes, buildEmotionChartOption, type EmotionType } from './EmotionCurveChart.utils';
 
 const logger = createLogger('EmotionCurveChart');
 
@@ -18,7 +18,7 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
 }) => {
   const { isDark } = useTheme();
   const { selectedTimeRange } = useAppStore();
-  const [selectedType, setSelectedType] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
+  const [selectedType, setSelectedType] = useState<EmotionType>('all');
   const [emotionData, setEmotionData] = useState<{
     hours: string[];
     positiveData: number[];
@@ -64,213 +64,17 @@ const EmotionCurveChart: React.FC<EmotionCurveChartProps> = ({
 
   const { hours, positiveData, negativeData, neutralData } = emotionData;
 
-  // 情感类型按钮配置
-  const emotionTypes = [
-    { key: 'all', label: '全部', color: '#3b82f6', icon: '◇' },
-    { key: 'positive', label: '正面', color: '#10b981', icon: '◇' },
-    { key: 'negative', label: '负面', color: '#ef4444', icon: '◇' },
-    { key: 'neutral', label: '中性', color: '#6b7280', icon: '◇' }
-  ] as const;
-
-  const getSeriesData = () => {
-    const series = [];
-
-    if (selectedType === 'all' || selectedType === 'positive') {
-      series.push({
-        name: '正面',
-        type: 'line',
-        data: positiveData,
-        smooth: true,
-        lineStyle: {
-          color: '#10b981',
-          width: 3,
-          shadowColor: 'rgba(16, 185, 129, 0.3)',
-          shadowBlur: 10
-        },
-        itemStyle: {
-          color: '#10b981',
-          borderWidth: 2,
-          borderColor: '#ffffff'
-        },
-        areaStyle: selectedType === 'positive' ? {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
-              { offset: 1, color: 'rgba(16, 185, 129, 0.05)' }
-            ]
-          }
-        } : undefined,
-        symbol: 'circle',
-        symbolSize: 8
-      });
-    }
-
-    if (selectedType === 'all' || selectedType === 'negative') {
-      series.push({
-        name: '负面',
-        type: 'line',
-        data: negativeData,
-        smooth: true,
-        lineStyle: {
-          color: '#ef4444',
-          width: 3,
-          shadowColor: 'rgba(239, 68, 68, 0.3)',
-          shadowBlur: 10
-        },
-        itemStyle: {
-          color: '#ef4444',
-          borderWidth: 2,
-          borderColor: '#ffffff'
-        },
-        areaStyle: selectedType === 'negative' ? {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(239, 68, 68, 0.3)' },
-              { offset: 1, color: 'rgba(239, 68, 68, 0.05)' }
-            ]
-          }
-        } : undefined,
-        symbol: 'circle',
-        symbolSize: 8
-      });
-    }
-
-    if (selectedType === 'all' || selectedType === 'neutral') {
-      series.push({
-        name: '中性',
-        type: 'line',
-        data: neutralData,
-        smooth: true,
-        lineStyle: {
-          color: '#6b7280',
-          width: 3,
-          shadowColor: 'rgba(107, 114, 128, 0.3)',
-          shadowBlur: 10
-        },
-        itemStyle: {
-          color: '#6b7280',
-          borderWidth: 2,
-          borderColor: '#ffffff'
-        },
-        areaStyle: selectedType === 'neutral' ? {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: 'rgba(107, 114, 128, 0.3)' },
-              { offset: 1, color: 'rgba(107, 114, 128, 0.05)' }
-            ]
-          }
-        } : undefined,
-        symbol: 'circle',
-        symbolSize: 8
-      });
-    }
-
-    return series;
-  };
-
-  const option = React.useMemo(() => {
-    // Return null if no valid data to prevent gradient rendering errors
-    if (!hours.length || (!positiveData.length && !negativeData.length && !neutralData.length)) {
-      return {
-        title: {
-          text: '暂无数据',
-          left: 'center',
-          top: 'middle',
-          textStyle: {
-            color: isDark ? '#9ca3af' : '#6b7280',
-            fontSize: 14
-          }
-        }
-      };
-    }
-
-    return {
-      tooltip: {
-        trigger: 'axis',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        textStyle: {
-          color: '#ffffff',
-        },
-        axisPointer: {
-          type: 'cross',
-          label: {
-            backgroundColor: '#6a7985'
-          }
-        },
-        formatter: (params: EChartsFormatterParams[]) => {
-          let result = `${params[0]?.name}<br/>`;
-          params.forEach((param) => {
-            result += `<span style="color: ${param.color};">●</span> ${param.seriesName}: ${param.value}<br/>`;
-          });
-          return result;
-        }
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        top: '15%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: hours,
-        axisLine: {
-          lineStyle: {
-            color: isDark ? '#374151' : '#e5e7eb'
-          }
-        },
-        axisLabel: {
-          color: isDark ? '#9ca3af' : '#6b7280',
-          fontSize: 12
-        },
-        splitLine: {
-          show: false
-        }
-      },
-      yAxis: {
-        type: 'value',
-        name: '数量',
-        nameTextStyle: {
-          color: isDark ? '#9ca3af' : '#6b7280',
-          fontSize: 12
-        },
-        axisLine: {
-          lineStyle: {
-            color: isDark ? '#374151' : '#e5e7eb'
-          }
-        },
-        axisLabel: {
-          color: isDark ? '#9ca3af' : '#6b7280',
-          formatter: '{value}'
-        },
-        splitLine: {
-          lineStyle: {
-            color: isDark ? '#374151' : '#e5e7eb',
-            type: 'dashed'
-          }
-        }
-      },
-      series: getSeriesData()
-    };
-  }, [isDark, selectedType, positiveData, negativeData, neutralData, hours]);
+  const option = React.useMemo(
+    () => buildEmotionChartOption({
+      hours,
+      positiveData,
+      negativeData,
+      neutralData,
+      selectedType,
+      isDark,
+    }),
+    [isDark, selectedType, positiveData, negativeData, neutralData, hours]
+  );
 
   return (
     <motion.div
