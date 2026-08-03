@@ -8,8 +8,8 @@
  *
  * 注意:测试文件必须将该模块作为第一个 import,确保 mock 先于被测模块注册。
  */
-import { vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { vi, type Mock } from 'vitest';
+import { render, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { root } from '@sker/core';
 import React from 'react';
@@ -245,7 +245,29 @@ import * as fixtures from './__fixtures__/eventDetailFixtures';
 
 export const mockEventId = fixtures.mockEventId;
 
-export const mockEventsController = {
+export const mockEventsController: {
+  getEventDetail: Mock;
+  getEventTimeSeries: Mock;
+  getEventTrends: Mock;
+  getEventKeywords: Mock;
+  getEventMilestones: Mock;
+  getEventTopicOverview: Mock;
+  getEventInstitutions: Mock;
+  getEventOpinionClusters: Mock;
+  getEventEmotionMap: Mock;
+  getEventUserEmotionInsights: Mock;
+  getEventSentimentTrendDetailed: Mock;
+  getEventRiskProfile: Mock;
+  getEventAbnormalUsers: Mock;
+  getEngagementTrend: Mock;
+  getEventUserRelations: Mock;
+  getEventGeographic: Mock;
+  getSentimentHotness: Mock;
+  getSentimentIntensity: Mock;
+  getAnomalies: Mock;
+  refreshCache: Mock;
+  updateEventKeywords: Mock;
+} = {
   getEventDetail: vi.fn(),
   getEventTimeSeries: vi.fn(),
   getEventTrends: vi.fn(),
@@ -269,15 +291,19 @@ export const mockEventsController = {
   updateEventKeywords: vi.fn(),
 };
 
-export const mockSpreadBreadthController = {
+export const mockSpreadBreadthController: {
+  getAnalysis: Mock;
+} = {
   getAnalysis: vi.fn(),
 };
 
-export const mockMediaTypeController = {
+export const mockMediaTypeController: {
+  getDistribution: Mock;
+} = {
   getDistribution: vi.fn(),
 };
 
-export const renderEventDetail = () =>
+export const renderEventDetail: () => RenderResult = () =>
   render(
     <MemoryRouter initialEntries={[`/event/${mockEventId}`]}>
       <EventDetail />
