@@ -31,5 +31,3 @@ root.set([
 // 导出工具
 export { RemoteDefaultVisitor } from './RemoteDefaultVisitor.js';
 export { executeRemote, handlerRemote } from './execute-remote.js';
-export { LastAstVisitor } from './LastAstVisitor.js'
-export { PostNLPLooperAstVisitor } from './PostNLPLooperAstVisitor.js';

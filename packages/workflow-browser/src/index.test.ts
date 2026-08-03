@@ -24,7 +24,5 @@ describe('@sker/workflow-browser entry', () => {
     expect(typeof browser.RemoteDefaultVisitor).toBe('function');
     expect(typeof browser.executeRemote).toBe('function');
     expect(typeof browser.handlerRemote).toBe('function');
-    expect(typeof browser.LastAstVisitor).toBe('function');
-    expect(typeof browser.PostNLPLooperAstVisitor).toBe('function');
   });
 });

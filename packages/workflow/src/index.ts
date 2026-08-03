@@ -22,6 +22,7 @@ export * from './DateAst';
 export * from './ast-utils';
 export { Compiler } from './compiler/index';
 export * from './StoreAst';
+export * from './error-handler';
 export * from './CollectorAst';
 export * from './LoopAst';
 export * from './FilterAst';
