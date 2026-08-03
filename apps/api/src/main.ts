@@ -8,27 +8,22 @@ import "@sker/workflow-ast";
 import "@sker/workflow-run";
 import "./controllers/index";
 import "./claude/claude.controller";
-import { createInjector, Injector, Logger, REQUEST, RESPONSE, root, } from '@sker/core';
+import { root, Logger } from '@sker/core';
 import { entitiesProviders, seedNuwa, seedSentimentAnalyzer, seedContentAuditor, seedDataValidator, seedProgrammingAssistant, useTranslation } from "@sker/entities";
 import { EdgeModeStrategyProviders, EVENT_STORE, DEFAULT_VISITOR, DefaultVisitor } from '@sker/workflow';
 import { DatabaseEventStore } from '@sker/workflow-run';
 import { createProxyProviders } from '@sker/ip-proxy';
 import { killPortProcess } from 'kill-port-process';
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { betterAuth } from 'better-auth';
 import { createSkerAuthPlugin, BETTER_AUTH } from '@sker/auth';
-import { Server as SocketIOServer } from 'socket.io';
-import { createServer } from 'http';
-import type { IncomingMessage, ServerResponse } from 'http';
 import { bearer, openAPI } from 'better-auth/plugins';
 import { UploadService } from './services/upload.service';
-import { ClaudeGateway } from './claude';
 import { DerivedNodeService } from './services/workflow/derived-node.service';
 import { BetterAuthWrapper } from './utils/auth-wrapper';
-import { validateEnv, } from './config/env.config';
+import { validateEnv } from './config/env.config';
 import { runStartupChecks } from './config/startup-check';
+import { createHonoApp } from './main.hono';
+import { createApiServer } from './main.server';
 
 Reflect.set(global, 'window', {
   WebSocket: WebSocket
@@ -94,29 +89,6 @@ async function bootstrap() {
     }
   }
 
-  // 创建 Hono 应用
-  const app = new Hono<{ Bindings: { injector: Injector } }>();
-
-  // CORS 配置
-  app.use('*', cors({
-    origin: (origin) => origin || '*',
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'X-Request-ID',
-      'Accept',
-      'Origin',
-      'Cache-Control'
-    ],
-    credentials: true,
-    maxAge: 86400,
-  }));
-
-  // 静态文件服务 - /uploads 路径
-  app.use('/uploads/*', serveStatic({ root: './' }));
-
   // Better Auth 初始化
   // 注意：本项目使用 Better Auth 仅作为 API 路由转发器，不使用其认证功能
   // 因此不配置 database，移除不必要的认证插件
@@ -154,150 +126,11 @@ async function bootstrap() {
   const uploadService = root.get(UploadService);
   const authWrapper = new BetterAuthWrapper(auth, { uploadService, logger });
 
-  // Better Auth 路由（支持所有请求格式）
-  app.on(['GET', 'POST', "PUT", "DELETE", "PATCH"], '/api/auth/*', async (c) => {
-    // 注入 injector 到请求对象
-    Reflect.set(c.req.raw, 'injector', c.env.injector);
+  // 创建 Hono 应用
+  const app = createHonoApp({ logger, authWrapper });
 
-    // 使用包装器处理请求
-    return authWrapper.handle(c.req.raw);
-  });
-  // 404 处理
-  app.notFound((c) => {
-    logger.warn('API route not found', {
-      timestamp: new Date().toISOString(),
-      path: c.req.path,
-      method: c.req.method,
-      query: c.req.query(),
-      headers: {
-        'user-agent': c.req.header('user-agent'),
-        'x-forwarded-for': c.req.header('x-forwarded-for'),
-        'x-real-ip': c.req.header('x-real-ip'),
-      }
-    });
-
-    return c.json({
-      success: false,
-      error: {
-        code: 'ROUTE_NOT_FOUND',
-        message: `Route ${c.req.method} ${c.req.path} not found`,
-        timestamp: new Date().toISOString(),
-        details: {
-          path: c.req.path,
-          method: c.req.method,
-          query: c.req.query(),
-        }
-      }
-    }, 404);
-  });
-
-  // 错误处理
-  app.onError((err, c) => {
-    logger.error('Unhandled error', {
-      error: err.message,
-      stack: err.stack,
-      path: c.req.path,
-      method: c.req.method
-    });
-
-    return c.json({
-      success: false,
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: err.message,
-        timestamp: new Date().toISOString()
-      }
-    }, 500);
-  });
-
-  // 创建 HTTP 服务器
-  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-    const url = new URL(req.url || '/', `http://${req.headers.host}`);
-    const request = new Request(url.toString(), {
-      method: req.method,
-      headers: req.headers as HeadersInit,
-      body: ['GET', 'HEAD'].includes(req.method || '') ? null : await getRequestBody(req)
-    });
-    const reqInjector = createInjector([
-      { provide: REQUEST, useValue: req },
-      { provide: RESPONSE, useValue: res },
-    ], root, 'feature');
-    const response = await app.fetch(request, { injector: reqInjector });
-
-    // SSE 由 controller.factory 直接写入 res，跳过标准响应处理
-    if (res.headersSent) return;
-
-    res.statusCode = response.status;
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-
-    if (response.body) {
-      const reader = response.body.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-    }
-    res.end();
-  });
-
-  // Socket.IO 服务器
-  const io = new SocketIOServer(server, {
-    path: '/ws',
-    cors: {
-      origin: [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:3002',
-        'http://localhost:3003',
-        'http://localhost:5173',
-        'exp://*',  // Expo 开发服务器
-        // 生产环境 origin
-        'http://43.240.223.138:8088',
-        'http://43.240.223.138',
-        'https://wb.sker.us',
-        'https://*.sker.us',
-      ],
-      credentials: true,
-    }
-  });
-
-  // 初始化 Claude Gateway
-  const claudeGateway = root.get(ClaudeGateway);
-  claudeGateway.initialize(io);
-  logger.info('✓ Claude Gateway initialized');
-
-  let connectedClients = 0;
-
-  io.on('connection', (socket) => {
-    connectedClients++;
-    logger.info('Client connected', {
-      clientId: socket.id,
-      totalClients: connectedClients
-    });
-
-    socket.on('disconnect', () => {
-      connectedClients--;
-      logger.info('Client disconnected', {
-        clientId: socket.id,
-        totalClients: connectedClients
-      });
-    });
-  });
-
-  // 将 WebSocket 广播功能暴露给全局
-  global.websocketBroadcast = (message: any) => {
-    const eventName = getEventName(message);
-    io.emit(eventName, message);
-
-    logger.debug('Message broadcasted', {
-      event: eventName,
-      messageType: message.type,
-      clientCount: connectedClients
-    });
-  };
+  // 创建 HTTP 服务器（含 Socket.IO）
+  const server = createApiServer(app, logger);
 
   server.listen(PORT, '0.0.0.0', () => {
     logger.info(`🚀 Server started at http://localhost:${PORT}`);
@@ -305,36 +138,6 @@ async function bootstrap() {
     logger.info('✓ WebSocket ready at /ws');
     logger.info('✓ Claude Gateway ready for mobile connections');
   });
-}
-
-/**
- * 读取请求体
- */
-function getRequestBody(req: IncomingMessage): Promise<BodyInit | null> {
-  return new Promise((resolve) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', () => resolve(null));
-  });
-}
-
-/**
- * 映射消息类型到前端期望的事件名
- */
-function getEventName(message: any): string {
-  switch (message.type) {
-    case 'update':
-      return 'data:update';
-    case 'alert':
-      return 'data:alert';
-    case 'heartbeat':
-      return 'data:heartbeat';
-    case 'connection':
-      return 'data:connection';
-    default:
-      return 'data:update';
-  }
 }
 
 // 进程信号处理

@@ -2,8 +2,8 @@ import { Injectable, Inject } from '@sker/core'
 import { useEntityManager } from '@sker/entities'
 import { WorkflowScheduleEntity, ScheduleType, ScheduleStatus, WorkflowEntity } from '@sker/entities'
 import { WorkflowRunService } from './workflow-run.service'
-import { CronExpressionParser } from 'cron-parser'
 import { LessThanOrEqual } from 'typeorm'
+import { toDate as toDateUtil, validateSchedule, calculateNextRunTime } from './workflow-schedule.utils'
 
 export interface CreateScheduleDto {
   workflowName: string
@@ -39,25 +39,7 @@ export class WorkflowScheduleService {
    * 如果值无效，返回 undefined 而不是 Invalid Date
    */
   private toDate(value?: Date | string): Date | undefined {
-    if (!value) return undefined
-    if (typeof value === 'string') {
-      // 空字符串视为无值
-      if (value.trim() === '') return undefined
-      const date = new Date(value)
-      // 验证日期是否有效 - isNaN 检查可以捕获 Invalid Date
-      if (isNaN(date.getTime())) {
-        return undefined
-      }
-      return date
-    }
-    // 对于已经是 Date 对象的输入，也需要验证
-    if (value instanceof Date) {
-      if (isNaN(value.getTime())) {
-        return undefined
-      }
-      return value
-    }
-    return undefined
+    return toDateUtil(value)
   }
 
   async createSchedule(dto: CreateScheduleDto): Promise<WorkflowScheduleEntity> {
@@ -78,14 +60,14 @@ export class WorkflowScheduleService {
       const endTime = this.toDate(dto.endTime)
 
       // 验证调度参数
-      this.validateSchedule({
+      validateSchedule({
         ...dto,
         startTime,
         endTime,
       })
 
       // 计算下次执行时间
-      const nextRunAt = this.calculateNextRunTime(dto.scheduleType, {
+      const nextRunAt = calculateNextRunTime(dto.scheduleType, {
         cronExpression: dto.cronExpression,
         intervalSeconds: dto.intervalSeconds,
         startTime
@@ -136,7 +118,7 @@ export class WorkflowScheduleService {
           throw new Error(`Workflow with ID ${schedule.workflowId} not found`)
         }
 
-        this.validateSchedule({
+        validateSchedule({
           workflowName: workflow.code,
           name: dto.name || schedule.name,
           scheduleType,
@@ -147,7 +129,7 @@ export class WorkflowScheduleService {
           endTime: endTime !== undefined ? endTime : schedule.endTime
         })
 
-        dto.nextRunAt = this.calculateNextRunTime(scheduleType, {
+        dto.nextRunAt = calculateNextRunTime(scheduleType, {
           cronExpression,
           intervalSeconds,
           startTime: resolvedStartTime
@@ -229,7 +211,7 @@ export class WorkflowScheduleService {
     }
 
     // 重新计算下次执行时间
-    const nextRunAt = this.calculateNextRunTime(schedule.scheduleType, {
+    const nextRunAt = calculateNextRunTime(schedule.scheduleType, {
       cronExpression: schedule.cronExpression,
       intervalSeconds: schedule.intervalSeconds,
       startTime: new Date()
@@ -264,7 +246,7 @@ export class WorkflowScheduleService {
   async updateScheduleAfterRun(schedule: WorkflowScheduleEntity): Promise<void> {
     await useEntityManager(async m => {
       const now = new Date()
-      const nextRunAt = this.calculateNextRunTime(schedule.scheduleType, {
+      const nextRunAt = calculateNextRunTime(schedule.scheduleType, {
         cronExpression: schedule.cronExpression,
         intervalSeconds: schedule.intervalSeconds,
         startTime: now
@@ -292,36 +274,6 @@ export class WorkflowScheduleService {
     })
   }
 
-  private validateSchedule(dto: CreateScheduleDto): void {
-    switch (dto.scheduleType) {
-      case ScheduleType.CRON:
-        if (!dto.cronExpression) {
-          throw new Error('Cron expression is required for cron schedule')
-        }
-        try {
-          CronExpressionParser.parse(dto.cronExpression)
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          throw new Error(`Invalid cron expression: ${errorMessage}`)
-        }
-        break
-      case ScheduleType.INTERVAL:
-        if (!dto.intervalSeconds || dto.intervalSeconds <= 0) {
-          throw new Error('Interval seconds must be greater than 0')
-        }
-        break
-      case ScheduleType.ONCE:
-        if (!dto.startTime) {
-          throw new Error('Start time is required for one-time schedule')
-        }
-        break
-    }
-
-    if (dto.endTime && dto.startTime && dto.endTime <= dto.startTime) {
-      throw new Error('End time must be after start time')
-    }
-  }
-
   calculateNextRunTime(
     scheduleType: ScheduleType,
     params: {
@@ -330,37 +282,6 @@ export class WorkflowScheduleService {
       startTime?: Date
     }
   ): Date | null {
-    const now = new Date()
-    const startTime = params.startTime || now
-
-    switch (scheduleType) {
-      case ScheduleType.ONCE:
-        return startTime > now ? startTime : now
-      case ScheduleType.CRON:
-        if (!params.cronExpression) {
-          throw new Error('Cron expression required')
-        }
-        try {
-          const interval = CronExpressionParser.parse(params.cronExpression)
-          const next = interval.next()
-          return next.toDate()
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          throw new Error(`Failed to calculate next run time: ${errorMessage}`)
-        }
-      case ScheduleType.INTERVAL:
-        if (!params.intervalSeconds) {
-          throw new Error('Interval seconds required')
-        }
-        return new Date(now.getTime() + params.intervalSeconds * 1000)
-      case ScheduleType.CONTINUOUS:
-        // 持续模式：执行完毕后立即重新执行，返回当前时间
-        return new Date()
-      case ScheduleType.MANUAL:
-        // 手动触发不需要下次执行时间
-        return null
-      default:
-        throw new Error(`Unsupported schedule type: ${scheduleType}`)
-    }
+    return calculateNextRunTime(scheduleType, params)
   }
 }

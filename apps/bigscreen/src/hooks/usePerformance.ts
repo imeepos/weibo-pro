@@ -4,8 +4,18 @@
  */
 
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { performanceMonitor, PerformanceReport, PerformanceMetric } from '@/utils/performance';
+import { performanceMonitor } from '@/utils/performance';
 import { createLogger } from '@sker/core';
+
+import { useAPIPerformance } from './usePerformance.api';
+import {
+  useGlobalPerformance,
+  usePageLoadPerformance,
+  useResourcePerformance,
+} from './usePerformance.metrics';
+
+export { useAPIPerformance };
+export { useGlobalPerformance, usePageLoadPerformance, useResourcePerformance };
 
 const logger = createLogger('usePerformance');
 
@@ -59,12 +69,12 @@ export function usePerformance(options: UsePerformanceOptions = {}) {
     return () => {
       const unmountTime = performance.now();
       const lifespanTime = mountTimeRef.current ? unmountTime - mountTimeRef.current : 0;
-      
+
       logger.debug(`Component ${componentName} unmounted`, {
         lifespan: lifespanTime,
         renderCount: renderCountRef.current,
-        averageRenderTime: renderTimesRef.current.length > 0 
-          ? renderTimesRef.current.reduce((a, b) => a + b, 0) / renderTimesRef.current.length 
+        averageRenderTime: renderTimesRef.current.length > 0
+          ? renderTimesRef.current.reduce((a, b) => a + b, 0) / renderTimesRef.current.length
           : 0,
       });
 
@@ -137,7 +147,7 @@ export function usePerformance(options: UsePerformanceOptions = {}) {
   // 在每次渲染时自动记录
   useEffect(() => {
     markRenderStart();
-    
+
     // 在下一个微任务中记录渲染结束时间
     Promise.resolve().then(() => {
       markRenderEnd();
@@ -154,7 +164,7 @@ export function usePerformance(options: UsePerformanceOptions = {}) {
 
     try {
       const result = fn();
-      
+
       if (result instanceof Promise) {
         return result.then(
           value => {
@@ -210,205 +220,4 @@ export function usePerformance(options: UsePerformanceOptions = {}) {
     markRenderEnd,
     measureFunction,
   };
-}
-
-/**
- * API性能监控Hook
- */
-export function useAPIPerformance() {
-  const [apiStats, setApiStats] = useState({
-    totalCalls: 0,
-    averageDuration: 0,
-    slowCalls: 0,
-    errorCalls: 0,
-  });
-
-  const recordAPICall = useCallback((
-    endpoint: string,
-    method: string,
-    duration: number,
-    status: number,
-    size: number = 0
-  ) => {
-    performanceMonitor.recordAPICall({
-      endpoint,
-      method,
-      duration,
-      status,
-      size,
-      timestamp: Date.now(),
-    });
-
-    // 更新统计信息
-    setApiStats(prev => ({
-      totalCalls: prev.totalCalls + 1,
-      averageDuration: (prev.averageDuration * prev.totalCalls + duration) / (prev.totalCalls + 1),
-      slowCalls: prev.slowCalls + (duration > 2000 ? 1 : 0),
-      errorCalls: prev.errorCalls + (status >= 400 ? 1 : 0),
-    }));
-  }, []);
-
-  const measureAPICall = useCallback(async <T>(
-    endpoint: string,
-    method: string,
-    apiCall: () => Promise<T>
-  ): Promise<T> => {
-    const startTime = performance.now();
-    let status = 200;
-    let size = 0;
-
-    try {
-      const result = await apiCall();
-      const duration = performance.now() - startTime;
-      
-      // 估算响应大小
-      if (result && typeof result === 'object') {
-        size = JSON.stringify(result).length;
-      }
-      
-      recordAPICall(endpoint, method, duration, status, size);
-      return result;
-    } catch (error: any) {
-      const duration = performance.now() - startTime;
-      status = error.status || error.code || 500;
-      recordAPICall(endpoint, method, duration, status, size);
-      throw error;
-    }
-  }, [recordAPICall]);
-
-  return {
-    apiStats,
-    recordAPICall,
-    measureAPICall,
-  };
-}
-
-/**
- * 全局性能监控Hook
- */
-export function useGlobalPerformance() {
-  const [report, setReport] = useState<PerformanceReport | null>(null);
-  const [memoryUsage, setMemoryUsage] = useState<Record<string, number>>({});
-
-  // 定期更新性能报告
-  useEffect(() => {
-    const updateReport = () => {
-      const newReport = performanceMonitor.generateReport();
-      const newMemoryUsage = performanceMonitor.getMemoryUsage();
-      
-      setReport(newReport);
-      setMemoryUsage(newMemoryUsage);
-    };
-
-    // 立即更新一次
-    updateReport();
-
-    // 每30秒更新一次
-    const interval = setInterval(updateReport, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const getMetricsByCategory = useCallback((category: PerformanceMetric['category']) => {
-    return performanceMonitor.getMetricsByCategory(category);
-  }, []);
-
-  const clearHistory = useCallback(() => {
-    performanceMonitor.clearHistory();
-    setReport(null);
-    setMemoryUsage({});
-  }, []);
-
-  return {
-    report,
-    memoryUsage,
-    getMetricsByCategory,
-    clearHistory,
-  };
-}
-
-/**
- * 页面加载性能Hook
- */
-export function usePageLoadPerformance() {
-  const [loadMetrics, setLoadMetrics] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    // 等待页面完全加载
-    const updateLoadMetrics = () => {
-      if (document.readyState === 'complete') {
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-        
-        if (navigation) {
-          const metrics = {
-            dns: navigation.domainLookupEnd - navigation.domainLookupStart,
-            tcp: navigation.connectEnd - navigation.connectStart,
-            request: navigation.responseStart - navigation.requestStart,
-            response: navigation.responseEnd - navigation.responseStart,
-            domParse: navigation.domInteractive - navigation.responseEnd,
-            domReady: navigation.domContentLoadedEventEnd - navigation.fetchStart,
-            pageLoad: navigation.loadEventEnd - navigation.fetchStart,
-          };
-
-          setLoadMetrics(metrics);
-          
-          logger.info('Page load metrics', metrics);
-        }
-      }
-    };
-
-    if (document.readyState === 'complete') {
-      updateLoadMetrics();
-    } else {
-      window.addEventListener('load', updateLoadMetrics);
-      return () => window.removeEventListener('load', updateLoadMetrics);
-    }
-  }, []);
-
-  return loadMetrics;
-}
-
-/**
- * 资源加载性能Hook
- */
-export function useResourcePerformance() {
-  const [resourceStats, setResourceStats] = useState({
-    totalResources: 0,
-    totalSize: 0,
-    largeResources: 0,
-    slowResources: 0,
-  });
-
-  useEffect(() => {
-    // 获取所有资源性能条目
-    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    
-    let totalSize = 0;
-    let largeResources = 0;
-    let slowResources = 0;
-
-    resources.forEach(resource => {
-      const size = resource.transferSize || resource.encodedBodySize || 0;
-      const duration = resource.responseEnd - resource.startTime;
-
-      totalSize += size;
-      
-      if (size > 1024 * 1024) { // 大于1MB
-        largeResources++;
-      }
-      
-      if (duration > 2000) { // 大于2秒
-        slowResources++;
-      }
-    });
-
-    setResourceStats({
-      totalResources: resources.length,
-      totalSize,
-      largeResources,
-      slowResources,
-    });
-  }, []);
-
-  return resourceStats;
 }

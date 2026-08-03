@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Settings, 
-  Save, 
-  Plus, 
-  Download, 
+import {
+  Settings,
+  Save,
+  Plus,
+  Download,
   RotateCcw,
   Edit3,
   Eye
@@ -13,6 +12,9 @@ import { GridContainer, GridItem } from './GridContainer';
 import { useLayoutStore, WidgetConfig } from '../../stores/useLayoutStore';
 import { twMerge } from 'tailwind-merge';
 import { legacyComponentMap as componentMap } from './LayoutComponentProvider';
+import { findBestPosition } from './LayoutEditor.utils';
+import { WidgetPanel } from './WidgetPanel';
+import { LayoutSettingsPanel } from './LayoutSettingsPanel';
 
 export const LayoutEditor: React.FC = () => {
   const {
@@ -37,28 +39,12 @@ export const LayoutEditor: React.FC = () => {
     if (!currentLayout) return;
 
     // 找到合适的位置放置新组件
-    const occupiedPositions = new Set(
-      currentLayout.items.flatMap(item => 
-        Array.from({ length: item.h }, (_, y) =>
-          Array.from({ length: item.w }, (_, x) => `${item.x + x},${item.y + y}`)
-        ).flat()
-      )
+    const bestPosition = findBestPosition(
+      currentLayout.items,
+      currentLayout.cols,
+      widget.defaultSize.w,
+      widget.defaultSize.h,
     );
-
-    let bestPosition = { x: 0, y: 0 };
-    for (let y = 0; y < 100; y++) {
-      for (let x = 0; x <= currentLayout.cols - widget.defaultSize.w; x++) {
-        const positions = Array.from({ length: widget.defaultSize.h }, (_, dy) =>
-          Array.from({ length: widget.defaultSize.w }, (_, dx) => `${x + dx},${y + dy}`)
-        ).flat();
-
-        if (positions.every(pos => !occupiedPositions.has(pos))) {
-          bestPosition = { x, y };
-          break;
-        }
-      }
-      if (bestPosition.x !== 0 || bestPosition.y !== 0) break;
-    }
 
     if (componentMap[widget.component]) {
       addGridItem({
@@ -124,8 +110,8 @@ export const LayoutEditor: React.FC = () => {
             onClick={toggleEditMode}
             className={twMerge(
               'flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors',
-              isEditMode 
-                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+              isEditMode
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             )}
           >
@@ -184,7 +170,7 @@ export const LayoutEditor: React.FC = () => {
         <GridContainer
           items={currentLayout.items.map(item => ({
             ...item,
-            component: typeof item.component === 'string' 
+            component: typeof item.component === 'string'
               ? componentMap[item.component as keyof typeof componentMap] || componentMap['StatsOverview']
               : item.component
           }))}
@@ -199,127 +185,19 @@ export const LayoutEditor: React.FC = () => {
       </div>
 
       {/* 组件面板 */}
-      <AnimatePresence>
-        {showWidgetPanel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-            onClick={() => setShowWidgetPanel(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg shadow-xl w-96 max-h-96 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold">添加组件</h3>
-              </div>
-              
-              <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
-                {availableWidgets.map((widget) => (
-                  <button
-                    key={widget.id}
-                    onClick={() => handleAddWidget(widget)}
-                    className="w-full p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{widget.icon}</span>
-                      <div>
-                        <div className="font-medium">{widget.name}</div>
-                        <div className="text-sm text-gray-500">{widget.description}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <WidgetPanel
+        open={showWidgetPanel}
+        widgets={availableWidgets}
+        onSelect={handleAddWidget}
+        onClose={() => setShowWidgetPanel(false)}
+      />
 
       {/* 布局设置面板 */}
-      <AnimatePresence>
-        {showLayoutSettings && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
-            onClick={() => setShowLayoutSettings(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg shadow-xl w-96"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold">布局设置</h3>
-              </div>
-              
-              <div className="p-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    布局名称
-                  </label>
-                  <input
-                    type="text"
-                    value={currentLayout.name}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="输入布局名称"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    网格列数
-                  </label>
-                  <input
-                    type="number"
-                    value={currentLayout.cols}
-                    min="1"
-                    max="24"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    行高 (px)
-                  </label>
-                  <input
-                    type="number"
-                    value={currentLayout.rowHeight}
-                    min="50"
-                    max="200"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <button
-                    onClick={() => setShowLayoutSettings(false)}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={() => setShowLayoutSettings(false)}
-                    className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-                  >
-                    保存
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <LayoutSettingsPanel
+        open={showLayoutSettings}
+        layout={currentLayout}
+        onClose={() => setShowLayoutSettings(false)}
+      />
     </div>
   );
 };

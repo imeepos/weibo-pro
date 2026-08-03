@@ -1,17 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { createLogger, root } from '@sker/core';
-import {
-  CommentDepthController,
-  CommunityDetectionController,
-  CommunityEvolutionController,
-  EventsController,
-  InfluencePredictionController,
-  PostingTimeController,
-  PropagationVelocityController,
-  UserRelationController,
-  UserStratificationController,
-} from '@sker/sdk';
+import { EventsController } from '@sker/sdk';
 import type { UserRelationNetwork } from '@sker/sdk';
 import { createInitialTabsState } from '@/types/tab-loading';
 import type { TabId, TabsDataManager } from '@/types/tab-loading';
@@ -25,6 +15,7 @@ import {
   type KeywordItem,
 } from './utils';
 import { useEventWidgets } from './useEventWidgets';
+import { loadDataForTab as loadDataForTabImpl } from './useEventDetailData.loaders';
 
 const logger = createLogger('EventDetail');
 
@@ -74,133 +65,32 @@ export function useEventDetailData(eventId: string | undefined, navigate: Naviga
   // 按 Tab 加载数据
   const loadDataForTab = useCallback(async (tabId: TabId) => {
     if (!eventId) return;
-    const c = root.get(EventsController);
-
-    switch (tabId) {
-      case 'overview':
-        // overview 已在 fetchEventData 中加载
-        break;
-
-      case 'network':
-        // 加载关系网络和社区发现数据
-        await Promise.all([
-          (async () => {
-            if (!userRelationNetwork) {
-              const data = await c.getEventUserRelations(eventId);
-              setUserRelationNetwork(data);
-            }
-          })(),
-          (async () => {
-            if (!communityData) {
-              const controller = root.get(CommunityDetectionController);
-              const data = await controller.getAnalysis(eventId);
-              setCommunityData(data);
-            }
-          })(),
-        ]);
-        break;
-
-      case 'geographic':
-        // 加载地理分布数据
-        if (!geographicData.length) {
-          const data = await c.getEventGeographic(eventId);
-
-          // 保存后端附加的统计数据
-          setGeographicStats({
-            totalPosts: data.statistics.postCount,
-            totalUsers: data.statistics.userCount,
-            totalRegions: data.statistics.regionCount,
-          });
-          setGeographicData(data.distributions.map((item: any) => ({
-            region: item.region,
-            count: item.count,
-            percentage: item.percentage,
-            posts: item.posts,
-            sentiment: item.sentiment
-          })));
-        }
-        break;
-
-      case 'trend':
-        await loadTrendWidgets();
-        break;
-
-      case 'opinions':
-        await loadOpinionWidgets();
-        break;
-
-      case 'sentiment':
-        await loadSentimentWidgets();
-        break;
-
-      case 'advanced':
-        // 加载高级分析数据
-        await Promise.all([
-          (async () => {
-            if (!propagationVelocityData) {
-              const controller = root.get(PropagationVelocityController);
-              const data = await controller.getVelocity(eventId);
-              setPropagationVelocityData(data);
-            }
-          })(),
-          (async () => {
-            if (!influencePredictionData) {
-              const controller = root.get(InfluencePredictionController);
-              const data = await controller.getInfluencePrediction(eventId);
-              setInfluencePredictionData(data);
-            }
-          })(),
-          (async () => {
-            if (!communityEvolutionData) {
-              const controller = root.get(CommunityEvolutionController);
-              const data = await controller.getAnalysis(eventId);
-              setCommunityEvolutionData(data);
-            }
-          })(),
-        ]);
-        break;
-
-      case 'user-analysis':
-        // 加载用户分析数据
-        await Promise.all([
-          loadUserAnalysisWidgets(),
-          (async () => {
-            if (!userStratificationData) {
-              const controller = root.get(UserStratificationController);
-              const data = await controller.getStratification(eventId);
-              setUserStratificationData(data);
-            }
-          })(),
-          (async () => {
-            if (!userRelationNetwork) {
-              const controller = root.get(UserRelationController);
-              const data = await controller.getNetwork(undefined, undefined, eventId);
-              setUserRelationNetwork(data);
-            }
-          })(),
-        ]);
-        break;
-
-      case 'content-analysis':
-        // 加载内容分析数据
-        await Promise.all([
-          (async () => {
-            if (!postingTimeData) {
-              const controller = root.get(PostingTimeController);
-              const data = await controller.getHeatmap(eventId);
-              setPostingTimeData(data);
-            }
-          })(),
-          (async () => {
-            if (!commentDepthData) {
-              const controller = root.get(CommentDepthController);
-              const data = await controller.getAnalysis(eventId);
-              setCommentDepthData(data);
-            }
-          })(),
-        ]);
-        break;
-    }
+    await loadDataForTabImpl(tabId, {
+      eventId,
+      userRelationNetwork,
+      communityData,
+      geographicData,
+      propagationVelocityData,
+      influencePredictionData,
+      communityEvolutionData,
+      userStratificationData,
+      postingTimeData,
+      commentDepthData,
+      setUserRelationNetwork,
+      setCommunityData,
+      setGeographicData,
+      setGeographicStats,
+      setPropagationVelocityData,
+      setInfluencePredictionData,
+      setCommunityEvolutionData,
+      setUserStratificationData,
+      setPostingTimeData,
+      setCommentDepthData,
+      loadTrendWidgets,
+      loadOpinionWidgets,
+      loadUserAnalysisWidgets,
+      loadSentimentWidgets,
+    });
   }, [eventId, userRelationNetwork, communityData, geographicData, loadTrendWidgets, loadOpinionWidgets, loadUserAnalysisWidgets, loadSentimentWidgets, propagationVelocityData, influencePredictionData, communityEvolutionData, userStratificationData, postingTimeData, commentDepthData]);
 
   // Tab 懒加载核心逻辑
