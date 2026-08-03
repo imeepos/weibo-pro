@@ -1,23 +1,16 @@
 import { WorkflowDSLGeneratorAgent } from '@sker/agent';
-import { getAllNodeTypes, findNodeType, NODE } from '@sker/workflow';
-import { compile } from '@sker/workflow-compiler';
 import { generateRandomString } from '@sker/utils';
-import { logger, root } from '@sker/core';
-
-/**
- * 会话状态
- */
-interface SessionState {
-  sessionId: string;
-  description: string;
-  currentDSL: string;
-  history: Array<{
-    dslCode: string;
-    feedback?: string;
-    timestamp: number;
-  }>;
-  createdAt: number;
-}
+import { logger } from '@sker/core';
+import {
+  createSession,
+  createAgentContext,
+  buildGenerationResult,
+  compileWorkflow,
+} from './workflow-dsl.utils';
+import {
+  listAvailableNodes as listNodes,
+  getNodeSchema as getSchema,
+} from './workflow-dsl.nodes';
 
 /**
  * 工作流 DSL 生成服务
@@ -29,7 +22,7 @@ interface SessionState {
  */
 export class WorkflowDSLService {
   private readonly agent: WorkflowDSLGeneratorAgent;
-  private readonly sessions: Map<string, SessionState>;
+  private readonly sessions: Map<string, ReturnType<typeof createSession>>;
 
   /** 会话过期时间（30 分钟） */
   private readonly SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -62,13 +55,7 @@ export class WorkflowDSLService {
     let session = this.sessions.get(sid);
 
     if (!session) {
-      session = {
-        sessionId: sid,
-        description,
-        currentDSL: '',
-        history: [],
-        createdAt: Date.now(),
-      };
+      session = createSession(sid, description);
       this.sessions.set(sid, session);
     }
 
@@ -83,14 +70,7 @@ export class WorkflowDSLService {
       createdAt: Date.now(),
     };
 
-    const context = {
-      projectPath: process.cwd(),
-      sessionId: sid,
-      messages: [],
-      subTasks: [],
-      artifacts: new Map(),
-      memory: new Map(),
-    };
+    const context = createAgentContext(sid);
 
     try {
       // 执行 Agent
@@ -114,18 +94,13 @@ export class WorkflowDSLService {
         timestamp: Date.now(),
       });
 
-      // 验证编译状态
-      const compilationResult = compile(dslOutput.dslCode);
-
-      return {
+      return buildGenerationResult({
         sessionId: sid,
         dslCode: dslOutput.dslCode,
         explanation: dslOutput.explanation,
         nodeCount: dslOutput.nodeCount,
         complexity: dslOutput.estimatedComplexity,
-        compilationStatus: compilationResult.success ? 'success' : 'error',
-        errors: compilationResult.errors?.map((err: any) => err.message),
-      };
+      });
     } catch (error) {
       logger.error('DSL 生成失败', {
         sessionId: sid,
@@ -162,14 +137,7 @@ export class WorkflowDSLService {
     }
 
     // 创建上下文
-    const context = {
-      projectPath: process.cwd(),
-      sessionId,
-      messages: [],
-      subTasks: [],
-      artifacts: new Map(),
-      memory: new Map(),
-    };
+    const context = createAgentContext(sessionId);
 
     try {
       // 调用 Agent 的 refine 方法
@@ -183,18 +151,13 @@ export class WorkflowDSLService {
         timestamp: Date.now(),
       });
 
-      // 验证编译状态
-      const compilationResult = compile(result.dslCode);
-
-      return {
+      return buildGenerationResult({
         sessionId,
         dslCode: result.dslCode,
         explanation: result.explanation,
         nodeCount: result.nodeCount,
         complexity: result.estimatedComplexity,
-        compilationStatus: compilationResult.success ? 'success' : 'error',
-        errors: compilationResult.errors?.map((err: any) => err.message),
-      };
+      });
     } catch (error) {
       logger.error('DSL 优化失败', {
         sessionId,
@@ -214,36 +177,7 @@ export class WorkflowDSLService {
     workflowGraph?: any;
     errors?: Array<{ message: string; line?: number; column?: number; severity?: string }>;
   }> {
-    try {
-      const result = compile(dslCode);
-
-      if (result.success) {
-        return {
-          success: true,
-          workflowGraph: result.workflowGraph,
-        };
-      } else {
-        return {
-          success: false,
-          errors: result.errors?.map((err: any) => ({
-            message: err.message,
-            line: err.line,
-            column: err.column,
-            severity: err.severity,
-          })),
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        errors: [
-          {
-            message: error instanceof Error ? error.message : String(error),
-            severity: 'error' as const,
-          },
-        ],
-      };
-    }
+    return compileWorkflow(dslCode);
   }
 
   /**
@@ -252,33 +186,7 @@ export class WorkflowDSLService {
   async listAvailableNodes(
     category: 'data-sources' | 'ai-capabilities' | 'data-processing' | 'all' = 'all'
   ): Promise<Array<{ name: string; title: string; type: string; description: string }>> {
-    const allNodes = getAllNodeTypes();
-
-    const filtered =
-      category === 'all'
-        ? allNodes
-        : allNodes.filter(node => {
-            const name = node.name.toLowerCase();
-            if (category === 'data-sources')
-              return name.includes('login') || name.includes('search') || name.includes('http');
-            if (category === 'ai-capabilities')
-              return name.includes('llm') || name.includes('agent') || name.includes('generator');
-            if (category === 'data-processing')
-              return (
-                name.includes('analyzer') || name.includes('filter') || name.includes('transform')
-              );
-            return true;
-          });
-
-    return filtered.map((node: any) => {
-      const metadata = root.get(NODE, []).find((m: any) => m.target === node);
-      return {
-        name: node.name,
-        title: metadata?.title || node.name,
-        type: metadata?.type || 'unknown',
-        description: '无描述',
-      };
-    });
+    return listNodes(category);
   }
 
   /**
@@ -291,33 +199,7 @@ export class WorkflowDSLService {
     inputs: Array<{ name: string; type: string; required: boolean; description: string }>;
     outputs: Array<{ name: string; type: string; description: string }>;
   }> {
-    const NodeClass = findNodeType(nodeType);
-
-    if (!NodeClass) {
-      throw new Error(`未找到节点类型: ${nodeType}`);
-    }
-
-    const _instance = new NodeClass();
-    const metadata = root.get(NODE, []).find((m: any) => m.target === NodeClass);
-    const inputs = Reflect.getMetadata('node:inputs', NodeClass.prototype) || [];
-    const outputs = Reflect.getMetadata('node:outputs', NodeClass.prototype) || [];
-
-    return {
-      name: nodeType,
-      title: metadata?.title || nodeType,
-      description: '无描述',
-      inputs: inputs.map((input: any) => ({
-        name: input.propertyKey,
-        type: input.type || 'any',
-        required: input.required !== false,
-        description: input.description || '',
-      })),
-      outputs: outputs.map((output: any) => ({
-        name: output.propertyKey,
-        type: output.type || 'any',
-        description: output.description || '',
-      })),
-    };
+    return getSchema(nodeType);
   }
 
   /**

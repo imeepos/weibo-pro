@@ -1,37 +1,9 @@
 import React from 'react';
 import { vi } from 'vitest';
-import type { CentralityAnalysis } from '@sker/sdk';
 import * as echarts from 'echarts';
+import type { CentralityAnalysis } from '@sker/sdk';
 
-// Mock ECharts - 必须在工厂函数内部定义
-vi.mock('echarts', () => {
-  const mockChartInstance = {
-    setOption: vi.fn(),
-    on: vi.fn(),
-    off: vi.fn(),
-    resize: vi.fn(),
-    dispose: vi.fn(),
-  };
-
-  return {
-    init: vi.fn(() => mockChartInstance),
-    // 导出 mock 实例供测试使用
-    __mockChartInstance: mockChartInstance,
-  };
-});
-
-// Mock ChartState component
-vi.mock('@sker/ui/components/ui/chart-state', () => ({
-  ChartState: ({ loading, error, empty, loadingText, emptyText, message }: any) => (
-    <div data-testid="chart-state">
-      {loading && <span data-testid="loading-state">{loadingText || '加载中...'}</span>}
-      {error && <span data-testid="error-state">{message || error}</span>}
-      {empty && <span data-testid="empty-state">{emptyText || message || '暂无数据'}</span>}
-    </div>
-  ),
-}));
-
-// 获取 mock 实例
+// 获取 mock 实例（echarts 由各测试文件负责 mock）
 export const getMockChartInstance = () => (echarts as any).__mockChartInstance;
 
 export const mockData: CentralityAnalysis = {

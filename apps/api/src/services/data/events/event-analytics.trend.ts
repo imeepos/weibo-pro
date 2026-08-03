@@ -1,9 +1,9 @@
 import {
-  useEntityManager,
   EventHourlyStatisticsEntity,
   EventEntity,
   getDateRangeByTimeRange,
 } from '@sker/entities';
+import type { EntityManager } from 'typeorm';
 import type {
   TimeRange,
   TrendDataSeries,
@@ -18,7 +18,7 @@ import { formatDate } from './event-analytics.format';
  * - 合并两个数据集，并计算总览统计
  */
 export async function fetchTrendData(
-  entityManager: any,
+  entityManager: EntityManager,
   timeRange: TimeRange,
 ): Promise<TrendDataSeries> {
   const dateRange = getDateRangeByTimeRange(timeRange);

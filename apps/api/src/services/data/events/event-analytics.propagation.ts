@@ -1,6 +1,7 @@
 import {
   PostNLPResultEntity,
 } from '@sker/entities';
+import type { EntityManager } from 'typeorm';
 import type {
   EventPropagationPath,
 } from './types';
@@ -9,7 +10,7 @@ import type {
  * 构建事件传播路径：按用户粉丝数区分用户类型，统计真实数据。
  */
 export async function fetchPropagationPath(
-  entityManager: any,
+  entityManager: EntityManager,
   eventId: string,
 ): Promise<EventPropagationPath[]> {
   const userStats = await entityManager

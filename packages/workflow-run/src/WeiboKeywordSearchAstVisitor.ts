@@ -1,38 +1,39 @@
-import { Inject, Injectable, NoRetryError, createLogger } from "@sker/core";
-import { Handler, NodeEvent, } from "@sker/workflow";
+import { Inject, Injectable, createLogger } from "@sker/core";
+import { Handler, NodeEvent } from "@sker/workflow";
 import { WeiboKeywordSearchAst } from "@sker/workflow-ast";
 import { WeiboHtmlParser } from "./services/WeiboHtmlParser";
 import { PlaywrightService } from "./services/PlaywrightService";
 import { WorkerBrowserService } from "./services/WorkerBrowserService";
 import { WeiboAccountService } from "./services/weibo-account.service";
 import { DelayService } from "./services/delay.service";
-import { Observable, Subscriber, from } from "rxjs";
+import { WeiboKeywordSearchExecutor } from "./services/WeiboKeywordSearchExecutor";
+import { Observable, from } from "rxjs";
 import { concatMap, mergeMap } from "rxjs/operators";
 import { ErrorHandlerOperators } from "./utils/error-handler.util";
-import {
-    EntityManager,
-    useEntityManager,
-    WeiboPostEntity,
-    EventEntity,
-} from "@sker/entities";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
+import { useEntityManager, EventEntity } from "@sker/entities";
 
 const logger = createLogger('WeiboKeywordSearchAstVisitor');
 
+/**
+ * 微博关键词搜索节点执行器
+ *
+ * 仅保留 @Handler 响应式管道；搜索执行逻辑抽到
+ * services/WeiboKeywordSearchExecutor.ts，日期格式化抽到
+ * utils/weibo-date-format.util.ts。
+ */
 @Injectable()
 export class WeiboKeywordSearchAstVisitor {
+    private executor: WeiboKeywordSearchExecutor;
+
     constructor(
-        @Inject(WeiboHtmlParser) private parser: WeiboHtmlParser,
-        @Inject(PlaywrightService) private playwright: PlaywrightService,
-        @Inject(WorkerBrowserService) private workerBrowser: WorkerBrowserService,
-        @Inject(WeiboAccountService) private account: WeiboAccountService,
+        @Inject(WeiboHtmlParser) parser: WeiboHtmlParser,
+        @Inject(PlaywrightService) playwright: PlaywrightService,
+        @Inject(WorkerBrowserService) workerBrowser: WorkerBrowserService,
+        @Inject(WeiboAccountService) account: WeiboAccountService,
         @Inject(DelayService) private delayService: DelayService
-    ) { }
+    ) {
+        this.executor = new WeiboKeywordSearchExecutor(parser, playwright, workerBrowser, account, delayService);
+    }
 
     @Handler(WeiboKeywordSearchAst)
     handler(ast: WeiboKeywordSearchAst, input$: Observable<Record<string, unknown>>, ctx: Record<string, unknown>): Observable<NodeEvent> {
@@ -79,7 +80,7 @@ export class WeiboKeywordSearchAstVisitor {
                         endDate: ast.endDate
                     });
 
-                    await this.executeSearch(ast, wrappedCtx, obs);
+                    await this.executor.executeSearch(ast, wrappedCtx, obs);
                     return [];
                 }),
                 ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[WeiboKeywordSearchAstVisitor]' }),
@@ -122,344 +123,4 @@ export class WeiboKeywordSearchAstVisitor {
             };
         });
     }
-
-    private async executeSearch(
-        ast: WeiboKeywordSearchAst,
-        ctx: { abortSignal?: AbortSignal },
-        obs: Subscriber<NodeEvent>
-    ): Promise<void> {
-        logger.info('[WeiboKeywordSearch] 开始执行搜索，参数:', {
-            keyword: ast.keyword,
-            startDate: ast.startDate,
-            endDate: ast.endDate,
-            page: ast.page
-        });
-
-        if (ctx.abortSignal?.aborted) {
-            throw new Error('工作流已取消');
-        }
-
-        const selection = await this.account.selectBestAccount();
-        if (!selection) {
-            throw new Error('没有可用账号');
-        }
-
-        const { keyword, startDate, endDate = new Date(), page = 1 } = ast;
-        if (!keyword || !startDate || !endDate) {
-            throw new NoRetryError(`WeiboSearchUrlBuilderAst 缺少必要参数: keyword:${keyword}, start:${startDate}, end:${endDate}`);
-        }
-
-        // 确保 startDate <= endDate
-        const start = startDate < endDate ? startDate : endDate;
-        const end = startDate < endDate ? endDate : startDate;
-
-        const base = 'https://s.weibo.com/weibo';
-        const params = new URLSearchParams({ q: keyword, typeall: `1`, suball: `1`, page: String(page), Refer: `g` });
-        params.set('timescope', `custom:${formatDate(start)}:${formatDate(end)}`);
-        const url = `${base}?${params.toString()}`;
-
-        ast.state = 'running';
-        ast.currentPage = 1;
-        obs.next({ type: 'node_runing', id: ast.id });
-
-        if (ctx.abortSignal?.aborted) {
-            throw new Error('工作流已取消');
-        }
-
-        logger.info('[WeiboKeywordSearch] 开始获取 HTML，URL:', url);
-        let html = await this.getHtmlWithFallback(url, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
-        logger.info('[WeiboKeywordSearch] HTML 获取成功，长度:', html.length);
-
-        let result;
-        try {
-            result = this.parser.parseSearchResultHtml(html);
-        } catch (error) {
-            // 检测登录失效错误
-            if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
-                logger.warn(`[WeiboKeywordSearch] 检测到账号 ${selection.id} 登录失效，标记为过期状态`);
-                await this.account.markAccountAsExpired(selection.id);
-            }
-            throw error;
-        }
-        logger.info('[WeiboKeywordSearch] 解析结果:', {
-            postsCount: result.posts.length,
-            hasNextPage: result.hasNextPage,
-            isEmptyResult: result.isEmptyResult,
-            currentPage: result.currentPage,
-            totalPage: result.totalPage
-        });
-
-        // 如果无结果（"抱歉，未找到相关结果"），直接发射空结果并结束
-        if (result.isEmptyResult) {
-            logger.info(`[WeiboKeywordSearchAst] 关键词 "${keyword}" 在时间区间 ${formatDate(start)} - ${formatDate(end)} 内无帖子`);
-
-            // 设置 crawl_end_reason
-            await useEntityManager(async (manager) => {
-                if (ast.event_id) {
-                    const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
-                    if (event) {
-                        event.crawl_end_reason = `无搜索结果。关键词：${ast.keyword}，时间范围：${formatDate(start)}-${formatDate(end)}`;
-                        await manager.save(EventEntity, event);
-                    }
-                }
-            });
-
-            obs.next({
-                type: 'node_emit',
-                id: ast.id,
-                data: { mblogid: null, uid: null, isEmptyResult: true }
-            });
-            await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-            return;
-        }
-
-        logger.info('[WeiboKeywordSearch] 开始处理帖子列表，帖子数量:', result.posts.length);
-        for (const post of result.posts) {
-            if (ctx.abortSignal?.aborted) {
-                throw new Error('工作流已取消');
-            }
-
-            logger.debug('[WeiboKeywordSearch] 检查帖子:', { mid: post.mid, uid: post.uid });
-
-            // 检查帖子是否在12小时内已有快照
-            const shouldSkip = await useEntityManager(async (m: EntityManager) => {
-                // 根据帖子ID查找帖子记录
-                const isLongId = /^\d{16,}$/.test(post.mid);
-                logger.debug('[WeiboKeywordSearch] 12小时快照检查:', {
-                    mid: post.mid,
-                    isLongId,
-                    queryField: isLongId ? 'id' : 'mblogid'
-                });
-
-                const postEntity = await m.findOne(WeiboPostEntity, {
-                    where: isLongId ? { id: post.mid } : { mblogid: post.mid }
-                });
-
-                if (!postEntity) {
-                    logger.debug('[WeiboKeywordSearch] 帖子不存在，正常发射');
-                    return false;
-                }
-                return true;
-            });
-
-            // 如果需要跳过，则跳过
-            if (shouldSkip) {
-                logger.info('[WeiboKeywordSearch] 跳过帖子（已存在），不发射数据:', post.mid);
-                await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
-                continue;
-            }
-
-            // 正常发射帖子事件
-            logger.debug('[WeiboKeywordSearch] 发射帖子数据:', { mblogid: post.mid, uid: post.uid });
-            ast.mblogid = post.mid;
-            ast.uid = post.uid;
-            obs.next({
-                type: 'node_emit',
-                id: ast.id,
-                data: { mblogid: ast.mblogid, uid: ast.uid }
-            });
-            await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-        }
-
-        let currentPageNum = 1;
-        const maxPageRetries = 2;
-
-        logger.info('[WeiboKeywordSearch] 开始分页处理，hasNextPage:', result.hasNextPage, 'nextPageLink:', result.nextPageLink);
-
-        while (result.hasNextPage && result.nextPageLink) {
-            if (ctx.abortSignal?.aborted) {
-                throw new Error('工作流已取消');
-            }
-
-            let pageRetryCount = 0;
-            let pageSuccess = false;
-
-            while (pageRetryCount < maxPageRetries && !pageSuccess) {
-                try {
-                    if (!result.nextPageLink) {
-                        // 设置 crawl_end_reason
-                        await useEntityManager(async (manager) => {
-                            if (ast.event_id) {
-                                const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
-                                if (event) {
-                                    event.crawl_end_reason = `分页链接为空，搜索结束。关键词：${ast.keyword}，当前页：${currentPageNum}`;
-                                    await manager.save(EventEntity, event);
-                                }
-                            }
-                        });
-                        await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-                        return;
-                    }
-                    currentPageNum++;
-
-                    if (!result.nextPageLink) {
-                        throw new Error('下一页链接为空');
-                    }
-
-                    logger.info('[WeiboKeywordSearch] 获取第', currentPageNum, '页，URL:', result.nextPageLink);
-                    html = await this.getHtmlWithFallback(result.nextPageLink, selection.cookieHeader, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36`);
-
-                    try {
-                        result = this.parser.parseSearchResultHtml(html);
-                    } catch (error) {
-                        // 检测登录失效错误
-                        if (error instanceof Error && error.message === 'LOGIN_EXPIRED') {
-                            logger.warn(`[WeiboKeywordSearch] 检测到账号 ${selection.id} 登录失效，标记为过期状态`);
-                            await this.account.markAccountAsExpired(selection.id);
-                        }
-                        throw error;
-                    }
-                    logger.info('[WeiboKeywordSearch] 第', currentPageNum, '页解析结果，帖子数量:', result.posts.length);
-
-                    ast.currentPage = currentPageNum;
-                    for (const post of result.posts) {
-                        if (ctx.abortSignal?.aborted) {
-                            throw new Error('工作流已取消');
-                        }
-
-                        // 检查帖子是否在12小时内已有快照
-                        const shouldSkip = await useEntityManager(async (m: EntityManager) => {
-                            // 根据帖子ID查找帖子记录
-                            const isLongId = /^\d{16,}$/.test(post.mid);
-                            const postEntity = await m.findOne(WeiboPostEntity, {
-                                where: isLongId ? { id: post.mid } : { mblogid: post.mid }
-                            });
-                            if (!postEntity) {
-                                // 帖子不存在，正常发射
-                                return false;
-                            }
-                            return true;
-                        });
-
-                        // 如果需要跳过，则跳过
-                        if (shouldSkip) {
-                            logger.info('[WeiboKeywordSearch] 跳过帖子（已存在），不发射数据:', post.mid);
-                            await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
-                            continue;
-                        }
-
-                        // 正常发射帖子事件
-                        ast.mblogid = post.mid;
-                        ast.uid = post.uid;
-                        obs.next({
-                            type: 'node_emit',
-                            id: ast.id,
-                            data: { mblogid: ast.mblogid, uid: ast.uid }
-                        });
-                        await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-                    }
-
-                    pageSuccess = true;
-
-                    if (result.totalCount) {
-                        await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-                        break;
-                    }
-                    await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
-                } catch (error) {
-                    pageRetryCount++;
-                    logger.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，第${pageRetryCount}次重试: ${result.nextPageLink}`, error);
-
-                    if (pageRetryCount >= maxPageRetries) {
-                        logger.warn(`[WeiboKeywordSearchAstVisitor] 分页搜索失败，跳过当前页: ${result.nextPageLink}`);
-                        break;
-                    }
-
-                    await this.delayService.randomDelay(ast.pageDelayMin || 3, ast.pageDelayMax || 5);
-                }
-            }
-
-            if (!pageSuccess) {
-                await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-                break;
-            }
-        }
-
-        if (result.totalCount && result.currentPage === result.totalPage && result.totalPage === 50) {
-            if (result.lastPostTime) {
-                ast.endDate = result.lastPostTime;
-                logger.info(`[WeiboKeywordSearchAst] 达到50页上限，调整时间范围后继续采集... 新 endDate:`, result.lastPostTime);
-                await this.delayService.randomDelay(ast.emitDelayMin || 1, ast.emitDelayMax || 3);
-                return await this.executeSearch(ast, ctx, obs);
-            }
-        }
-
-        logger.info('[WeiboKeywordSearch] 搜索完成，准备更新事件爬取结束原因和最后爬取时间');
-
-        // 正常退出时更新事件爬取结束原因和最后爬取时间
-        await useEntityManager(async (manager) => {
-            if (ast.event_id) {
-                const event = await manager.findOne(EventEntity, { where: { id: ast.event_id } });
-                if (event) {
-                    const reasons: string[] = [];
-
-                    if (!result.hasNextPage) {
-                        reasons.push(`${ast.startDate}-${ast.endDate}: 无更多数据`);
-                    }
-
-                    if (result.totalCount) {
-                        reasons.push('微博已返回全部数据');
-                    }
-
-                    if (result.totalPage >= 50) {
-                        reasons.push('达到50页上限');
-                    }
-
-                    if (reasons.length === 0) {
-                        reasons.push('搜索完成');
-                    }
-
-                    event.crawl_end_reason = `${reasons.join('，')}。关键词：${ast.keyword}，当前页：${result.currentPage}/${result.totalPage}`;
-                    event.last_crawl_at = new Date(); // 更新最后爬取时间
-                    await manager.save(EventEntity, event);
-                    logger.info(`[WeiboKeywordSearch] 已更新事件 last_crawl_at: ${event.last_crawl_at.toISOString()}`);
-                }
-            }
-        });
-    }
-
-    private async getHtmlWithFallback(url: string, cookies: string, ua: string): Promise<string> {
-        const workerEnabled = process.env.WORKER_BROWSER_ENABLED === 'true';
-
-        if (workerEnabled) {
-            try {
-                return await this.workerBrowser.getHtml(url, cookies, ua);
-            } catch (error) {
-                logger.warn('[WorkerBrowser] 失败，降级到本地 Playwright', {
-                    url,
-                    error: (error as Error).message
-                });
-            }
-        }
-
-        // 降级到本地 Playwright
-        return await this.playwright.getHtml(url, cookies, ua);
-    }
 }
-
-const formatDate = (date: Date | string | number | object | undefined | null) => {
-    // 处理空对象、null、undefined 的情况 - 静默使用当前时间（北京时间）
-    if (date == null || (typeof date === 'object' && !(date instanceof Date) && Object.keys(date as object).length === 0)) {
-        return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
-    }
-
-    // 如果是带时区偏移的字符串，直接解析字符串（完全不依赖运行环境）
-    const dateStr = String(date);
-    const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})\.\d{3}\s+([+-]\d{4})/);
-    if (match) {
-        const [, year, month, day, hour] = match;
-        // 直接返回解析出的年月日小时（不依赖运行环境）
-        return `${year}-${month}-${day}-${hour}`;
-    }
-
-    // 使用 dayjs 解析并转换为北京时间
-    const time = dayjs(date as string | number | Date);
-
-    if (!time.isValid()) {
-        logger.error(`[formatDate] 无效的日期值: ${typeof date === 'object' ? JSON.stringify(date) : date}`);
-        return dayjs().tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
-    }
-
-    // 明确转换为北京时间
-    return time.tz('Asia/Shanghai').format('YYYY-MM-DD-HH');
-};

@@ -157,7 +157,7 @@ export function buildAggregatedChartOption(
         },
       },
     ],
-  };
+  } as EChartsOption;
 }
 
 // 构建原有数据的图表配置（回退逻辑）
@@ -282,5 +282,5 @@ export function buildOriginalChartOption(
         },
       },
     ],
-  };
+  } as EChartsOption;
 }

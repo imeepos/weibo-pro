@@ -6,71 +6,41 @@
 import { root } from '@sker/core'
 import { WorkflowController, type WorkflowSummary, type WorkflowGraphAst, RunStatus } from '@sker/sdk'
 import { createLogger } from '@/utils'
+import type {
+  TriggerNLPRequest,
+  CrawlPostRequest,
+  CrawlPostData,
+  BatchNLPRequest,
+  WeiboSearchRequest,
+  WorkflowStatusResponse,
+  WorkflowApiResponse,
+} from './workflow.types'
+
+export type {
+  TriggerNLPRequest,
+  CrawlPostRequest,
+  CrawlPostData,
+  BatchNLPRequest,
+  WeiboSearchRequest,
+  WorkflowStatusResponse,
+  WorkflowApiResponse,
+} from './workflow.types'
 
 const logger = createLogger('WorkflowAPI')
-
-// ================ 类型定义 ================
-
-/** 触发 NLP 分析请求 */
-export interface TriggerNLPRequest {
-  postId: string
-}
-
-/** 爬取帖子请求 */
-export interface CrawlPostRequest {
-  postId: string
-}
-
-/** 爬取帖子响应数据 */
-export interface CrawlPostData {
-  postId: string
-  mid: string
-  uid: string
-  commentsCount: number
-  repostsCount: number
-  commentsCrawled: boolean
-  repostsCrawled: boolean
-}
-
-/** 批量触发 NLP 分析请求 */
-export interface BatchNLPRequest {
-  postIds: string[]
-}
-
-/** 微博关键词搜索请求 */
-export interface WeiboSearchRequest {
-  keyword: string
-  startDate: string // YYYY-MM-DD
-  endDate: string   // YYYY-MM-DD
-  page?: number
-}
-
-/** 工作流状态响应 */
-export interface WorkflowStatusResponse {
-  nlpQueue: 'active' | 'inactive' | 'error'
-  workflowEngine: 'running' | 'stopped' | 'error'
-  lastExecution?: string // ISO 8601 时间戳
-  queueDepth?: number
-}
-
-/** API 响应包装 */
-export interface WorkflowApiResponse<T = any> {
-  success: boolean
-  message?: string
-  data?: T
-  timestamp?: string
-}
 
 // ================ API 服务类 ================
 
 export class WorkflowAPI {
+  private static getController() {
+    return root.get(WorkflowController)
+  }
+
   /**
    * 获取工作流列表
    */
   static async listWorkflows(): Promise<WorkflowSummary[]> {
     logger.debug('Fetching workflow list')
-    const controller = root.get(WorkflowController)
-    return controller.listWorkflows()
+    return this.getController().listWorkflows()
   }
 
   /**
@@ -78,8 +48,7 @@ export class WorkflowAPI {
    */
   static async getWorkflow(name: string): Promise<WorkflowGraphAst | null> {
     logger.debug('Fetching workflow', { name })
-    const controller = root.get(WorkflowController)
-    return controller.getWorkflow({ name })
+    return this.getController().getWorkflow({ name })
   }
 
   /**
@@ -87,8 +56,7 @@ export class WorkflowAPI {
    */
   static async saveWorkflow(workflow: WorkflowGraphAst) {
     logger.debug('Saving workflow', { name: workflow.name })
-    const controller = root.get(WorkflowController)
-    return controller.saveWorkflow(workflow)
+    return this.getController().saveWorkflow(workflow)
   }
 
   /**
@@ -96,8 +64,7 @@ export class WorkflowAPI {
    */
   static async deleteWorkflow(id: string): Promise<{ success: boolean }> {
     logger.debug('Deleting workflow', { id })
-    const controller = root.get(WorkflowController)
-    return controller.deleteWorkflow({ id })
+    return this.getController().deleteWorkflow({ id })
   }
 
   /**
@@ -105,8 +72,7 @@ export class WorkflowAPI {
    */
   static async listTemplates() {
     logger.debug('Fetching workflow templates')
-    const controller = root.get(WorkflowController)
-    return controller.listTemplates()
+    return this.getController().listTemplates()
   }
 
   /**
@@ -114,8 +80,7 @@ export class WorkflowAPI {
    */
   static async initWorkflow(name: string) {
     logger.debug('Initializing workflow', { name })
-    const controller = root.get(WorkflowController)
-    return controller.initWorkflow({ name })
+    return this.getController().initWorkflow({ name })
   }
 
   /**
@@ -123,8 +88,7 @@ export class WorkflowAPI {
    */
   static executeWorkflow(payload: { ast: any; workflow: WorkflowGraphAst; input?: Record<string, any> }) {
     logger.debug('Executing workflow', { workflowName: payload.workflow.name })
-    const controller = root.get(WorkflowController)
-    return controller.execute(payload)
+    return this.getController().execute(payload)
   }
 
   /**
@@ -132,8 +96,7 @@ export class WorkflowAPI {
    */
   static executeNode(payload: { workflow: any; nodeId: string; config?: any }) {
     logger.debug('Executing workflow node', { nodeId: payload.nodeId })
-    const controller = root.get(WorkflowController)
-    return controller.executeNode(payload)
+    return this.getController().executeNode(payload)
   }
 
   /**
@@ -141,8 +104,7 @@ export class WorkflowAPI {
    */
   static async getAvailableNodes() {
     logger.debug('Fetching available workflow nodes')
-    const controller = root.get(WorkflowController)
-    return controller.getAvailableNodes()
+    return this.getController().getAvailableNodes()
   }
 
   /**
@@ -150,8 +112,7 @@ export class WorkflowAPI {
    */
   static async createRun(workflowId: string, inputs?: Record<string, unknown>) {
     logger.debug('Creating workflow run', { workflowId })
-    const controller = root.get(WorkflowController)
-    return controller.createRun({ workflowId, inputs })
+    return this.getController().createRun({ workflowId, inputs })
   }
 
   /**
@@ -159,8 +120,7 @@ export class WorkflowAPI {
    */
   static async executeRun(runId: string) {
     logger.debug('Executing workflow run', { runId })
-    const controller = root.get(WorkflowController)
-    return controller.executeRun({ runId })
+    return this.getController().executeRun({ runId })
   }
 
   /**
@@ -168,8 +128,7 @@ export class WorkflowAPI {
    */
   static async getRun(runId: string) {
     logger.debug('Fetching workflow run', { runId })
-    const controller = root.get(WorkflowController)
-    return controller.getRun(runId)
+    return this.getController().getRun(runId)
   }
 
   /**
@@ -183,8 +142,7 @@ export class WorkflowAPI {
     scheduleId?: string
   }) {
     logger.debug('Listing workflow runs', params)
-    const controller = root.get(WorkflowController)
-    return controller.listRuns(params)
+    return this.getController().listRuns(params)
   }
 
   /**
@@ -192,8 +150,7 @@ export class WorkflowAPI {
    */
   static async cancelRun(runId: string) {
     logger.debug('Canceling workflow run', { runId })
-    const controller = root.get(WorkflowController)
-    return controller.cancelRun({ runId })
+    return this.getController().cancelRun({ runId })
   }
 
   // ================ 调度相关方法 ================
@@ -211,8 +168,7 @@ export class WorkflowAPI {
     startTime?: Date
     endTime?: Date
   }) {
-    const controller = root.get(WorkflowController)
-    return controller.createSchedule(params)
+    return this.getController().createSchedule(params)
   }
 
   /**
@@ -220,8 +176,7 @@ export class WorkflowAPI {
    */
   static async listSchedules(workflowName: string) {
     logger.debug('Listing workflow schedules', { workflowName })
-    const controller = root.get(WorkflowController)
-    return controller.listSchedules(workflowName)
+    return this.getController().listSchedules(workflowName)
   }
 
   /**
@@ -229,8 +184,7 @@ export class WorkflowAPI {
    */
   static async getSchedule(scheduleId: string) {
     logger.debug('Fetching workflow schedule', { scheduleId })
-    const controller = root.get(WorkflowController)
-    return controller.getSchedule(scheduleId)
+    return this.getController().getSchedule(scheduleId)
   }
 
   /**
@@ -238,8 +192,7 @@ export class WorkflowAPI {
    */
   static async updateSchedule(scheduleId: string, params: any) {
     logger.debug('Updating workflow schedule', { scheduleId })
-    const controller = root.get(WorkflowController)
-    return controller.updateSchedule(scheduleId, params)
+    return this.getController().updateSchedule(scheduleId, params)
   }
 
   /**
@@ -247,8 +200,7 @@ export class WorkflowAPI {
    */
   static async deleteSchedule(scheduleId: string) {
     logger.debug('Deleting workflow schedule', { scheduleId })
-    const controller = root.get(WorkflowController)
-    return controller.deleteSchedule(scheduleId)
+    return this.getController().deleteSchedule(scheduleId)
   }
 
   /**
@@ -256,8 +208,7 @@ export class WorkflowAPI {
    */
   static async enableSchedule(scheduleId: string) {
     logger.debug('Enabling workflow schedule', { scheduleId })
-    const controller = root.get(WorkflowController)
-    return controller.enableSchedule(scheduleId)
+    return this.getController().enableSchedule(scheduleId)
   }
 
   /**
@@ -265,8 +216,7 @@ export class WorkflowAPI {
    */
   static async disableSchedule(scheduleId: string) {
     logger.debug('Disabling workflow schedule', { scheduleId })
-    const controller = root.get(WorkflowController)
-    return controller.disableSchedule(scheduleId)
+    return this.getController().disableSchedule(scheduleId)
   }
 
   /**
@@ -274,8 +224,7 @@ export class WorkflowAPI {
    */
   static async triggerSchedule(scheduleId: string, inputs?: Record<string, unknown>) {
     logger.debug('Triggering workflow schedule', { scheduleId })
-    const controller = root.get(WorkflowController)
-    return controller.triggerSchedule(scheduleId, { inputs })
+    return this.getController().triggerSchedule(scheduleId, { inputs })
   }
 
   /**
@@ -283,8 +232,7 @@ export class WorkflowAPI {
    */
   static fineTuneNode(runId: string, nodeId: string, config: any) {
     logger.debug('Fine-tuning workflow node', { runId, nodeId })
-    const controller = root.get(WorkflowController)
-    return controller.fineTuneNode(runId, nodeId, { config })
+    return this.getController().fineTuneNode(runId, nodeId, { config })
   }
 
   // ================ 自定义方法（SDK 不支持） ================

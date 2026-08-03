@@ -1,6 +1,7 @@
 import {
   EventHourlyStatisticsEntity,
 } from '@sker/entities';
+import type { EntityManager } from 'typeorm';
 import type {
   TimeRange,
   TimeSeriesData,
@@ -10,7 +11,7 @@ import type {
  * 获取单个事件的时间序列数据（帖子、用户、情感）。
  */
 export async function fetchEventTimeSeries(
-  entityManager: any,
+  entityManager: EntityManager,
   eventId: string,
   _timeRange: TimeRange,
 ): Promise<TimeSeriesData> {
