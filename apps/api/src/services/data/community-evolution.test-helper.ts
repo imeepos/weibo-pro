@@ -13,7 +13,7 @@ import { mockEntityManager, mockRedis } from '../../test-setup';
 /**
  * 创建 mock query builder（链式调用 + 默认空结果）
  */
-export function createMockQueryBuilder() {
+export function createMockQueryBuilder(): any {
   return {
     select: vi.fn().mockReturnThis(),
     addSelect: vi.fn().mockReturnThis(),
