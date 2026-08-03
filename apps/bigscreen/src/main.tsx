@@ -13,18 +13,14 @@ import '@sker/workflow-ui/styles'
 import { createLogger } from './utils';
 import { createAuthClient } from 'better-auth/client';
 import { createSkerClientPlugin } from '@sker/sdk';
+import { getBaseUrl } from './config/api-base-url';
 
 const logger = createLogger('main');
 
-function getBaseUrl() {
-  const url = new URL(window.location.href)
-  if (url.protocol.startsWith('https')) {
-    return `https://43.240.223.138:18443/api/auth`
-  }
-  return `http://43.240.223.138:18088/api/auth`
-}
-
-const baseURL = getBaseUrl();
+const baseURL = getBaseUrl(
+  new URL(window.location.href),
+  import.meta.env.VITE_API_BASE_URL
+);
 
 // 异步初始化 Better Auth（避免打包时的初始化顺序问题）
 (async () => {

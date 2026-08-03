@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect, useState, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout, FullscreenLayout } from '@/components';
 import { useTheme } from '@/hooks/useTheme';
@@ -20,7 +20,6 @@ const UserDetection = lazy(() => import('@/pages/UserDetection'));
 const UserDetection3D = lazy(() => import('@/pages/UserDetection3D'));
 const UserRelationTopology = lazy(() => import('@/pages/UserRelationTopology'));
 const LayoutDemo = lazy(() => import('@/pages/LayoutDemo').then(m => ({ default: m.LayoutDemo })));
-const BleMeshTopology = lazy(() => import('@/pages/BleMeshTopology'));
 const WorkflowEditor = lazy(() => import('@/pages/WorkflowEditor'));
 const CrawlerControl = lazy(() => import('@/pages/CrawlerControl'));
 const LlmManagement = lazy(() => import('@/pages/LlmManagement'));
@@ -121,7 +120,7 @@ const App: React.FC = () => {
             <Route path="/user-detection-3d" element={<FullscreenLayout><AnimatedPage pageKey="user-detection-3d"><UserDetection3D /></AnimatedPage></FullscreenLayout>} />
             <Route path="/custom-overview" element={<Layout><AnimatedPage pageKey="custom-overview"><CustomDataOverview /></AnimatedPage></Layout>} />
             <Route path="/layout-editor" element={<Layout><AnimatedPage pageKey="layout-editor"><LayoutDemo /></AnimatedPage></Layout>} />
-            <Route path="/ble-mesh-topology" element={<Layout><AnimatedPage pageKey="ble-mesh"><BleMeshTopology /></AnimatedPage></Layout>} />
+            <Route path="/ble-mesh-topology" element={<Navigate to="/user-relation-topology" replace />} />
             <Route path="/workflow-editor/:name?" element={<Layout><AnimatedPage pageKey="workflow-editor"><WorkflowEditor /></AnimatedPage></Layout>} />
             <Route path="/crawler-control" element={<Layout><AnimatedPage pageKey="crawler"><CrawlerControl /></AnimatedPage></Layout>} />
             <Route path="/user-relation-topology" element={<Layout><AnimatedPage pageKey="user-relation"><UserRelationTopology /></AnimatedPage></Layout>} />

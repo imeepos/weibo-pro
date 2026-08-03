@@ -6,8 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { CrawlerAPI, type CrawlerControlStatusSummary } from '@/services/api/crawler';
 import { createLogger } from '@/utils';
-import { NLP_UNSUPPORTED_MESSAGE } from './CrawlerControl.panels';
-import { CrawlAndAnalyzePanel, BatchNlpPanel, SearchPanel } from './CrawlerControl.panels';
+import { CrawlAndAnalyzePanel, SearchPanel } from './CrawlerControl.panels';
 import { WorkflowStatusCard, ExecutionRecordsCard } from './CrawlerControl.monitor';
 import type { TaskExecution, TaskType } from './CrawlerControl.types';
 
@@ -23,14 +22,8 @@ const CrawlerControl: React.FC = () => {
   const [nlpPostId, setNlpPostId] = useState('');
   const [nlpLoading, setNlpLoading] = useState(false);
 
-  // NLP 批量任务表单
-  const [batchPostIds, setBatchPostIds] = useState('');
-  const [batchLoading, _setBatchLoading] = useState(false);
-
   // 微博搜索表单
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [searchStartDate, setSearchStartDate] = useState('');
-  const [searchEndDate, setSearchEndDate] = useState('');
   const [searchPage, setSearchPage] = useState('1');
   const [searchLoading, setSearchLoading] = useState(false);
 
@@ -85,18 +78,6 @@ const CrawlerControl: React.FC = () => {
     }
   };
 
-  const handleTriggerNLP = async () => {
-    addExecution('nlp', { postId: nlpPostId }, 'error', NLP_UNSUPPORTED_MESSAGE);
-  };
-
-  const handleCrawlAndAnalyze = async () => {
-    addExecution('crawl-and-analyze', { postId: nlpPostId }, 'error', NLP_UNSUPPORTED_MESSAGE);
-  };
-
-  const handleBatchNLP = async () => {
-    addExecution('batch-nlp', { raw: batchPostIds }, 'error', NLP_UNSUPPORTED_MESSAGE);
-  };
-
   const handleSearchWeibo = async () => {
     if (!searchKeyword.trim()) {
       alert('请填写关键词');
@@ -105,8 +86,6 @@ const CrawlerControl: React.FC = () => {
 
     const params = {
       keyword: searchKeyword.trim(),
-      startDate: searchStartDate,
-      endDate: searchEndDate,
       page: parseInt(searchPage, 10) || 1,
     };
 
@@ -148,26 +127,12 @@ const CrawlerControl: React.FC = () => {
                 onNlpPostIdChange={setNlpPostId}
                 nlpLoading={nlpLoading}
                 onCrawlPost={handleCrawlPost}
-                onTriggerNLP={handleTriggerNLP}
-                onCrawlAndAnalyze={handleCrawlAndAnalyze}
-              />
-
-              {/* NLP 批量任务触发 */}
-              <BatchNlpPanel
-                batchPostIds={batchPostIds}
-                onBatchPostIdsChange={setBatchPostIds}
-                batchLoading={batchLoading}
-                onBatchNLP={handleBatchNLP}
               />
 
               {/* 微博搜索触发 */}
               <SearchPanel
                 searchKeyword={searchKeyword}
                 onSearchKeywordChange={setSearchKeyword}
-                searchStartDate={searchStartDate}
-                onSearchStartDateChange={setSearchStartDate}
-                searchEndDate={searchEndDate}
-                onSearchEndDateChange={setSearchEndDate}
                 searchPage={searchPage}
                 onSearchPageChange={setSearchPage}
                 searchLoading={searchLoading}

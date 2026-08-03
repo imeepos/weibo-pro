@@ -91,7 +91,7 @@ describe('CrawlerControl', () => {
     })
   })
 
-  it('loads crawler status and disables unsupported NLP actions', async () => {
+  it('loads crawler status without exposing unsupported NLP action buttons', async () => {
     render(<CrawlerControl />)
 
     await waitFor(() => {
@@ -99,7 +99,10 @@ describe('CrawlerControl', () => {
       expect(screen.getByText('running')).toBeInTheDocument()
     })
 
-    expect(screen.getAllByText(/当前主分支未接入 NLP 手动触发接口/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/当前支持微博详情爬取和关键词搜索爬取/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/未接入|未接通|暂仅作为记录项/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /仅分析/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /批量触发 NLP 分析/ })).not.toBeInTheDocument()
   })
 
   it('starts a detail crawl from the single post form', async () => {
@@ -108,7 +111,7 @@ describe('CrawlerControl', () => {
     fireEvent.change(screen.getByPlaceholderText('例如: 5095814444178803'), {
       target: { value: '5095814444178803' },
     })
-    fireEvent.click(screen.getByRole('button', { name: '📥 启动详情爬取' }))
+    fireEvent.click(screen.getByRole('button', { name: '启动详情爬取' }))
 
     await waitFor(() => {
       expect(crawlPost).toHaveBeenCalledWith({ postId: '5095814444178803' })
@@ -129,8 +132,6 @@ describe('CrawlerControl', () => {
     await waitFor(() => {
       expect(searchWeibo).toHaveBeenCalledWith({
         keyword: '人工智能',
-        startDate: '',
-        endDate: '',
         page: 3,
       })
     })

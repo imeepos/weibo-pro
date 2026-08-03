@@ -14,8 +14,6 @@ export interface CrawlPostRequest {
 
 export interface WeiboSearchRequest {
   keyword: string
-  startDate: string
-  endDate: string
   page?: number
 }
 
