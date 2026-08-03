@@ -3,6 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import PromptManagement from '../PromptManagement';
 
+// cmdk 在 jsdom 中需要 scrollIntoView 实现
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 const { mockControllers } = vi.hoisted(() => ({
   mockControllers: {
     findAll: vi.fn(),
@@ -121,16 +126,24 @@ describe('PromptManagement', () => {
     render(<PromptManagement />);
 
     await screen.findByText('系统助手');
+    await user.click(screen.getByText('系统助手'));
     await user.click(screen.getByRole('button', { name: '绑定' }));
 
     await screen.findByText('绑定技能');
     const dialog = screen.getByRole('dialog');
     await user.click(within(dialog).getByText('点击选择技能...'));
 
-    await screen.findByText('搜索技能');
+    await screen.findByPlaceholderText('搜索技能...');
     const commandDialog = screen.getAllByRole('dialog').at(-1);
     expect(commandDialog).toBeDefined();
     await user.click(within(commandDialog!).getByText('联网搜索'));
+
+    // 选中技能后回到绑定对话框，点击“绑定”提交
+    await waitFor(() => {
+      expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    });
+    const bindDialogAgain = screen.getByRole('dialog');
+    await user.click(within(bindDialogAgain).getByRole('button', { name: '绑定' }));
 
     await waitFor(() => {
       expect(mockControllers.addSkill).toHaveBeenCalledWith('r1', { skill_id: 's1', ref_type: 'required' });

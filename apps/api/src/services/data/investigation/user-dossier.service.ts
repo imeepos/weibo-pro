@@ -20,15 +20,17 @@ import {
   queryEvidenceHistory,
   queryEvidenceNlp,
   queryEvidenceRelation,
-  queryEventTypes,
   queryHistoryCoverage,
   queryInteractionByDay,
   queryPostingByDay,
   queryPostingByHour,
   queryRelationSummary,
+} from './user-dossier.queries';
+import {
+  queryEventTypes,
   querySentimentTrend,
   queryTopicKeywords,
-} from './user-dossier.queries';
+} from './user-dossier.queries.nlp';
 import {
   buildEmptyEventRiskContext,
   mapAccountSnapshot,

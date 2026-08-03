@@ -7,11 +7,11 @@ export interface ChartData {
   }>;
 }
 
-// 词云条目
+// 词云条目（与 @sker/sdk 的 WordCloudItem 保持一致）
 export interface WordCloudItem {
   keyword: string;
   count: number;
-  sentiment: string;
+  sentiment: 'positive' | 'negative' | 'neutral';
   weight: number;
 }
 
