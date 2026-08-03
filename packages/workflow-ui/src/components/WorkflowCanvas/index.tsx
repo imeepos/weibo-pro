@@ -1,123 +1,49 @@
 'use client'
-import React, { useCallback, useState, useEffect, useImperativeHandle, forwardRef, useMemo, useRef } from 'react'
+import React, { useCallback, useImperativeHandle, forwardRef, useMemo, useRef, useEffect } from 'react'
 import {
-  ReactFlow,
-  Background,
-  BackgroundVariant,
-  SelectionMode,
   ReactFlowProvider,
-  type Connection,
-  type NodeChange,
-  type EdgeChange,
   useReactFlow,
   useUpdateNodeInternals,
 } from '@xyflow/react'
 
-import { fromJson, INode, WorkflowGraphAst, toJson, createWorkflowGraphAst, globalRuntime } from '@sker/workflow'
-import type { WorkflowNode, WorkflowEdge } from '../../types'
+import { fromJson, createWorkflowGraphAst } from '@sker/workflow'
+import type { WorkflowGraphAst } from '@sker/workflow'
 import { createNodeTypes } from '../nodes'
 import { edgeTypes } from '../edges'
 import { useWorkflow } from '../../hooks/useWorkflow'
 import { useAutoSave } from '../../hooks/useAutoSave'
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useCanvasControls } from './useCanvasControls'
 import { useCanvasState } from './useCanvasState'
 import { useWorkflowOperations } from './useWorkflowOperations'
-import { validateEdge } from '../../utils/edgeValidator'
-
-// 新的业务逻辑钩子
 import { useFileOperations } from './hooks/useFileOperations'
 import { useNodeOperations } from './hooks/useNodeOperations'
-import { useEventHandlers } from './hooks/useEventHandlers'
-import { WorkflowOperationsContext, type WorkflowOperations } from '../../context/workflow-operations'
-import { useTimeTravel } from '../../hooks/useTimeTravel'
-import { TimeTravelDebugger } from './TimeTravelDebugger'
-
-// 纯展示组件（来自 @sker/ui）
-import { WorkflowControls, WorkflowMenubar, WorkflowEmptyState, WorkflowMinimap, WorkflowProgress } from '@sker/ui/components/workflow'
-import { Toaster } from '@sker/ui/components/ui'
-
-// 原有组件
-import { ContextMenu } from './ContextMenu'
-import { NodeSelector } from './NodeSelector'
-import { ShareDialog } from './ShareDialog'
-import { SubWorkflowModal } from '../SubWorkflowModal'
-import { LeftDrawer } from '../LeftDrawer'
-import { EdgeConfigDialog } from './EdgeConfigDialog'
-import { WorkflowSettingsDialog } from './WorkflowSettingsDialog'
-import { ScheduleDialog } from './ScheduleDialog'
-import { ScheduleList } from './ScheduleList'
-import { RunHistoryPanel } from './RunHistoryPanel'
-import { RunConfigDialog } from './RunConfigDialog'
-import { AiExportDialog } from './AiExportDialog'
+import { WorkflowOperationsContext } from '../../context/workflow-operations'
 import { cn } from '../../utils/cn'
-import { getAllNodeTypes } from '../../adapters'
 
-/**
- * WorkflowCanvas 命令式 API 接口
- * 通过 ref 暴露给外部的方法
- */
-export interface WorkflowCanvasRef {
-  // 文件操作
-  importWorkflow: (json: string) => Promise<void>
-  exportWorkflow: () => string
+// 拆分后的子组件与 Hooks
+import { CanvasFlow } from './CanvasFlow'
+import { CanvasControls } from './CanvasControls'
+import { CanvasOverlays } from './CanvasOverlays'
+import { useCanvasEnvironment } from './useCanvasEnvironment'
+import { useEventStoreToggle } from './useEventStoreToggle'
+import { useCanvasTimeTravel } from './useCanvasTimeTravel'
+import { useCanvasConnections } from './useCanvasConnections'
+import { useCanvasInteraction } from './useCanvasInteraction'
+import { useCanvasImperativeApi } from './useCanvasImperativeApi'
+import { useCanvasEventHandlers } from './useCanvasEventHandlers'
+import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts'
+import { useCanvasWorkflowOps } from './useCanvasWorkflowOps'
+import { useCanvasSaveSubWorkflow } from './useCanvasSaveSubWorkflow'
+import { useCanvasRenderProps } from './useCanvasRenderProps'
 
-  // 执行控制
-  runWorkflow: () => Promise<void>
-  cancelWorkflow: () => void
-  runNode: (nodeId: string) => Promise<void>
-  runNodeIsolated: (nodeId: string) => Promise<void>
-
-  // 视图操作
-  autoLayout: (direction?: 'TB' | 'LR') => void
-  fitView: () => void
-  zoomIn: () => void
-  zoomOut: () => void
-  centerView: () => void
-  locateNode: (nodeId: string) => void
-
-  // 节点操作
-  selectAll: () => void
-  deleteSelection: () => void
-  copyNodes: () => void
-  pasteNodes: () => void
-
-  // 数据访问
-  getWorkflowAst: () => WorkflowGraphAst
-  getSelectedNodes: () => INode[]
-}
-
-export interface WorkflowCanvasProps {
-  /** 工作流 AST 实例 */
-  workflowAst?: INode
-  /** 是否显示小地图 */
-  showMiniMap?: boolean
-  /** 是否显示控制面板 */
-  showControls?: boolean
-  /** 是否使用水平菜单栏（默认 false 使用垂直按钮组） */
-  useMenubar?: boolean
-  /** 是否显示背景 */
-  showBackground?: boolean
-  /** 是否启用网格吸附 */
-  snapToGrid?: boolean
-  /** 自定义类名 */
-  className?: string
-  /** 顶部标题 */
-  title?: string
-  /** 名称 */
-  name?: string
-  /** 运行全部节点回调 */
-  onRunAll?: () => void
-  /** 保存工作流回调 */
-  onSave?: () => void
-  /** 分享工作流回调 */
-  onShare?: () => void
-}
+// 公共 API 类型（保持向后兼容）
+import type { WorkflowCanvasRef, WorkflowCanvasProps } from './types'
+export type { WorkflowCanvasRef, WorkflowCanvasProps } from './types'
 
 /**
  * 工作流画布内部组件
  *
- * 职责：包含所有需要访问 ReactFlow 上下文的逻辑
+ * 职责：包含所有需要访问 ReactFlow 上下文的逻辑（画布组合）
  */
 const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>(({
   workflowAst,
@@ -150,7 +76,7 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     }
   )
 
-  const { triggerSave, saveNow: _saveNow } = useAutoSave(workflow.workflowAst, {
+  const { triggerSave } = useAutoSave(workflow.workflowAst, {
     debounce: 1000,
     enabled: true,
     onSaveSuccess: useCallback(() => {}, []),
@@ -169,275 +95,49 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
   }, [triggerSave])
 
   // 状态管理
-  const {
-    isRunning,
-    setIsRunning,
-    isSaving,
-    setIsSaving,
-    shareDialog,
-    closeShareDialog,
-    subWorkflowModal,
-    openSubWorkflowModal,
-    closeSubWorkflowModal,
-    showToast,
-    settingPanel: _settingPanel,
-    openSettingPanel,
-    closeSettingPanel: _closeSettingPanel,
-    drawer,
-    openDrawer,
-    closeDrawer,
-    edgeConfigDialog,
-    openEdgeConfigDialog,
-    closeEdgeConfigDialog,
-    workflowSettingsDialog,
-    openWorkflowSettingsDialog,
-    closeWorkflowSettingsDialog,
-    scheduleDialog,
-    openScheduleDialog,
-    closeScheduleDialog,
-    schedulePanel,
-    openSchedulePanel,
-    closeSchedulePanel,
-    runHistoryPanel,
-    openRunHistoryPanel,
-    closeRunHistoryPanel,
-    runConfigDialog,
-    openRunConfigDialog,
-    closeRunConfigDialog,
-    aiExportDialog,
-    openAiExportDialog,
-    closeAiExportDialog,
-  } = useCanvasState()
+  const canvasState = useCanvasState()
+  const canvasControls = useCanvasControls()
+  const { isRunning, isSaving, showToast, openSettingPanel, openEdgeConfigDialog, openDrawer, openSubWorkflowModal, openRunConfigDialog } = canvasState
 
   // 撤销/重做历史（直接从 workflow 实例获取）
   const { canUndo, canRedo, undo, redo } = workflow
 
-  // 连线状态追踪
-  const [connectingInfo, setConnectingInfo] = useState<{
-    nodeId: string | null
-    handleId: string | null
-    handleType: 'source' | 'target' | null
-  } | null>(null)
-
-  // 鼠标位置追踪（用于智能粘贴）
-  const [lastMousePosition, setLastMousePosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-
-  // 全局鼠标移动监听（确保始终追踪到最新位置）
-  useEffect(() => {
-    const handleGlobalMouseMove = (event: MouseEvent) => {
-      setLastMousePosition({
-        x: event.clientX,
-        y: event.clientY
-      })
-    }
-
-    window.addEventListener('mousemove', handleGlobalMouseMove)
-    return () => window.removeEventListener('mousemove', handleGlobalMouseMove)
-  }, [])
-
-  // 主题检测
-  const [isDark, setIsDark] = useState(() =>
-    document.documentElement.classList.contains('dark')
-  )
-
-  // ========== 事件存储开关状态管理 ==========
-  const [eventStoreEnabled, setEventStoreEnabled] = useState(false)
-
-  // 订阅全局 eventStream 的事件存储状态
-  useEffect(() => {
-    const sub = globalRuntime.events.storeEnabled$.subscribe(enabled => {
-      setEventStoreEnabled(enabled)
-    })
-
-    return () => sub.unsubscribe()
-  }, [])
-
-  // 切换事件存储开关
-  const handleEventStoreToggle = useCallback((enabled: boolean) => {
-    globalRuntime.events.setStoreEnabled(enabled)
-  }, [showToast])
-
-  // 监听主题变化
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    })
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    })
-
-    return () => observer.disconnect()
-  }, [])
-
-  // 时间旅行功能
-  const timeTravel = useTimeTravel()
-
-  // 节点状态时间切片渲染（时间旅行核心逻辑）
-  useEffect(() => {
-    // 订阅 nodeStates$，实时更新节点状态
-    // 只更新有事件的节点，避免干扰其他节点的状态
-    const sub = timeTravel.eventStream.nodeStates$.subscribe(nodeStates => {
-      if (nodeStates.size === 0) return
-
-      // 批量更新节点状态 - 只更新有事件的节点
-      workflow.setNodes(prevNodes =>
-        prevNodes.map(node => {
-          const event = nodeStates.get(node.id)
-
-          if (!event) {
-            // 没有事件的节点保持原状态不变
-            return node
-          }
-
-          // 根据事件类型更新节点状态
-          let newState: 'pending' | 'running' | 'success' | 'fail' = 'pending'
-
-          if (event.type === 'node_success') {
-            newState = 'success'
-          } else if (event.type === 'node_fail') {
-            newState = 'fail'
-          } else if (event.type === 'node_runing') {
-            newState = 'running'
-          } else if (event.type === 'node_emit') {
-            newState = 'running' // 发射数据时也显示为运行中
-          }
-
-          // 不可变更新节点数据
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              state: newState,
-            },
-          }
-        })
-      )
-    })
-
-    return () => sub.unsubscribe()
-  }, [timeTravel.eventStream, workflow.setNodes])
-
-  // 画布控制 - 先获取，供业务钩子使用
-  const {
-    onNodeClick,
-    onPaneClick,
-    onPaneContextMenu,
-    menu,
-    closeMenu,
-    nodeSelector,
-    openNodeSelector,
-    closeNodeSelector,
-    screenToFlowPosition,
-    handleFitView,
-    handleCenterView,
-    handleResetZoom,
-    handleSelectAll,
-    handleZoomIn,
-    handleZoomOut,
-    handleLocateNode,
-  } = useCanvasControls()
+  // 环境状态（明暗主题、全局鼠标位置、事件存储开关、时间旅行）
+  const { isDark, lastMousePosition } = useCanvasEnvironment()
+  const { eventStoreEnabled, handleEventStoreToggle } = useEventStoreToggle()
+  const timeTravel = useCanvasTimeTravel(workflow)
 
   // 业务逻辑钩子 - 正确在组件顶层调用
-  const { exportWorkflow, importWorkflow, processImportFile } = useFileOperations(workflow, {
+  const fileOperations = useFileOperations(workflow, {
     onShowToast: showToast,
     onGetViewport: getViewport,
-    onFitView: handleFitView
+    onFitView: canvasControls.handleFitView
   })
 
-  const {
-    copyNodes,
-    cutNodes,
-    pasteNodes,
-    deleteSelection,
-    createGroup,
-    ungroupNodes,
-    collapseNodes,
-    expandNodes,
-    autoLayout,
-    deleteNode,
-    deleteEdge,
-    toggleNodeCollapse,
-    clearCanvas
-  } = useNodeOperations(workflow, {
+  const nodeOperations = useNodeOperations(workflow, {
     onShowToast: showToast,
-    onFitView: handleFitView
+    onFitView: canvasControls.handleFitView
   })
 
-  // 工作流操作
-  const { runNode, runNodeIsolated, saveWorkflow, saveSubWorkflow: originalSaveSubWorkflow, runWorkflow, cancelWorkflow } = useWorkflowOperations(workflow, {
+  const workflowOperations = useWorkflowOperations(workflow, {
     onShowToast: showToast,
-    onSetRunning: setIsRunning,
-    onSetSaving: setIsSaving,
+    onSetRunning: canvasState.setIsRunning,
+    onSetSaving: canvasState.setIsSaving,
     getViewport,
   })
 
   // 包装 saveSubWorkflow，保存后刷新节点端口
-  const saveSubWorkflow = useCallback(
-    (parentNodeId: string, updatedAst: WorkflowGraphAst) => {
-      const result = originalSaveSubWorkflow(parentNodeId, updatedAst)
-
-      // 如果保存成功（返回了 parentNodeId），刷新该节点的端口
-      if (result) {
-        // 使用 requestAnimationFrame 确保在下一帧渲染后刷新
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            updateNodeInternals(result)
-          })
-        })
-      }
-
-      return result
-    },
-    [originalSaveSubWorkflow, updateNodeInternals]
-  )
+  const saveSubWorkflow = useCanvasSaveSubWorkflow(workflowOperations.saveSubWorkflow, updateNodeInternals)
 
   // 事件处理统一委托
-  useEventHandlers({
-    onEdgeDelete: useCallback((edgeId: string) => {
-      const edge = workflow.edges.find((e) => e.id === edgeId)
-      if (edge) {
-        workflow.removeEdge(edge)
-      }
-    }, [workflow]),
-
-    onOpenSubWorkflow: useCallback((nodeId: string, workflowAst: any) => {
-      openSubWorkflowModal({ nodeId, workflowAst })
-    }, [openSubWorkflowModal]),
-
-    onOpenSettingPanel: useCallback((nodeId: string, nodeData: any) => {
-      openSettingPanel({ nodeId, nodeData })
-    }, [openSettingPanel]),
-
-    onOpenEdgeConfig: useCallback((edgeId: string) => {
-      const edge = workflow.edges.find((e) => e.id === edgeId)
-      if (edge?.data?.edge) {
-        openEdgeConfigDialog(edge.data.edge)
-      }
-    }, [workflow.edges, openEdgeConfigDialog]),
-
-    onNodeDoubleClick: useCallback((nodeId: string) => {
-      openDrawer(nodeId)
-    }, [openDrawer]),
-
-    onNodeDuplicate: useCallback((nodeId: string) => {
-      // 选中当前节点并复制
-      workflow.setNodes((nodes) =>
-        nodes.map((n) => ({ ...n, selected: n.id === nodeId }))
-      )
-      copyNodes()
-      // 立即粘贴到原位置附近
-      const node = workflow.nodes.find((n) => n.id === nodeId)
-      if (node) {
-        const offsetPosition = { x: node.position.x + 50, y: node.position.y + 50 }
-        pasteNodes(offsetPosition)
-      }
-    }, [workflow, copyNodes, pasteNodes]),
-
-    onNodeDelete: useCallback((nodeId: string) => {
-      workflow.removeNode(nodeId)
-    }, [workflow]),
+  useCanvasEventHandlers({
+    workflow,
+    openSubWorkflowModal,
+    openSettingPanel,
+    openEdgeConfigDialog,
+    openDrawer,
+    copyNodes: nodeOperations.copyNodes,
+    pasteNodes: nodeOperations.pasteNodes,
   })
 
   // 恢复视图窗口状态
@@ -448,409 +148,114 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
     }
   }, [workflow.workflowAst, setViewport])
 
+  // 连线逻辑
+  const connections = useCanvasConnections({
+    workflow,
+    showToast,
+    screenToFlowPosition: canvasControls.screenToFlowPosition,
+    openNodeSelector: canvasControls.openNodeSelector,
+    nodeSelectorFlowPosition: canvasControls.nodeSelector.flowPosition,
+  })
+
+  // 通用交互事件与派生状态
+  const interaction = useCanvasInteraction({
+    workflow,
+    showToast,
+    screenToFlowPosition: canvasControls.screenToFlowPosition,
+    openEdgeConfigDialog,
+    edgeConfigDialog: canvasState.edgeConfigDialog,
+    processImportFile: fileOperations.processImportFile,
+    openRunConfigDialog,
+    runWorkflow: workflowOperations.runWorkflow,
+    saveWorkflow: workflowOperations.saveWorkflow,
+    handleEventStoreToggle,
+  })
+
   // 键盘快捷键
-  useKeyboardShortcuts({
-    enabled: true,
-    onCopy: copyNodes,
-    onCut: cutNodes,
-    onPaste: () => {
-      // 将屏幕坐标转换为 Flow 坐标
-      const flowPosition = screenToFlowPosition(lastMousePosition)
-      pasteNodes(flowPosition)
-    },
-    onDelete: deleteSelection,
-    onSelectAll: handleSelectAll,
-    onSave: customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled')),
-    onCancel: cancelWorkflow,
-    onToggleCollapse: () => { }, // 通过节点操作钩子处理
-    onUndo: undo,
-    onRedo: redo,
-    onCreateGroup: createGroup,
-    onUngroupNodes: ungroupNodes,
-    onCollapseNodes: collapseNodes,
-    onExpandNodes: expandNodes,
-    onAutoLayout: autoLayout,
+  useCanvasKeyboardShortcuts({
+    customOnSave,
+    workflowName: workflow.workflowAst?.name,
+    saveWorkflow: workflowOperations.saveWorkflow,
+    cancelWorkflow: workflowOperations.cancelWorkflow,
+    undo,
+    redo,
+    copyNodes: nodeOperations.copyNodes,
+    cutNodes: nodeOperations.cutNodes,
+    pasteNodes: nodeOperations.pasteNodes,
+    deleteSelection: nodeOperations.deleteSelection,
+    handleSelectAll: canvasControls.handleSelectAll,
+    createGroup: nodeOperations.createGroup,
+    ungroupNodes: nodeOperations.ungroupNodes,
+    collapseNodes: nodeOperations.collapseNodes,
+    expandNodes: nodeOperations.expandNodes,
+    autoLayout: nodeOperations.autoLayout,
+    screenToFlowPosition: canvasControls.screenToFlowPosition,
+    lastMousePosition,
   })
 
   // 暴露命令式 API
-  useImperativeHandle(ref, () => ({
-    // 文件操作
-    importWorkflow: async (json: string) => {
-      try {
-        // importWorkflow 是按钮触发函数，不接受参数
-        // 这里需要直接处理 JSON 字符串
-        const data = JSON.parse(json)
-        const importedWorkflow = fromJson<WorkflowGraphAst>(data.workflow || data)
-
-        Object.assign(workflow.workflowAst, importedWorkflow)
-        workflow.syncFromAst()
-
-        if (handleFitView) {
-          setTimeout(() => {
-            handleFitView()
-          }, 100)
-        }
-
-        showToast('success', '导入成功', `已导入工作流 "${importedWorkflow.name || '未命名'}"`)
-      } catch (error) {
-        console.error('导入工作流失败:', error)
-        showToast('error', '导入失败', error instanceof Error ? error.message : '未知错误')
-        throw error
-      }
-    },
-    exportWorkflow: () => {
-      try {
-        if (!workflow?.workflowAst) {
-          return ''
-        }
-
-        const workflowJson = toJson(workflow.workflowAst)
-        const exportData = {
-          workflow: workflowJson
-        }
-
-        return JSON.stringify(exportData, null, 2)
-      } catch (error) {
-        console.error('导出工作流失败:', error)
-        return ''
-      }
-    },
-
-    // 执行控制
-    runWorkflow: async () => {
-      await runWorkflow()
-    },
-    cancelWorkflow: () => {
-      cancelWorkflow()
-    },
-    runNode: async (nodeId: string) => {
-      await runNode(nodeId)
-    },
-    runNodeIsolated: async (nodeId: string) => {
-      await runNodeIsolated(nodeId)
-    },
-
-    // 视图操作
-    autoLayout: (_direction?: 'TB' | 'LR') => {
-      // autoLayout 不接受参数，这里忽略参数
-      autoLayout()
-    },
-    fitView: () => {
-      handleFitView()
-    },
-    zoomIn: () => {
-      handleZoomIn()
-    },
-    zoomOut: () => {
-      handleZoomOut()
-    },
-    centerView: () => {
-      handleCenterView()
-    },
-    locateNode: (nodeId: string) => {
-      handleLocateNode(nodeId)
-    },
-
-    // 节点操作
-    selectAll: () => {
-      handleSelectAll()
-    },
-    deleteSelection: () => {
-      deleteSelection()
-    },
-    copyNodes: () => {
-      copyNodes()
-    },
-    pasteNodes: () => {
-      pasteNodes()
-    },
-
-    // 数据访问
-    getWorkflowAst: () => {
-      workflow.workflowAst.viewport = getViewport()
-      return workflow.workflowAst
-    },
-    getSelectedNodes: () => {
-      return workflow.nodes.filter((n) => n.selected).map((n) => n.data)
-    },
-  }), [
-    exportWorkflow,
-    runWorkflow, cancelWorkflow, runNode, runNodeIsolated,
-    autoLayout, handleFitView, handleZoomIn, handleZoomOut, handleCenterView, handleLocateNode,
-    handleSelectAll, deleteSelection, copyNodes, pasteNodes,
-    workflow, showToast
-  ])
-
-  // 处理连线
-  const handleNodesChangeInternal = useCallback((changes: NodeChange[]) => {
-    workflow.onNodesChange(changes)
-  }, [workflow])
-
-  const handleEdgesChangeInternal = useCallback((changes: EdgeChange[]) => {
-    // 检测边选中事件并打印边数据结构
-    workflow.onEdgesChange(changes)
-  }, [workflow])
-
-  const handleConnectInternal = useCallback((connection: Connection) => {
-    // 创建临时边对象用于验证
-    const tempEdge: WorkflowEdge = {
-      id: `temp-${Date.now()}`,
-      source: connection.source!,
-      target: connection.target!,
-      sourceHandle: connection.sourceHandle,
-      targetHandle: connection.targetHandle,
-      type: 'workflow-data-edge',
-      data: { edgeType: 'data' }
-    }
-
-    // 验证边的合法性
-    const { valid, errors } = validateEdge(
-      tempEdge,
-      workflow.nodes.map((n) => n.data),
-      workflow.edges
-    )
-
-    if (!valid) {
-      showToast('error', '连接失败', errors.join('；'))
-      return
-    }
-
-    workflow.connectNodes(connection)
-  }, [workflow, showToast])
-
-  const handleConnectStart = useCallback((
-    _event: MouseEvent | TouchEvent,
-    params: { nodeId: string | null; handleId: string | null; handleType: 'source' | 'target' | null }
-  ) => {
-    setConnectingInfo({
-      nodeId: params.nodeId,
-      handleId: params.handleId,
-      handleType: params.handleType,
-    })
-  }, [])
-
-  const handleConnectEnd = useCallback((event: MouseEvent | TouchEvent) => {
-    if (connectingInfo && connectingInfo.nodeId) {
-      const clientX = 'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX
-      const clientY = 'touches' in event ? event.touches[0]?.clientY ?? 0 : event.clientY
-
-      const screenPosition = { x: clientX, y: clientY }
-      const flowPosition = screenToFlowPosition(screenPosition)
-
-      openNodeSelector(screenPosition, flowPosition)
-    }
-
-    setConnectingInfo(null)
-  }, [connectingInfo, screenToFlowPosition, openNodeSelector])
-
-  const handleNodesDelete = useCallback((nodesToDelete: WorkflowNode[]) => {
-    nodesToDelete.forEach((node) => workflow.removeNode(node.id))
-  }, [workflow])
-
-  const handleEdgesDelete = useCallback((edgesToDelete: WorkflowEdge[]) => {
-    edgesToDelete.forEach((edge) => workflow.removeEdge(edge))
-  }, [workflow])
-
-  // 边事件处理
-  const handleEdgeDoubleClick = useCallback((_event: React.MouseEvent, edge: WorkflowEdge) => {
-    // 直接打开边配置对话框
-    const astEdge = workflow.workflowAst.edges.find((e) => e.id === edge.id)
-    if (astEdge) {
-      openEdgeConfigDialog(astEdge)
-    }
-  }, [workflow.workflowAst.edges, openEdgeConfigDialog])
-
-  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: WorkflowEdge) => {
-    event.preventDefault()
-    console.log('[handleEdgeContextMenu] 右键边:', edge.id)
-    // 打开右键菜单
-    const screenPosition = { x: event.clientX, y: event.clientY }
-    const _flowPosition = screenToFlowPosition(screenPosition)
-
-    // 使用 useCanvasControls 的 menu 系统
-    const customEvent = new CustomEvent('edge-context-menu', {
-      detail: { edgeId: edge.id, event },
-    })
-    window.dispatchEvent(customEvent)
-  }, [screenToFlowPosition])
-
-  const handleAddNodeFromSelector = useCallback((metadata: any) => {
-    const registeredNodeTypes = getAllNodeTypes()
-    const NodeClass = registeredNodeTypes.find((type: any) => type.name === metadata.type)
-
-    if (NodeClass) {
-      const newNode = workflow.addNode(NodeClass, nodeSelector.flowPosition, metadata.label)
-
-      if (connectingInfo && connectingInfo.nodeId && newNode) {
-        const connection: Connection = {
-          source: connectingInfo.handleType === 'source' ? connectingInfo.nodeId : newNode.id,
-          target: connectingInfo.handleType === 'source' ? newNode.id : connectingInfo.nodeId,
-          sourceHandle: connectingInfo.handleType === 'source' ? connectingInfo.handleId : null,
-          targetHandle: connectingInfo.handleType === 'source' ? null : connectingInfo.handleId,
-        }
-        workflow.connectNodes(connection)
-      }
-    }
-  }, [workflow, nodeSelector.flowPosition, connectingInfo])
-
-  // 拖拽处理
-  const handleDrop = useCallback(async (event: React.DragEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
-
-    const files = Array.from(event.dataTransfer.files)
-    const jsonFile = files.find((file) => file.name.endsWith('.json'))
-
-    if (jsonFile) {
-      const isCanvasEmpty = workflow.nodes.length === 0
-      await processImportFile(jsonFile, isCanvasEmpty)
-    } else if (files.length > 0) {
-      showToast('error', '文件类型错误', '请拖拽 JSON 格式的工作流文件')
-    }
-  }, [processImportFile, workflow.nodes.length, showToast])
-
-  const handleDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault()
-    event.stopPropagation()
-    event.dataTransfer.dropEffect = 'copy'
-  }, [])
-
-  // 边配置处理
-  const handleSaveEdgeConfig = useCallback((edgeConfig: any) => {
-    if (!edgeConfigDialog.edge) return
-
-    const edgeId = edgeConfigDialog.edge.id
-
-    // 不可变更新 AST 中的边
-    workflow.workflowAst.edges = workflow.workflowAst.edges.map((e: any) =>
-      e.id === edgeId ? { ...e, ...edgeConfig } : e
-    )
-
-    workflow.setEdges((currentEdges) =>
-      currentEdges.map((edge) => {
-        if (edge.id === edgeId && edge.data?.edge) {
-          return {
-            ...edge,
-            data: {
-              ...edge.data,
-              edge: { ...edge.data.edge, ...edgeConfig }
-            }
-          }
-        }
-        return edge
-      })
-    )
-
-    showToast('success', '边配置已更新')
-  }, [edgeConfigDialog.edge, workflow, showToast])
-
-  const handleConfigEdge = useCallback((edgeId: string) => {
-    const customEvent = new CustomEvent('open-edge-config', {
-      detail: { edgeId },
-    })
-    window.dispatchEvent(customEvent)
-  }, [])
-
-  // 工作流设置
-  const handleSaveWorkflowSettings = useCallback(async (settings: any) => {
-    if (settings.name) {
-      workflow.workflowAst.name = settings.name
-    }
-    if (settings.description !== undefined) {
-      workflow.workflowAst.description = settings.description
-    }
-    if (settings.color) {
-      workflow.workflowAst.color = settings.color
-    }
-    if (settings.tags !== undefined) {
-      workflow.workflowAst.tags = settings.tags
-    }
-
-    // 保存到后端
-    await saveWorkflow(settings.name || workflow.workflowAst.name)
-
-    showToast('success', '工作流设置已保存', `已更新工作流 "${settings.name || '未命名'}" 的属性`)
-  }, [workflow, showToast, saveWorkflow])
-
-  /**
-   * 检测工作流是否有需要配置的输入节点
-   * 优雅设计：只要有入度为 0 的起始节点，就认为需要配置
-   */
-  const hasConfigurableInputs = useCallback(() => {
-    // 只要有 entryNodeIds，就需要配置
-    return !!(workflow.workflowAst?.entryNodeIds && workflow.workflowAst.entryNodeIds.length > 0)
-  }, [workflow])
-
-  /**
-   * 处理工作流运行
-   * 优雅设计：自动检测是否需要配置输入，提供流畅的用户体验
-   */
-  const handleRunWorkflow = useCallback(() => {
-    if (hasConfigurableInputs()) {
-      openRunConfigDialog()
-    } else {
-      runWorkflow()
-    }
-  }, [hasConfigurableInputs, openRunConfigDialog, runWorkflow])
-
-  /**
-   * 调试运行工作流
-   * 自动开启事件存储并运行工作流
-   */
-  const handleDebugRun = useCallback(() => {
-    handleEventStoreToggle(true)
-    handleRunWorkflow()
-  }, [handleEventStoreToggle, handleRunWorkflow])
-
-  const isCanvasEmpty = workflow.nodes.length === 0
-
-  // 执行进度计算
-  const executionProgress = useMemo(() => {
-    const nodes = workflow.workflowAst?.nodes || []
-    const total = nodes.length
-    const completed = nodes.filter(n => n.state === 'success' || n.state === 'fail').length
-    const failed = nodes.filter(n => n.state === 'fail').length
-    const runningNode = nodes.find(n => n.state === 'running')
-
-    return {
-      total,
-      completed,
-      failed,
-      currentNodeName: runningNode?.title || runningNode?.name,
-    }
-  }, [workflow.workflowAst?.nodes])
-
-  // MiniMap 节点颜色映射
-  const getMiniMapNodeColor = useCallback((node: any) => {
-    const status = node.data?.state
-    if (!status || status === 'pending') {
-      return 'hsl(var(--muted-foreground))'
-    }
-
-    const statusColors: Record<string, string> = {
-      running: 'hsl(var(--node-running))',
-      emitting: 'hsl(var(--node-emitting))',
-      success: 'hsl(var(--node-success))',
-      fail: 'hsl(var(--node-error))',
-    }
-
-    return statusColors[status] || 'hsl(var(--muted-foreground))'
-  }, [])
+  const imperativeApi = useCanvasImperativeApi({
+    workflow,
+    getViewport,
+    runWorkflow: workflowOperations.runWorkflow,
+    cancelWorkflow: workflowOperations.cancelWorkflow,
+    runNode: workflowOperations.runNode,
+    runNodeIsolated: workflowOperations.runNodeIsolated,
+    autoLayout: nodeOperations.autoLayout,
+    handleFitView: canvasControls.handleFitView,
+    handleZoomIn: canvasControls.handleZoomIn,
+    handleZoomOut: canvasControls.handleZoomOut,
+    handleCenterView: canvasControls.handleCenterView,
+    handleLocateNode: canvasControls.handleLocateNode,
+    handleSelectAll: canvasControls.handleSelectAll,
+    deleteSelection: nodeOperations.deleteSelection,
+    copyNodes: nodeOperations.copyNodes,
+    pasteNodes: nodeOperations.pasteNodes,
+    showToast,
+  })
+  useImperativeHandle(ref, () => imperativeApi, [imperativeApi])
 
   // 准备工作流操作上下文
-  const workflowOps: WorkflowOperations = useMemo(() => ({
-    toggleGroupCollapse: workflow.toggleGroupCollapse,
-    openSubWorkflow: (nodeId, workflowAst) => {
-      openSubWorkflowModal({ nodeId, workflowAst })
-    },
-    selectNode: (nodeId) => {
-      const targetNode = workflow.nodes.find(n => n.id === nodeId)
-      if (targetNode && onNodeClick) {
-        const mouseEvent = new MouseEvent('click') as unknown as React.MouseEvent
-        onNodeClick(mouseEvent, targetNode)
-      }
-    }
-  }), [workflow, openSubWorkflowModal, onNodeClick])
+  const workflowOps = useCanvasWorkflowOps(workflow, openSubWorkflowModal, canvasControls.onNodeClick)
+
+  const isCanvasEmpty = workflow.nodes.length === 0
+  const workflowName = workflow.workflowAst?.name
+  const workflowId = workflow.workflowAst?.id
+
+  // 渲染属性适配（业务 Hook → 展示组件 props）
+  const { flowProps, controlsProps, overlaysActions, overlaysStructural } = useCanvasRenderProps({
+    workflow,
+    nodeTypes,
+    edgeTypes,
+    canvasState,
+    canvasControls,
+    nodeOperations,
+    fileOperations,
+    workflowOperations,
+    connections,
+    interaction,
+    showControls,
+    useMenubar,
+    isDark,
+    showBackground,
+    showMiniMap,
+    snapToGrid,
+    customOnSave,
+    isCanvasEmpty,
+    isRunning,
+    isSaving,
+    workflowName,
+    workflowId,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    handleViewportChange,
+    handleEventStoreToggle,
+    triggerSave,
+    saveSubWorkflow,
+    eventStoreEnabled,
+  })
 
   return (
     <WorkflowOperationsContext.Provider value={workflowOps}>
@@ -860,323 +265,17 @@ const WorkflowCanvasInner = forwardRef<WorkflowCanvasRef, WorkflowCanvasProps>((
           className
         )}
       >
-      <ReactFlow
-        nodes={workflow.nodes}
-        edges={workflow.edges}
-        onNodesChange={handleNodesChangeInternal}
-        onEdgesChange={handleEdgesChangeInternal}
-        onConnect={handleConnectInternal}
-        onConnectStart={handleConnectStart}
-        onConnectEnd={handleConnectEnd}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        onNodesDelete={handleNodesDelete}
-        onEdgesDelete={handleEdgesDelete}
-        onEdgeDoubleClick={handleEdgeDoubleClick}
-        onEdgeContextMenu={handleEdgeContextMenu}
-        onPaneContextMenu={onPaneContextMenu}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onMove={handleViewportChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        panOnScroll
-        selectionOnDrag={true}
-        panOnDrag={[1]}
-        selectionMode={SelectionMode.Partial}
-        fitView={!workflow.workflowAst.viewport}
-        deleteKeyCode="Delete"
-        snapToGrid={snapToGrid}
-        nodesDraggable={true}
-        nodesConnectable={true}
-        elementsSelectable={true}
-        minZoom={0.1}
-        maxZoom={4}
-        zoomOnDoubleClick={false}
-        colorMode={isDark ? 'dark' : 'light'}
-      >
-        {showBackground && (
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={24}
-            size={1}
-            style={{
-              backgroundColor: isDark
-                ? 'oklch(0.175 0 0)'
-                : 'oklch(0.985 0 0)'
-            }}
-          />
-        )}
-        {showMiniMap && <WorkflowMinimap nodeColor={getMiniMapNodeColor} />}
-      </ReactFlow>
-
-      {isCanvasEmpty && <WorkflowEmptyState />}
-
-      {/* 执行进度条 */}
-      <WorkflowProgress
-        isRunning={isRunning}
-        totalNodes={executionProgress.total}
-        completedNodes={executionProgress.completed}
-        currentNodeName={executionProgress.currentNodeName}
-        failedNodes={executionProgress.failed}
-        onCancel={cancelWorkflow}
-      />
-
-      {showControls && !useMenubar && (
-        <WorkflowControls
-          className="absolute left-4 top-4 z-[5]"
-          onRun={handleRunWorkflow}
-          onDebugRun={handleDebugRun}
-          onCancel={cancelWorkflow}
-          onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
-          onExport={exportWorkflow}
-          onAiExport={openAiExportDialog}
-          onImport={importWorkflow}
-          onSettings={openWorkflowSettingsDialog}
-          onSchedule={() => {
-            const workflowName = workflow.workflowAst?.name
-            if (workflowName) {
-              openScheduleDialog(workflowName)
-            } else {
-              showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
-            }
-          }}
-          onScheduleList={() => {
-            const workflowName = workflow.workflowAst?.name
-            if (workflowName) {
-              openSchedulePanel(workflowName)
-            } else {
-              showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
-            }
-          }}
-          onRunHistory={() => {
-            const workflowId = workflow.workflowAst?.id
-            if (workflowId) {
-              openRunHistoryPanel(workflowId)
-            } else {
-              showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
-            }
-          }}
-          onEventStoreToggle={handleEventStoreToggle}
+        <CanvasFlow {...flowProps} />
+        <CanvasControls {...controlsProps} />
+        <CanvasOverlays
+          canvasState={canvasState}
+          workflow={workflow}
+          {...overlaysStructural}
+          actions={overlaysActions}
+          timeTravel={timeTravel}
           eventStoreEnabled={eventStoreEnabled}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onFitView={handleFitView}
-          onCollapseNodes={collapseNodes}
-          onExpandNodes={expandNodes}
-          onAutoLayout={autoLayout}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          isRunning={isRunning}
-          isSaving={isSaving}
         />
-      )}
-
-      {showControls && useMenubar && (
-        <WorkflowMenubar
-          className="absolute left-4 top-4 z-[5]"
-          onRun={handleRunWorkflow}
-          onDebugRun={handleDebugRun}
-          onCancel={cancelWorkflow}
-          onSave={customOnSave || (() => saveWorkflow(workflow.workflowAst?.name || 'Untitled'))}
-          onExport={exportWorkflow}
-          onAiExport={openAiExportDialog}
-          onImport={importWorkflow}
-          onSettings={openWorkflowSettingsDialog}
-          onSchedule={() => {
-            const workflowName = workflow.workflowAst?.name
-            if (workflowName) {
-              openScheduleDialog(workflowName)
-            } else {
-              showToast('error', '请先保存工作流', '只有保存的工作流才能创建调度')
-            }
-          }}
-          onScheduleList={() => {
-            const workflowName = workflow.workflowAst?.name
-            if (workflowName) {
-              openSchedulePanel(workflowName)
-            } else {
-              showToast('error', '请先保存工作流', '只有保存的工作流才能查看调度')
-            }
-          }}
-          onRunHistory={() => {
-            const workflowId = workflow.workflowAst?.id
-            if (workflowId) {
-              openRunHistoryPanel(workflowId)
-            } else {
-              showToast('error', '请先保存工作流', '只有保存的工作流才能查看运行历史')
-            }
-          }}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onFitView={handleFitView}
-          onCollapseNodes={collapseNodes}
-          onExpandNodes={expandNodes}
-          onAutoLayout={autoLayout}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          isRunning={isRunning}
-          isSaving={isSaving}
-        />
-      )}
-      <ContextMenu
-        menu={menu}
-        onFitView={handleFitView}
-        onCenterView={handleCenterView}
-        onResetZoom={handleResetZoom}
-        onSelectAll={handleSelectAll}
-        onClearCanvas={clearCanvas}
-        onDeleteNode={deleteNode}
-        onRunNode={runNode}
-        onRunNodeIsolated={runNodeIsolated}
-        onToggleNodeCollapse={toggleNodeCollapse}
-        onDeleteEdge={deleteEdge}
-        onConfigEdge={handleConfigEdge}
-        onCreateGroup={createGroup}
-        onUngroupNodes={ungroupNodes}
-        onCollapseNodes={collapseNodes}
-        onExpandNodes={expandNodes}
-        onAutoLayout={autoLayout}
-        onToggleEntryNode={workflow.toggleEntryNode}
-        onToggleEndNode={workflow.toggleEndNode}
-        onClose={closeMenu}
-        nodeData={menu.contextType === 'node' && menu.targetId
-          ? workflow.nodes.find((n) => n.id === menu.targetId)?.data
-          : undefined}
-        hasMultipleSelectedNodes={workflow.nodes.filter((n) => n.selected).length > 1}
-        isGroupNode={
-          menu.contextType === 'node' && menu.targetId
-            ? (() => {
-                const node = workflow.nodes.find((n) => n.id === menu.targetId)
-                return node?.data instanceof WorkflowGraphAst && node.data.isGroup
-              })()
-            : false
-        }
-        selectedNodesCount={workflow.nodes.filter((n) => n.selected).length}
-        isEntryNode={
-          menu.contextType === 'node' && menu.targetId
-            ? workflow.isEntryNode(menu.targetId)
-            : false
-        }
-        isEndNode={
-          menu.contextType === 'node' && menu.targetId
-            ? workflow.isEndNode(menu.targetId)
-            : false
-        }
-      />
-
-      <NodeSelector
-        visible={nodeSelector.visible}
-        position={nodeSelector.screenPosition}
-        onSelect={handleAddNodeFromSelector}
-        onClose={closeNodeSelector}
-      />
-
-      <ShareDialog
-        visible={shareDialog.visible}
-        shareUrl={shareDialog.url}
-        onClose={closeShareDialog}
-      />
-
-      <Toaster />
-
-      <SubWorkflowModal
-        visible={subWorkflowModal.visible}
-        workflowAst={subWorkflowModal.workflowAst}
-        parentNodeId={subWorkflowModal.nodeId}
-        onClose={closeSubWorkflowModal}
-        onSave={saveSubWorkflow}
-      />
-
-      <LeftDrawer
-        visible={drawer.visible}
-        onClose={closeDrawer}
-        onRunNode={runNode}
-        onLocateNode={handleLocateNode}
-        onAutoSave={triggerSave}
-        onUpdateNode={workflow.updateNode}
-      />
-
-      <EdgeConfigDialog
-        visible={edgeConfigDialog.visible}
-        edge={edgeConfigDialog.edge}
-        onClose={closeEdgeConfigDialog}
-        onSave={handleSaveEdgeConfig}
-      />
-
-      <WorkflowSettingsDialog
-        visible={workflowSettingsDialog.visible}
-        workflow={workflow.workflowAst}
-        onClose={closeWorkflowSettingsDialog}
-        onSave={handleSaveWorkflowSettings}
-      />
-
-      {/* 调度对话框 */}
-      {scheduleDialog.visible && scheduleDialog.workflowName && (
-        <ScheduleDialog
-          workflowName={scheduleDialog.workflowName}
-          open={scheduleDialog.visible}
-          onOpenChange={closeScheduleDialog}
-          onSuccess={() => {
-            showToast('success', '调度创建成功', '工作流调度已创建成功')
-            // 如果调度面板是打开的，刷新列表
-            if (schedulePanel.visible) {
-              // 这里可以添加刷新逻辑
-            }
-          }}
-        />
-      )}
-
-      {/* 调度列表面板 */}
-      {schedulePanel.visible && schedulePanel.workflowName && (
-        <ScheduleList
-          workflowName={schedulePanel.workflowName}
-          onClose={closeSchedulePanel}
-          className="absolute top-4 right-4 w-[600px] max-h-[80vh] overflow-y-auto z-[5]"
-        />
-      )}
-
-      {/* 运行历史面板 */}
-      {runHistoryPanel.visible && runHistoryPanel.workflowId && (
-        <RunHistoryPanel
-          visible={runHistoryPanel.visible}
-          workflowId={runHistoryPanel.workflowId}
-          onClose={closeRunHistoryPanel}
-        />
-      )}
-
-      {/* 运行配置对话框 */}
-      <RunConfigDialog
-        visible={runConfigDialog.visible}
-        workflow={workflow.workflowAst}
-        defaultInputs={runConfigDialog.defaultInputs}
-        onConfirm={(inputs) => {
-          closeRunConfigDialog()
-          runWorkflow(inputs)
-        }}
-        onCancel={closeRunConfigDialog}
-      />
-
-      {/* AI导出对话框 */}
-      <AiExportDialog
-        visible={aiExportDialog.visible}
-        workflow={workflow.workflowAst}
-        onClose={closeAiExportDialog}
-      />
-
-      {/* 时间旅行调试器 - 只要开启事件存储就显示 */}
-      {eventStoreEnabled && (
-        <TimeTravelDebugger
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[10]"
-          onLocateNode={handleLocateNode}
-          {...timeTravel}
-        />
-      )}
-    </div>
+      </div>
     </WorkflowOperationsContext.Provider>
   )
 })

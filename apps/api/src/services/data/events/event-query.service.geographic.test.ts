@@ -137,9 +137,16 @@ describe('EventQueryService - GeographicResponse 统计数据', () => {
   beforeAll(() => {
     const queryFilePath = path.resolve(__dirname, './event-query.service.ts');
     const sdkTypesPath = path.resolve(__dirname, '../../../../../../packages/sdk/src/types.ts');
+    const sdkTypesDir = path.resolve(__dirname, '../../../../../../packages/sdk/src/types');
     const sdkControllerPath = path.resolve(__dirname, '../../../../../../packages/sdk/src/controllers/events.controller.ts');
     queryServiceCode = fs.readFileSync(queryFilePath, 'utf-8');
-    sdkTypesCode = fs.readFileSync(sdkTypesPath, 'utf-8');
+    // SDK 类型按领域拆分到 types/ 目录,聚合读取以兼容拆分布局
+    sdkTypesCode = [
+      fs.readFileSync(sdkTypesPath, 'utf-8'),
+      ...fs.readdirSync(sdkTypesDir)
+        .filter((f) => f.endsWith('.ts'))
+        .map((f) => fs.readFileSync(path.join(sdkTypesDir, f), 'utf-8')),
+    ].join('\n');
     sdkControllerCode = fs.readFileSync(sdkControllerPath, 'utf-8');
   });
 

@@ -1,15 +1,9 @@
 import { Inject, Injectable } from '@sker/core';
-import { WorkflowGraphAst, NodeEvent, generateId } from '@sker/workflow';
+import { WorkflowGraphAst, NodeEvent } from '@sker/workflow';
 import { ChapterData, StoryWeaverAst } from '@sker/workflow-ast';
-import { Observable, of, from, throwError, Subject, merge, timer, } from 'rxjs';
-import { concatMap, map, catchError, tap, takeUntil, finalize, filter, timeout, } from 'rxjs/operators';
+import { Observable, of, from, throwError, Subject, merge } from 'rxjs';
+import { concatMap, map, catchError, finalize, takeUntil } from 'rxjs/operators';
 import { z } from 'zod';
-import { ChatOpenAI, ChatOpenAICallOptions } from '@langchain/openai';
-import { StructuredToolInterface } from '@langchain/core/tools';
-import { Runnable } from '@langchain/core/runnables';
-import { BaseLanguageModelInput } from '@langchain/core/language_models/base';
-import { AIMessageChunk } from '@langchain/core/messages';
-import { parse as parseWithHarmony } from '@sker/json-harmony';
 import { useLlmModel } from '../llm-client';
 import { ChapterQualityService, QualityCheckResult, QualityIssue } from './ChapterQualityService';
 import { PromptBuilder } from './PromptBuilder';
@@ -17,7 +11,11 @@ import { ContentValidator } from './ContentValidator';
 import { StoryContextService } from './StoryContextService';
 import { StoryToolsFactory } from './StoryToolsFactory';
 import { LlmInvoker } from './LlmInvoker';
-import { StreamingLlmInvoker, StreamChunk } from './StreamingLlmInvoker';
+import { StreamingLlmInvoker } from './StreamingLlmInvoker';
+import { ChapterStructuredExtractor } from './chapter/ChapterStructuredExtractor';
+import { ChapterStreamingHandler } from './chapter/ChapterStreamingHandler';
+import { validateAndCleanContent } from './chapter/chapter-content-extractor';
+import { prepareChapterContext } from './chapter/chapter-preprocessing';
 
 interface AttemptResult {
   chapter: ChapterData;
@@ -30,23 +28,6 @@ interface GenerationState {
   improvementHints: string;
   allAttempts: AttemptResult[];
   result?: AttemptResult | null;
-}
-
-interface MessageContent {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-interface ParsedChapter {
-  title: string;
-  summary: string;
-  content: string;
-  clues?: Array<{
-    id: string;
-    description: string;
-    status: 'pending' | 'resolved';
-  }>;
-  resolvedClueIds?: string[];
 }
 
 interface ChapterEmitData {
@@ -62,10 +43,13 @@ interface ChapterEmitData {
 
 /**
  * 章节生成服务
- * 职责：章节生成的核心逻辑，包括重试、质检、内容提取
+ * 职责：章节生成的核心编排，包括重试、质检、内容提取
  */
 @Injectable()
 export class ChapterGenerationService {
+  private structuredExtractor: ChapterStructuredExtractor;
+  private streamingHandler: ChapterStreamingHandler;
+
   constructor(
     @Inject(ChapterQualityService) private qualityService: ChapterQualityService,
     @Inject(PromptBuilder) private promptBuilder: PromptBuilder,
@@ -74,7 +58,10 @@ export class ChapterGenerationService {
     @Inject(StoryToolsFactory) private toolsFactory: StoryToolsFactory,
     @Inject(LlmInvoker) private llmInvoker: LlmInvoker,
     @Inject(StreamingLlmInvoker) private streamingLlmInvoker: StreamingLlmInvoker
-  ) {}
+  ) {
+    this.structuredExtractor = new ChapterStructuredExtractor(this.promptBuilder);
+    this.streamingHandler = new ChapterStreamingHandler(this.promptBuilder, this.llmInvoker, this.streamingLlmInvoker, this.toolsFactory);
+  }
 
   /**
    * 简化版章节生成：草稿 → 改进 → 结构化（支持流式）
@@ -103,32 +90,11 @@ export class ChapterGenerationService {
       resolvedClueIds: z.array(z.string()).optional().describe('本章回填的伏笔ID列表（可选）')
     });
 
-    const chapters = (ast.previousChapters || []).filter(ch => {
-      if (!ch.content || ch.content.trim().length === 0) {
-        console.warn(`[ChapterGeneration] 过滤空章节 ${ch.chapterNumber}`);
-        return false;
-      }
-
-      const suspiciousPatterns = [
-        '我先查看', '让我查看', '我需要了解', '让我先',
-        '暂无明确章节标题', '我先回顾', '我将', '叙述者回顾', '叙述者表示'
-      ];
-
-      const titleSuspicious = suspiciousPatterns.some(pattern => ch.title.includes(pattern));
-      const contentSuspicious = suspiciousPatterns.some(pattern =>
-        ch.content && ch.content.substring(0, 200).includes(pattern)
-      );
-
-      return !titleSuspicious && !contentSuspicious;
-    });
-
-    const isFirstChapter = chapters.length === 0;
-    const nextChapterNumber = isFirstChapter ? 1 : Math.max(...chapters.map(c => c.chapterNumber)) + 1;
-    const existingTitles = new Set(chapters.map(ch => this.contentValidator.normalizeTitle(ch.title)));
+    const { chapters, isFirstChapter, nextChapterNumber, existingTitles } = prepareChapterContext(ast, this.contentValidator);
     const useTools = true;
 
     const baseModel = useLlmModel({ model: ast.model, temperature: ast.temperature });
-    const model = useTools ? baseModel.bindTools(this.createTools(chapters, ctx, ast, useTools)) : baseModel;
+    const model = useTools ? baseModel.bindTools(this.streamingHandler.createTools(chapters, ctx, ast, useTools)) : baseModel;
 
     const systemPrompt = this.promptBuilder.buildSystemPrompt(ast, chapters, isFirstChapter, nextChapterNumber, useTools);
     const prompts = Array.isArray(ast.prompt) ? ast.prompt.join('\n') : ast.prompt;
@@ -142,18 +108,18 @@ export class ChapterGenerationService {
     const mainFlow$ = of(null).pipe(
       concatMap(() => {
         console.log('\n🌱 [Step 1/3] 生成草稿...');
-        return this.generateDraft(model, systemPrompt, userPrompt, signal, useTools, chapters, ctx, ast, streamEventSubject, enableStreaming);
+        return this.streamingHandler.generateDraft(model, systemPrompt, userPrompt, signal, useTools, chapters, ctx, ast, streamEventSubject, enableStreaming);
       }),
       concatMap((draftText: string) => {
         console.log(`\n✅ [Step 1/3] 草稿完成，长度: ${draftText.length}字`);
         console.log('\n✨ [Step 2/3] 自我改进...');
-        return this.selfRefine(baseModel, draftText, ast.wordCount, signal, ast, streamEventSubject, enableStreaming, chapters, ctx);
+        return this.streamingHandler.selfRefine(baseModel, draftText, ast.wordCount, signal, ast, streamEventSubject, enableStreaming, chapters, ctx);
       }),
       concatMap((refinedText: string) => {
         console.log(`\n✅ [Step 2/3] 改进完成，长度: ${refinedText.length}字`);
         console.log('\n🔍 [Step 3/3] 提取结构化数据...');
-        return this.extractStructuredContentWithRetry(baseModel, refinedText, signal, ExtractionSchema, 3).pipe(
-          map((parsed) => this.validateAndCleanContent(parsed, nextChapterNumber, existingTitles)),
+        return this.structuredExtractor.extractWithRetry(baseModel, refinedText, signal, ExtractionSchema, 3).pipe(
+          map((parsed) => validateAndCleanContent(parsed, nextChapterNumber, existingTitles, this.contentValidator)),
           map(({ chapter }) => {
             console.log(`\n✅ [Step 3/3] 完成：第${chapter.chapterNumber}章《${chapter.title}》`);
             this.updateAstState(ast, chapter, nextChapterNumber);
@@ -176,399 +142,6 @@ export class ChapterGenerationService {
     }
 
     return mainFlow$;
-  }
-
-  /**
-   * Step 1: 生成草稿（流式）
-   */
-  private generateDraft(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
-    systemPrompt: string,
-    userPrompt: string,
-    signal: AbortSignal,
-    useTools: boolean,
-    chapters: ChapterData[],
-    ctx: WorkflowGraphAst,
-    ast: StoryWeaverAst,
-    streamEventSubject: Subject<NodeEvent>,
-    enableStreaming: boolean
-  ): Observable<string> {
-    const initialMessages: MessageContent[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ];
-
-    const tools = useTools ? this.createTools(chapters, ctx, ast, useTools) : [];
-
-    if (enableStreaming) {
-      return this.invokeWithStreaming(model, initialMessages, signal, useTools, tools, ast, streamEventSubject);
-    }
-
-    return this.llmInvoker.invokeWithTools(model, initialMessages, signal, useTools, tools);
-  }
-
-  /**
-   * Step 2: 自我改进（流式）
-   * 保持工具开启，虽然改进提示词通常不需要调用工具
-   */
-  private selfRefine(
-    model: ChatOpenAI<ChatOpenAICallOptions>,
-    draftText: string,
-    wordCount: number,
-    signal: AbortSignal,
-    ast: StoryWeaverAst,
-    streamEventSubject: Subject<NodeEvent>,
-    enableStreaming: boolean,
-    chapters: ChapterData[],
-    ctx: WorkflowGraphAst
-  ): Observable<string> {
-    const refinePrompt = this.promptBuilder.buildSelfRefinePrompt(draftText, wordCount);
-    const tools = this.createTools(chapters, ctx, ast, true);
-
-    // 绑定工具
-    const modelWithTools = model.bindTools(tools);
-
-    if (enableStreaming) {
-      let accumulatedText = '';
-      let lastDeltaEmitTime = 0;
-      const DELTA_THROTTLE_MS = 150;
-
-      return this.streamingLlmInvoker.streamWithTools(
-        modelWithTools,
-        [{ role: 'user', content: refinePrompt }],
-        signal,
-        true,  // useTools = true，保持工具开启
-        tools
-      ).pipe(
-        tap((chunk: StreamChunk) => {
-          if (chunk.type === 'delta' && chunk.delta) {
-            accumulatedText += chunk.delta;
-
-            const now = Date.now();
-            if ((now - lastDeltaEmitTime) >= DELTA_THROTTLE_MS) {
-              streamEventSubject.next({
-                type: 'node_delta',
-                id: ast.id,
-                data: { delta: chunk.delta, accumulated: accumulatedText }
-              });
-              lastDeltaEmitTime = now;
-            }
-          }
-        }),
-        filter((chunk: StreamChunk) => chunk.type === 'complete'),
-        map((chunk: StreamChunk) => {
-          const finalText = chunk.fullText || accumulatedText;
-
-          streamEventSubject.next({
-            type: 'node_delta',
-            id: ast.id,
-            data: { delta: '', accumulated: finalText }
-          });
-
-          console.log(`[selfRefine] 改进完成，长度: ${finalText.length}字`);
-          return finalText;
-        })
-      );
-    }
-
-    return this.llmInvoker.invokeWithTools(modelWithTools, [{ role: 'user', content: refinePrompt }], signal, true, tools);
-  }
-
-
-  private invokeWithStreaming(
-    model: ChatOpenAI<ChatOpenAICallOptions> | Runnable<BaseLanguageModelInput, AIMessageChunk, ChatOpenAICallOptions>,
-    initialMessages: MessageContent[],
-    signal: AbortSignal,
-    useTools: boolean,
-    tools: StructuredToolInterface[],
-    ast: StoryWeaverAst,
-    streamEventSubject: Subject<NodeEvent>
-  ): Observable<string> {
-    let accumulatedText = '';
-
-    // 节流控制：减少前端 DOM 更新频率
-    let lastDeltaEmitTime = 0;
-    const DELTA_THROTTLE_MS = 150; // 150ms = ~6.7fps，肉眼流畅阈值
-
-    return this.streamingLlmInvoker.streamWithTools(model, initialMessages, signal, useTools, tools).pipe(
-      tap((chunk: StreamChunk) => {
-        if (chunk.type === 'delta' && chunk.delta) {
-          // 始终累积文本（不节流）
-          accumulatedText += chunk.delta;
-
-          // 节流发送到前端（减少 DOM 更新）
-          const now = Date.now();
-          const shouldEmit = (now - lastDeltaEmitTime) >= DELTA_THROTTLE_MS;
-
-          if (shouldEmit) {
-            streamEventSubject.next({
-              type: 'node_delta',
-              id: ast.id,
-              data: { delta: chunk.delta, accumulated: accumulatedText }
-            });
-            lastDeltaEmitTime = now;
-          }
-        } else if (chunk.type === 'tool_progress' && chunk.toolProgress) {
-          // 工具进度事件：不节流（保证实时性）
-          streamEventSubject.next({
-            type: 'node_progress',
-            id: ast.id,
-            data: {
-              stage: chunk.toolProgress.currentTool,
-              message: chunk.toolProgress.message,
-              round: chunk.toolProgress.round,
-              status: chunk.toolProgress.status
-            }
-          });
-        } else if (chunk.type === 'tool_result' && chunk.toolResult) {
-          // 工具结果事件：不节流
-          streamEventSubject.next({
-            type: 'node_progress',
-            id: ast.id,
-            data: {
-              stage: chunk.toolResult.toolName,
-              message: `✓ ${chunk.toolResult.resultSummary}`,
-              status: 'completed'
-            }
-          });
-        }
-      }),
-      filter((chunk: StreamChunk) => chunk.type === 'complete'),
-      map((chunk: StreamChunk) => {
-        const finalText = chunk.fullText || accumulatedText;
-
-        // 发送最后一次 delta（确保前端显示完整内容）
-        streamEventSubject.next({
-          type: 'node_delta',
-          id: ast.id,
-          data: { delta: '', accumulated: finalText }
-        });
-
-        return finalText;
-      })
-    );
-  }
-
-  private handleLlmError(error: Error, _useTools: boolean, _chapters: ChapterData[]): Observable<never> {
-    return throwError(() => error);
-  }
-
-  /**
-   * 提取结构化内容（带重试）
-   * 最多重试 maxRetries 次，每次重试间隔递增
-   */
-  private extractStructuredContentWithRetry(
-    baseModel: ChatOpenAI<ChatOpenAICallOptions>,
-    rawText: string,
-    signal: AbortSignal,
-    ExtractionSchema: z.ZodObject<z.ZodRawShape>,
-    maxRetries: number,
-    currentAttempt: number = 1
-  ): Observable<ParsedChapter> {
-    console.log(`[extractStructuredContentWithRetry] 开始第${currentAttempt}次提取尝试`);
-
-    return this.extractStructuredContent(baseModel, rawText, signal, ExtractionSchema).pipe(
-      catchError((error) => {
-        console.error(`[extractStructuredContentWithRetry] 第${currentAttempt}次提取失败:`, error.message);
-
-        if (currentAttempt >= maxRetries) {
-          console.error(`[extractStructuredContentWithRetry] 已达到最大重试次数 ${maxRetries}，放弃提取`);
-          return throwError(() => new Error(`结构化提取失败，已重试 ${maxRetries} 次：${error.message}`));
-        }
-
-        // 指数退避：1秒、2秒、4秒
-        const backoffDelay = 1000 * Math.pow(2, currentAttempt - 1);
-        console.log(`[extractStructuredContentWithRetry] ${backoffDelay}ms 后进行第${currentAttempt + 1}次尝试...`);
-
-        return timer(backoffDelay).pipe(
-          concatMap(() =>
-            this.extractStructuredContentWithRetry(
-              baseModel,
-              rawText,
-              signal,
-              ExtractionSchema,
-              maxRetries,
-              currentAttempt + 1
-            )
-          )
-        );
-      })
-    );
-  }
-
-  /**
-   * 提取结构化内容
-   * 使用 json-harmony 优雅地解析 LLM 返回的文本
-   *
-   * 哲学：宁可失败，不以次充好
-   * - 不使用降级方案
-   * - 解析失败直接抛出错误
-   * - 触发重试机制
-   */
-  private extractStructuredContent(
-    baseModel: ChatOpenAI<ChatOpenAICallOptions>,
-    rawText: string,
-    signal: AbortSignal,
-    ExtractionSchema: z.ZodObject<z.ZodRawShape>
-  ): Observable<ParsedChapter> {
-    const extractionPrompt = this.promptBuilder.buildExtractionPrompt(rawText);
-
-    const startTime = Date.now();
-
-    // 使用普通 invoke，让 LLM 返回 JSON 文本，然后用 json-harmony 解析
-    return from(baseModel.invoke([
-      {
-        role: 'system',
-        content: `你是一个文本结构化提取专家，精确提取小说章节的元数据。
-
-**严格要求**：
-1. 只返回 JSON 对象，不要有任何其他文字说明
-2. JSON 必须完整且格式正确
-3. 使用标准 JSON 格式（双引号、正确的逗号）
-4. 不要截断 JSON，确保所有字段都完整
-5. 直接输出 JSON，可以使用 \`\`\`json 代码块包裹`
-      },
-      { role: 'user', content: extractionPrompt }
-    ], { signal })).pipe(
-      timeout(60000), // 60秒超时，超时直接抛出错误
-      map((aiMessage) => {
-        // 获取 LLM 返回的文本
-        const responseText = typeof aiMessage.content === 'string'
-          ? aiMessage.content
-          : JSON.stringify(aiMessage.content);
-
-        console.log(`[extractStructuredContent] LLM 返回文本长度: ${responseText.length}`);
-        console.log(`[extractStructuredContent] LLM 返回文本预览: ${responseText.slice(0, 300)}...`);
-
-        // 使用 json-harmony 解析，它能处理：
-        // - Markdown 代码块
-        // - 无引号的键
-        // - 尾随逗号
-        // - 混合格式
-        const parseResult = parseWithHarmony(responseText);
-
-        console.log(`[extractStructuredContent] json-harmony 解析成功`);
-        console.log(`[extractStructuredContent] 使用的恢复策略: ${parseResult.statistics.recoveryStrategiesUsed.join(', ')}`);
-        console.log(`[extractStructuredContent] 解析耗时: ${parseResult.statistics.parseTimeMs}ms`);
-
-        // 检查 PreserveAsString 策略：如果返回字符串，尝试手动提取 JSON
-        if (typeof parseResult.data === 'string') {
-          console.warn(`[extractStructuredContent] json-harmony 降级为 PreserveAsString，尝试手动提取 JSON`);
-          console.log(`[extractStructuredContent] 字符串内容: ${parseResult.data.slice(0, 500)}`);
-
-          // 尝试手动提取 JSON（去除代码块标记、前后空白等）
-          let jsonText = parseResult.data.trim();
-
-          // 移除 Markdown 代码块标记
-          const codeBlockMatch = jsonText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-          if (codeBlockMatch?.[1]) {
-            jsonText = codeBlockMatch[1].trim();
-            console.log(`[extractStructuredContent] 提取代码块后: ${jsonText.slice(0, 300)}`);
-          }
-
-          // 再次使用 json-harmony 解析提取后的文本
-          // 因为 json-harmony 比原生 JSON.parse() 更强大，能修复更多格式错误
-          const retryResult = parseWithHarmony(jsonText);
-
-          console.log(`[extractStructuredContent] 二次解析恢复策略: ${retryResult.statistics.recoveryStrategiesUsed.join(', ')}`);
-
-          if (typeof retryResult.data !== 'string') {
-            // 二次解析成功，使用解析后的数据
-            console.log(`[extractStructuredContent] 二次解析成功`);
-            parseResult.data = retryResult.data;
-          } else {
-            // 如果 json-harmony 尝试了所有策略后还是返回字符串，说明 JSON 格式严重错误
-            console.error(`[extractStructuredContent] json-harmony 二次解析仍然失败`);
-            console.error(`[extractStructuredContent] 无法解析的文本: ${jsonText.slice(0, 500)}`);
-
-            throw new Error('LLM 返回的 JSON 格式无效，json-harmony 尝试所有策略后仍无法解析为结构化数据，将触发重试');
-          }
-        }
-
-        // 数据清洗：修复 LLM 可能返回的格式错误
-        const sanitizedData = this.sanitizeChapterData(parseResult.data);
-
-        // 使用 zod schema 验证数据结构
-        const validated = ExtractionSchema.parse(sanitizedData) as {
-          title: string;
-          summary: string;
-          contentStartMarker?: string;
-          contentEndMarker?: string;
-          clues?: Array<{
-            id: string;
-            description: string;
-            status: 'pending' | 'resolved';
-          }>;
-          resolvedClueIds?: string[];
-        };
-
-        // 使用标记从原始文本中提取正文内容
-        const content = this.extractContentByMarkers(
-          rawText,
-          validated.contentStartMarker || '',
-          validated.contentEndMarker || ''
-        );
-
-        // 组装完整的 ParsedChapter
-        const parsedChapter: ParsedChapter = {
-          title: validated.title,
-          summary: validated.summary,
-          content: content,
-          clues: validated.clues,
-          resolvedClueIds: validated.resolvedClueIds
-        };
-
-        return parsedChapter;
-      }),
-      catchError((error) => {
-        // 检查是否为中止错误
-        if (signal.aborted) {
-          return throwError(() => new Error('任务已被用户取消'));
-        }
-
-        console.error(`[extractStructuredContent] 结构化提取失败:`, error);
-        console.error(`[extractStructuredContent] 错误详情:`, {
-          message: error.message,
-          name: error.name,
-          stack: error.stack
-        });
-
-        // 不使用降级方案，直接抛出错误，触发重试
-        return throwError(() => error);
-      }),
-      finalize(() => {
-        const elapsed = Date.now() - startTime;
-        console.log(`[extractStructuredContent] 结构化提取流程结束，总耗时: ${elapsed}ms`);
-      })
-    );
-  }
-
-  private validateAndCleanContent(
-    parsed: ParsedChapter,
-    nextChapterNumber: number,
-    existingTitles: Set<string>
-  ): { chapter: ChapterData; attempt: number } {
-    const cleanedContent = this.contentValidator.cleanContent(parsed.content, parsed.title, parsed.summary);
-    const normalizedTitle = this.contentValidator.normalizeTitle(parsed.title);
-
-    if (existingTitles.has(normalizedTitle)) {
-      throw new Error(`TITLE_DUPLICATE:${parsed.title}`);
-    }
-
-    return {
-      chapter: {
-        chapterNumber: nextChapterNumber,
-        title: parsed.title,
-        summary: parsed.summary,
-        content: cleanedContent,
-        clues: parsed.clues?.map((clue) => ({
-          ...clue,
-          chapterNumber: nextChapterNumber
-        })),
-        resolvedClueIds: parsed.resolvedClueIds
-      },
-      attempt: 0
-    };
   }
 
   private retryQualityCheck(
@@ -693,161 +266,6 @@ export class ChapterGenerationService {
     }
   }
 
-  /**
-   * 数据清洗：修复 LLM 返回的格式错误
-   *
-   * 常见错误：
-   * 1. clues 是字符串数组而非对象数组
-   * 2. resolvedClueIds 包含完整描述而非ID
-   */
-  private sanitizeChapterData(data: any): any {
-    const sanitized = { ...data };
-
-    // 修复 clues：如果是字符串数组，转换为对象数组
-    if (Array.isArray(sanitized.clues)) {
-      sanitized.clues = sanitized.clues.map((clue: any, _index: number) => {
-        if (typeof clue === 'string') {
-          // 字符串转对象：生成唯一ID
-          return {
-            id: `clue_${generateId()}`,
-            description: clue,
-            status: 'pending'
-          };
-        }
-        return clue;
-      });
-    }
-
-    // 修复 resolvedClueIds：如果包含完整描述，尝试提取ID或生成警告
-    if (Array.isArray(sanitized.resolvedClueIds)) {
-      sanitized.resolvedClueIds = sanitized.resolvedClueIds.map((id: any) => {
-        if (typeof id === 'string') {
-          // 如果长度超过50，可能是描述而非ID，截取或生成ID
-          if (id.length > 50) {
-            console.warn(`[sanitizeChapterData] resolvedClueIds 包含描述而非ID: "${id.slice(0, 50)}..."`);
-            // 尝试从描述中提取ID（如果有 clue_ 前缀）
-            const match = id.match(/clue_\w+/);
-            return match ? match[0] : `resolved_${generateId()}`;
-          }
-          return id;
-        }
-        return id;
-      });
-    }
-
-    return sanitized;
-  }
-
-  /**
-   * 使用起止标记从原始文本中提取正文内容
-   *
-   * @param rawText 原始文本（包含标题、简介、正文、伏笔说明等）
-   * @param startMarker 正文开头标记（前20字左右）
-   * @param endMarker 正文结尾标记（后20字左右）
-   */
-  private extractContentByMarkers(rawText: string, startMarker: string, endMarker: string): string {
-    // 去除标记中的空白符，提高匹配成功率
-    const normalizedText = rawText.replace(/\s+/g, ' ');
-    const normalizedStart = startMarker.replace(/\s+/g, ' ').trim();
-    const normalizedEnd = endMarker.replace(/\s+/g, ' ').trim();
-
-    const startIndex = normalizedText.indexOf(normalizedStart);
-    const endIndex = normalizedText.indexOf(normalizedEnd);
-
-    if (startIndex === -1) {
-      console.warn(`[extractContentByMarkers] 未找到起始标记: "${startMarker.slice(0, 30)}..."`);
-      // 降级：使用算法提取
-      return this.extractContentFromRawText(rawText);
-    }
-
-    if (endIndex === -1) {
-      console.warn(`[extractContentByMarkers] 未找到结束标记: "${endMarker.slice(0, 30)}..."`);
-      // 降级：从起始标记到文本末尾
-      const startOffset = this.findOriginalOffset(rawText, normalizedText, startIndex);
-      return rawText.substring(startOffset).trim();
-    }
-
-    // 计算在原始文本中的偏移量（考虑空白符差异）
-    const startOffset = this.findOriginalOffset(rawText, normalizedText, startIndex);
-    const endOffset = this.findOriginalOffset(rawText, normalizedText, endIndex + normalizedEnd.length);
-
-    const content = rawText.substring(startOffset, endOffset).trim();
-
-    console.log(`[extractContentByMarkers] 成功提取正文，长度: ${content.length} 字符`);
-    return content;
-  }
-
-  /**
-   * 在原始文本中找到对应于规范化文本位置的偏移量
-   */
-  private findOriginalOffset(originalText: string, normalizedText: string, normalizedOffset: number): number {
-    let originalIdx = 0;
-    let normalizedIdx = 0;
-
-    while (normalizedIdx < normalizedOffset && originalIdx < originalText.length) {
-      const originalChar = originalText[originalIdx] as string;
-      const normalizedChar = normalizedText[normalizedIdx];
-
-      if (/\s/.test(originalChar)) {
-        // 原始文本是空白符，跳过
-        originalIdx++;
-        if (normalizedChar === ' ') {
-          normalizedIdx++;
-        }
-      } else {
-        // 非空白符，必须匹配
-        originalIdx++;
-        normalizedIdx++;
-      }
-    }
-
-    return originalIdx;
-  }
-
-  /**
-   * 从原始文本中提取正文内容（降级方案）
-   * 去除标题（# 开头的行）和其他元数据标记
-   */
-  private extractContentFromRawText(rawText: string): string {
-    // 按行分割
-    const lines = rawText.split('\n');
-    const contentLines: string[] = [];
-    let skipNextEmpty = false;
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-
-      // 跳过标题行（# 开头）
-      if (trimmed.startsWith('#')) {
-        skipNextEmpty = true;
-        continue;
-      }
-
-      // 跳过标题后的第一个空行
-      if (skipNextEmpty && trimmed === '') {
-        skipNextEmpty = false;
-        continue;
-      }
-
-      skipNextEmpty = false;
-      contentLines.push(line);
-    }
-
-    // 去除开头和结尾的空行
-    let content = contentLines.join('\n').trim();
-
-    // 去除可能的伏笔说明部分（通常在末尾）
-    const clueMarkers = ['**伏笔', '伏笔说明', 'clues:', '本章伏笔'];
-    for (const marker of clueMarkers) {
-      const index = content.lastIndexOf(marker);
-      if (index > content.length * 0.8) { // 只在文本末尾20%处寻找
-        content = content.substring(0, index).trim();
-      }
-    }
-
-    return content;
-  }
-
   private buildEmitEvent(ast: StoryWeaverAst, chapterData: ChapterData): NodeEvent {
     const emitData: ChapterEmitData = {
       title: chapterData.title,
@@ -866,11 +284,7 @@ export class ChapterGenerationService {
     return { type: 'node_emit', id: ast.id, data: emitData };
   }
 
-  private createTools(chapters: ChapterData[], ctx: WorkflowGraphAst, ast: StoryWeaverAst, useTools: boolean): StructuredToolInterface[] {
-    if (!useTools) return [];
-
-    const chapterTools = this.toolsFactory.createChapterTools(chapters, ast);
-    const nodeTools = this.toolsFactory.createNodeTools(ctx, ast.id);
-    return [...chapterTools, ...nodeTools];
+  private handleLlmError(error: Error, _useTools: boolean, _chapters: ChapterData[]): Observable<never> {
+    return throwError(() => error);
   }
 }

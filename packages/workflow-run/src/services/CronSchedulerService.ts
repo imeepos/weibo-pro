@@ -1,25 +1,16 @@
 import { Injectable, Inject, logger } from '@sker/core'
 import { RedisClient } from '@sker/redis'
-import { useEntityManager, WorkflowScheduleEntity, ScheduleStatus, ScheduleType, cleanupIdleConnections } from '@sker/entities'
+import { WorkflowScheduleEntity, ScheduleStatus } from '@sker/entities'
 import { WorkflowExecutionService } from './WorkflowExecutionService'
 import { WeiboAccountSyncService } from './weibo-account-sync.service'
-import { withRetryOnNetworkError } from '../utils/retry-on-network-error'
 import nodeSchedule from 'node-schedule'
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc.js'
-import timezone from 'dayjs/plugin/timezone.js'
-
-// 配置 dayjs 时区插件
-dayjs.extend(utc)
-dayjs.extend(timezone)
-
-/**
- * 格式化时间为北京时间字符串
- */
-function formatBeijingTime(date: Date | null | undefined): string {
-  if (!date) return '无'
-  return dayjs(date).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm:ss')
-}
+import { CronJobRegistry } from './cron/cron-job-registry'
+import { DistributedLock } from './cron/cron-distributed-lock'
+import { CronSchedulePersistence } from './cron/cron-schedule-persistence'
+import { CronExecutionEngine } from './cron/cron-execution-engine'
+import { CronJobScheduler } from './cron/cron-job-scheduler'
+import { triggerCleanup } from './cron/cron-cleanup'
+import { formatBeijingTime } from './cron/cron-time.util'
 
 type ScheduleChangeType = 'insert' | 'update' | 'delete'
 
@@ -36,501 +27,55 @@ interface ScheduleWatcher {
 /**
  * Cron 调度服务（基于 node-schedule + 分布式锁）
  *
- * 存在即合理：
- * - 使用 node-schedule 替换轮询机制，实现精确调度
- * - 使用 Redis 分布式锁避免多实例重复执行
- * - 内存管理：Map 缓存 Job 对象
- * - 优雅关闭：自动 cancel 所有任务
- *
- * 优雅设计：
- * - addSchedule: 添加或更新调度任务
- * - removeSchedule: 移除调度任务
- * - initializeSchedules: 启动时加载所有启用的调度
- * - 分布式锁：每个任务执行前尝试获取锁
- *
- * 性能即艺术：
- * - node-schedule 基于系统定时器，零轮询开销
- * - Redis 分布式锁，多实例安全
+ * 对外门面，职责拆分为：
+ * - cron/cron-job-registry: 内存任务状态管理
+ * - cron/cron-distributed-lock: Redis 分布式锁
+ * - cron/cron-schedule-persistence: 数据库持久化
+ * - cron/cron-execution-engine: 调度触发执行
+ * - cron/cron-job-scheduler: 任务注册/注销
+ * - cron/cron-cleanup: 定期清理
+ * - cron/cron-time.util: 北京时间格式化
  */
 @Injectable()
 export class CronSchedulerService {
-  private scheduleJobs = new Map<string, nodeSchedule.Job>()
-  private intervalTimers = new Map<string, NodeJS.Timeout>()
-  private continuousRunning = new Set<string>() // 正在运行的持续调度任务ID
   private readonly lockTTL = 300 // 锁过期时间（秒），根据任务最长执行时间调整
-  private executionCount = 0 // 执行计数器
   private readonly MAX_EXECUTIONS_BEFORE_CLEANUP = 50 // 每50次执行后清理
-  private accountSyncJob: nodeSchedule.Job | null = null // 账号同步定时任务
+  private readonly registry = new CronJobRegistry()
+  private readonly persistence = new CronSchedulePersistence()
+  private readonly engine: CronExecutionEngine
+  private readonly scheduler: CronJobScheduler
 
   constructor(
-    @Inject(WorkflowExecutionService) private executionService: WorkflowExecutionService,
-    @Inject(RedisClient) private redis: RedisClient,
+    @Inject(WorkflowExecutionService) executionService: WorkflowExecutionService,
+    @Inject(RedisClient) private readonly redis: RedisClient,
     @Inject(WeiboAccountSyncService) private accountSyncService: WeiboAccountSyncService
-  ) { }
+  ) {
+    const lock = new DistributedLock(this.redis)
+    this.engine = new CronExecutionEngine({
+      executionService,
+      lock,
+      registry: this.registry,
+      persistence: this.persistence,
+      lockTTL: this.lockTTL,
+      maxExecutionsBeforeCleanup: this.MAX_EXECUTIONS_BEFORE_CLEANUP,
+      onRemoveSchedule: (scheduleId) => this.removeSchedule(scheduleId),
+      onTriggerCleanup: () => triggerCleanup()
+    })
+    this.scheduler = new CronJobScheduler(this.registry, this.engine, this.persistence)
+  }
 
   /**
    * 添加调度任务
    */
   async addSchedule(schedule: WorkflowScheduleEntity): Promise<void> {
-    // 先移除已存在的任务
-    this.removeSchedule(schedule.id)
-
-    let job: nodeSchedule.Job | null = null
-
-    switch (schedule.scheduleType) {
-      case ScheduleType.CRON: {
-        if (!schedule.cronExpression) {
-          logger.error('❌ Cron 调度缺少表达式', { scheduleId: schedule.id })
-          return
-        }
-        job = nodeSchedule.scheduleJob(
-          schedule.cronExpression,
-          async () => await this.executeWithLock(schedule)
-        )
-        const nextInvocation = job?.nextInvocation()
-
-        // 📅 立即更新数据库中的 nextRunAt，确保与内存中的调度时间同步
-        if (nextInvocation) {
-          await this.updateNextRunAtInDatabase(schedule.id, nextInvocation)
-        }
-
-        logger.info('📅 Cron 调度已启动', {
-          scheduleId: schedule.id,
-          scheduleName: schedule.name,
-          cronExpression: schedule.cronExpression,
-          workflowId: schedule.workflowId,
-          nextRunAt: formatBeijingTime(nextInvocation)
-        })
-        break
-      }
-
-      case ScheduleType.INTERVAL: {
-        if (!schedule.intervalSeconds) {
-          logger.error('❌ 间隔调度缺少间隔时间', { scheduleId: schedule.id })
-          return
-        }
-        // 使用 setInterval 实现精确间隔调度，避免时间漂移
-        const intervalMs = schedule.intervalSeconds * 1000
-        const timer = setInterval(async () => {
-          await this.executeWithLock(schedule)
-        }, intervalMs)
-        this.intervalTimers.set(schedule.id, timer)
-        const nextIntervalRun = new Date(Date.now() + intervalMs)
-
-        // 📅 立即更新数据库中的 nextRunAt，确保与内存中的调度时间同步
-        await this.updateNextRunAtInDatabase(schedule.id, nextIntervalRun)
-
-        logger.info('⏱️ 间隔调度已启动', {
-          scheduleId: schedule.id,
-          scheduleName: schedule.name,
-          intervalSeconds: schedule.intervalSeconds,
-          intervalMs,
-          workflowId: schedule.workflowId,
-          nextRunAt: formatBeijingTime(nextIntervalRun)
-        })
-        return
-      }
-
-      case ScheduleType.ONCE: {
-        if (!schedule.startTime) {
-          logger.error('❌ 一次性调度缺少开始时间', { scheduleId: schedule.id })
-          return
-        }
-        job = nodeSchedule.scheduleJob(
-          new Date(schedule.startTime),
-          async () => await this.executeWithLock(schedule)
-        )
-        const executeDate = new Date(schedule.startTime)
-
-        // 📅 一次性调度的 nextRunAt 应该等于执行时间
-        await this.updateNextRunAtInDatabase(schedule.id, executeDate)
-
-        logger.info('🎯 一次性调度已设置', {
-          scheduleId: schedule.id,
-          scheduleName: schedule.name,
-          startTime: schedule.startTime,
-          executeAt: formatBeijingTime(executeDate),
-          workflowId: schedule.workflowId
-        })
-        break
-      }
-
-      case ScheduleType.MANUAL:
-        // 手动触发不需要调度
-        logger.debug('🖐️ 手动触发类型，跳过调度', { scheduleId: schedule.id })
-        return
-
-      case ScheduleType.CONTINUOUS:
-        // 持续模式：立即启动第一次执行
-        // 后续执行在 executeContinuous 中处理（执行完毕后立即重新执行）
-        this.startContinuousSchedule(schedule)
-        return
-
-      default:
-        logger.error('❌ 不支持的调度类型', {
-          scheduleId: schedule.id,
-          scheduleType: schedule.scheduleType
-        })
-        return
-    }
-
-    if (job) {
-      this.scheduleJobs.set(schedule.id, job)
-    }
+    await this.scheduler.register(schedule)
   }
 
   /**
    * 移除调度任务
    */
   removeSchedule(scheduleId: string): void {
-    // 清理 cron/once 类型的 node-schedule 任务
-    const job = this.scheduleJobs.get(scheduleId)
-    if (job) {
-      job.cancel()
-      this.scheduleJobs.delete(scheduleId)
-      logger.debug('移除调度任务', { scheduleId })
-    }
-
-    // 清理 interval 类型的定时器
-    const timer = this.intervalTimers.get(scheduleId)
-    if (timer) {
-      clearInterval(timer)
-      this.intervalTimers.delete(scheduleId)
-      logger.debug('移除间隔定时器', { scheduleId })
-    }
-
-    // 清理 continuous 类型的运行标记
-    if (this.continuousRunning.has(scheduleId)) {
-      this.continuousRunning.delete(scheduleId)
-      logger.debug('移除持续调度运行标记', { scheduleId })
-    }
-  }
-
-  /**
-   * 启动持续调度模式
-   * 持续模式会在工作流执行完毕后立即重新执行，形成无限循环
-   */
-  private startContinuousSchedule(schedule: WorkflowScheduleEntity): void {
-    // 防止重复启动
-    if (this.continuousRunning.has(schedule.id)) {
-      logger.debug('持续调度已在运行中，跳过重复启动', { scheduleId: schedule.id })
-      return
-    }
-
-    this.continuousRunning.add(schedule.id)
-    logger.info('🔄 持续调度已启动', {
-      scheduleId: schedule.id,
-      scheduleName: schedule.name,
-      workflowId: schedule.workflowId
-    })
-
-    // 使用 setImmediate 立即启动第一次执行，避免阻塞当前调用栈
-    setImmediate(() => this.executeContinuous(schedule))
-  }
-
-  /**
-   * 持续调度执行循环
-   * 在工作流执行完毕后立即重新执行
-   */
-  private async executeContinuous(schedule: WorkflowScheduleEntity): Promise<void> {
-    const scheduleId = schedule.id
-
-    // 检查是否仍在运行中（可能已被外部移除）
-    if (!this.continuousRunning.has(scheduleId)) {
-      logger.debug('持续调度已停止，退出循环', { scheduleId })
-      return
-    }
-
-    const lockKey = `schedule:lock:${scheduleId}`
-    const startTime = Date.now()
-
-    try {
-      // 🔍 在执行前检查调度状态（从数据库获取最新状态）
-      const latestSchedule = await this.validateScheduleStatus(scheduleId, schedule.name)
-      if (!latestSchedule) {
-        this.continuousRunning.delete(scheduleId)
-        return
-      }
-
-      // 🔒 尝试获取分布式锁
-      const locked = await withRetryOnNetworkError(
-        () => this.tryLock(lockKey, this.lockTTL),
-        3,
-        1000,
-        `获取分布式锁 [持续调度 ${schedule.name}]`
-      )
-
-      if (!locked) {
-        logger.debug('⏭️ 持续调度任务被其他实例执行中，跳过本次执行', {
-          scheduleId,
-          scheduleName: schedule.name
-        })
-        // 等待一段时间后重试
-        await this.delayBeforeNextRun(5000)
-        if (this.continuousRunning.has(scheduleId)) {
-          setImmediate(() => this.executeContinuous(schedule))
-        }
-        return
-      }
-
-      logger.debug('🔒 持续调度获取分布式锁成功，开始执行', {
-        scheduleId,
-        scheduleName: schedule.name
-      })
-
-      // 执行任务
-      try {
-        await withRetryOnNetworkError(
-          () => this.executionService.execute(latestSchedule),
-          3,
-          1000,
-          `执行持续调度任务 [${schedule.name}]`
-        )
-
-        const duration = Date.now() - startTime
-        logger.info('✅ 持续调度任务执行成功，准备立即执行下一次', {
-          scheduleId,
-          scheduleName: schedule.name,
-          duration: `${duration}ms`
-        })
-
-        // 定期触发清理
-        this.executionCount++
-        if (this.executionCount >= this.MAX_EXECUTIONS_BEFORE_CLEANUP) {
-          await this.triggerCleanup()
-          this.executionCount = 0
-        }
-      } finally {
-        // 释放锁
-        await withRetryOnNetworkError(
-          () => this.redis.del(lockKey),
-          3,
-          1000,
-          `释放分布式锁 [持续调度 ${schedule.name}]`
-        )
-      }
-
-      // 执行完毕后调度下一次执行（增加延迟给 GC 更多时间）
-      if (this.continuousRunning.has(scheduleId)) {
-        await this.delayBeforeNextRun(30000) // 从 5000ms 增加到 30000ms
-        setImmediate(() => this.executeContinuous(schedule))
-      }
-    } catch (error) {
-      const duration = Date.now() - startTime
-      logger.error('❌ 持续调度任务执行异常，等待后重试', {
-        scheduleId,
-        scheduleName: schedule.name,
-        duration: `${duration}ms`,
-        error: (error as Error).message,
-        stack: (error as Error).stack
-      })
-
-      // 发生错误时等待一段时间后重试
-      if (this.continuousRunning.has(scheduleId)) {
-        await this.delayBeforeNextRun(30000) // 错误后等待30秒
-        if (this.continuousRunning.has(scheduleId)) {
-          setImmediate(() => this.executeContinuous(schedule))
-        }
-      }
-    }
-  }
-
-  /**
-   * 触发定期清理（浏览器实例 + 数据库连接 + GC）
-   */
-  private async triggerCleanup(): Promise<void> {
-    logger.info('🧹 触发定期清理')
-
-    try {
-      // 清理 Playwright 浏览器实例
-      const { PlaywrightService } = await import('./PlaywrightService.js')
-      await PlaywrightService.cleanup()
-      logger.info('✅ Playwright 浏览器实例已清理')
-    } catch (error) {
-      logger.error('清理 Playwright 失败', { error: (error as Error).message })
-    }
-
-    try {
-      // 清理空闲数据库连接（空闲超过 60 秒，保留最少 5 个）
-      const cleanedCount = await cleanupIdleConnections(60000, 5)
-      if (cleanedCount > 0) {
-        logger.info(`✅ 数据库空闲连接已清理`, { count: cleanedCount })
-      }
-    } catch (error) {
-      logger.error('清理数据库连接失败', { error: (error as Error).message })
-    }
-
-    // 触发 GC（如果可用）
-    if (global.gc) {
-      global.gc()
-      logger.info('✅ 手动触发 GC 完成')
-    }
-
-    // 记录内存使用情况
-    this.logMemoryUsage()
-  }
-
-  /**
-   * 记录内存使用情况
-   */
-  private logMemoryUsage(): void {
-    const used = process.memoryUsage()
-    logger.info('📊 内存使用情况', {
-      rss: `${Math.round(used.rss / 1024 / 1024)}MB`,
-      heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)}MB`,
-      heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)}MB`,
-      external: `${Math.round(used.external / 1024 / 1024)}MB`
-    })
-  }
-
-  /**
-   * 下次执行前的延迟
-   */
-  private async delayBeforeNextRun(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
-  }
-
-  /**
-   * 检查调度状态是否可以执行
-   * @returns 返回最新调度信息，如果不可执行则返回 null
-   */
-  private async validateScheduleStatus(scheduleId: string, scheduleName: string): Promise<WorkflowScheduleEntity | null> {
-    const latestSchedule = await withRetryOnNetworkError(
-      async () => {
-        return await useEntityManager(async (manager) => {
-          return await manager.findOne(WorkflowScheduleEntity, { where: { id: scheduleId } })
-        })
-      },
-      3,
-      1000,
-      `检查调度状态 [${scheduleName}]`
-    )
-
-    // 如果调度不存在，取消执行
-    if (!latestSchedule) {
-      logger.warn('⚠️ 调度不存在，取消执行', {
-        scheduleId,
-        scheduleName
-      })
-      this.removeSchedule(scheduleId)
-      return null
-    }
-
-    // 如果调度已被禁用或过期，取消执行
-    if (latestSchedule.status !== ScheduleStatus.ENABLED) {
-      logger.warn('⚠️ 调度已被禁用或过期，取消执行', {
-        scheduleId,
-        scheduleName,
-        status: latestSchedule.status
-      })
-      this.removeSchedule(scheduleId)
-      return null
-    }
-
-    return latestSchedule
-  }
-
-  /**
-   * 使用分布式锁执行任务
-   */
-  private async executeWithLock(schedule: WorkflowScheduleEntity): Promise<void> {
-    const lockKey = `schedule:lock:${schedule.id}`
-    const startTime = Date.now()
-
-    logger.info('⏰ 调度任务触发', {
-      scheduleId: schedule.id,
-      scheduleName: schedule.name,
-      scheduleType: schedule.scheduleType,
-      workflowId: schedule.workflowId
-    })
-
-    try {
-      // 🔍 在执行前检查调度状态（从数据库获取最新状态）
-      const latestSchedule = await this.validateScheduleStatus(schedule.id, schedule.name)
-      if (!latestSchedule) {
-        return
-      }
-
-      // 🔒 尝试获取分布式锁（使用 SETNX + EXPIRE）
-      const locked = await withRetryOnNetworkError(
-        () => this.tryLock(lockKey, this.lockTTL),
-        3,
-        1000,
-        `获取分布式锁 [${schedule.name}]`
-      )
-
-      if (!locked) {
-        logger.debug('⏭️ 调度任务被其他实例执行中，跳过', {
-          scheduleId: schedule.id,
-          scheduleName: schedule.name
-        })
-        return
-      }
-
-      logger.debug('🔒 获取分布式锁成功，开始执行', {
-        scheduleId: schedule.id,
-        scheduleName: schedule.name,
-        lockTTL: this.lockTTL
-      })
-
-      // 执行任务
-      try {
-        await withRetryOnNetworkError(
-          () => this.executionService.execute(latestSchedule),
-          3,
-          1000,
-          `执行调度任务 [${schedule.name}]`
-        )
-
-        const duration = Date.now() - startTime
-        logger.info('✅ 调度任务执行成功', {
-          scheduleId: schedule.id,
-          scheduleName: schedule.name,
-          duration: `${duration}ms`
-        })
-      } finally {
-        // 释放锁
-        await withRetryOnNetworkError(
-          () => this.redis.del(lockKey),
-          3,
-          1000,
-          `释放分布式锁 [${schedule.name}]`
-        )
-      }
-    } catch (error) {
-      const duration = Date.now() - startTime
-      logger.error('❌ 调度任务执行异常', {
-        scheduleId: schedule.id,
-        scheduleName: schedule.name,
-        duration: `${duration}ms`,
-        error: (error as Error).message,
-        stack: (error as Error).stack
-      })
-    }
-  }
-
-  /**
-   * 尝试获取分布式锁
-   */
-  private async tryLock(key: string, ttl: number): Promise<boolean> {
-    try {
-      // 使用 SETNX 获取锁
-      const result = await this.redis.setnx(key, '1')
-
-      if (result === 1) {
-        // 获取锁成功，设置过期时间
-        await this.redis.expire(key, ttl)
-        return true
-      }
-
-      return false
-    } catch (error) {
-      logger.error('获取分布式锁失败', {
-        key,
-        error: (error as Error).message
-      })
-      return false
-    }
+    this.scheduler.unregister(scheduleId)
   }
 
   /**
@@ -554,42 +99,34 @@ export class CronSchedulerService {
       }
 
       // 2. 设置每小时执行一次的定期同步任务
-      this.accountSyncJob = nodeSchedule.scheduleJob('0 * * * *', async () => {
-        logger.info('🔄 定期同步账号健康数据')
-        try {
-          const syncResult = await this.accountSyncService.syncAccountsToRedis()
-          logger.info('✅ 定期账号同步完成', {
-            added: syncResult.added,
-            updated: syncResult.updated,
-            errors: syncResult.errors.length
-          })
-        } catch (error) {
-          logger.error('❌ 定期账号同步失败', {
-            error: (error as Error).message
-          })
-        }
-      })
+      this.registry.setAccountSyncJob(
+        nodeSchedule.scheduleJob('0 * * * *', async () => {
+          logger.info('🔄 定期同步账号健康数据')
+          try {
+            const syncResult = await this.accountSyncService.syncAccountsToRedis()
+            logger.info('✅ 定期账号同步完成', {
+              added: syncResult.added,
+              updated: syncResult.updated,
+              errors: syncResult.errors.length
+            })
+          } catch (error) {
+            logger.error('❌ 定期账号同步失败', {
+              error: (error as Error).message
+            })
+          }
+        })
+      )
 
-      if (this.accountSyncJob) {
-        const nextSyncTime = this.accountSyncJob.nextInvocation()
+      const accountSyncJob = this.registry.getAccountSyncJob()
+      if (accountSyncJob) {
+        const nextSyncTime = accountSyncJob.nextInvocation()
         logger.info('📅 账号同步定时任务已设置', {
           nextSyncTime: formatBeijingTime(nextSyncTime)
         })
       }
 
       // 3. 加载调度任务
-      const schedules = await withRetryOnNetworkError(
-        async () => {
-          return await useEntityManager(async (manager) => {
-            return await manager.find(WorkflowScheduleEntity, {
-              where: { status: ScheduleStatus.ENABLED }
-            })
-          })
-        },
-        3,
-        1000,
-        '加载调度任务列表'
-      )
+      const schedules = await this.persistence.findEnabledSchedules()
 
       logger.info(`🚀 开始加载调度任务`, { count: schedules.length })
 
@@ -600,9 +137,9 @@ export class CronSchedulerService {
       logger.info(`✅ 调度任务加载完成`, {
         total: schedules.length,
         loaded: this.getJobCount(),
-        cronJobs: this.scheduleJobs.size,
-        intervalTimers: this.intervalTimers.size,
-        continuousRunning: this.continuousRunning.size
+        cronJobs: this.registry.scheduleJobs.size,
+        intervalTimers: this.registry.intervalTimers.size,
+        continuousRunning: this.registry.continuousRunning.size
       })
     } catch (error) {
       logger.error('加载调度任务失败', {
@@ -616,40 +153,39 @@ export class CronSchedulerService {
    * 停止所有调度任务
    */
   async stopAll(): Promise<void> {
-    const totalCount = this.scheduleJobs.size + this.intervalTimers.size + this.continuousRunning.size
+    const totalCount = this.registry.getJobCount()
     logger.info('🛑 停止所有调度任务', {
       count: totalCount,
-      cronJobs: this.scheduleJobs.size,
-      intervalTimers: this.intervalTimers.size,
-      continuousSchedules: this.continuousRunning.size
+      cronJobs: this.registry.scheduleJobs.size,
+      intervalTimers: this.registry.intervalTimers.size,
+      continuousSchedules: this.registry.continuousRunning.size
     })
 
     // 清理账号同步定时任务
-    if (this.accountSyncJob) {
-      this.accountSyncJob.cancel()
-      this.accountSyncJob = null
+    if (this.registry.getAccountSyncJob()) {
+      this.registry.cancelAccountSyncJob()
       logger.debug('取消账号同步定时任务')
     }
 
     // 清理 node-schedule 任务
-    for (const [scheduleId, job] of this.scheduleJobs) {
+    for (const [scheduleId, job] of this.registry.scheduleJobs) {
       job.cancel()
       logger.debug('取消 Cron 调度', { scheduleId })
     }
-    this.scheduleJobs.clear()
+    this.registry.scheduleJobs.clear()
 
     // 清理 interval 定时器
-    for (const [scheduleId, timer] of this.intervalTimers) {
+    for (const [scheduleId, timer] of this.registry.intervalTimers) {
       clearInterval(timer)
       logger.debug('取消间隔定时器', { scheduleId })
     }
-    this.intervalTimers.clear()
+    this.registry.intervalTimers.clear()
 
     // 清理持续调度运行标记（这会停止持续调度的循环）
-    for (const scheduleId of this.continuousRunning) {
+    for (const scheduleId of this.registry.continuousRunning) {
       logger.debug('停止持续调度', { scheduleId })
     }
-    this.continuousRunning.clear()
+    this.registry.continuousRunning.clear()
 
     logger.info('✅ 所有调度任务已停止')
   }
@@ -658,14 +194,14 @@ export class CronSchedulerService {
    * 获取当前运行的调度任务数量
    */
   getJobCount(): number {
-    return this.scheduleJobs.size + this.intervalTimers.size + this.continuousRunning.size
+    return this.registry.getJobCount()
   }
 
   /**
    * 获取所有调度任务ID
    */
   getScheduleIds(): string[] {
-    return Array.from(new Set([...this.scheduleJobs.keys(), ...this.intervalTimers.keys(), ...this.continuousRunning]))
+    return this.registry.getScheduleIds()
   }
 
   /**
@@ -715,9 +251,7 @@ export class CronSchedulerService {
    * 重新加载单个调度
    */
   async reloadSchedule(scheduleId: string): Promise<void> {
-    const schedule = await useEntityManager(async (manager) => {
-      return await manager.findOne(WorkflowScheduleEntity, { where: { id: scheduleId } })
-    })
+    const schedule = await this.persistence.findById(scheduleId)
 
     if (!schedule) {
       // 调度不存在，移除
@@ -757,44 +291,6 @@ export class CronSchedulerService {
 
       default:
         logger.warn('未知的调度变更类型', { type, scheduleId })
-    }
-  }
-
-  /**
-   * 更新数据库中的 nextRunAt 字段
-   *
-   * 这个方法确保内存中的调度时间与数据库保持同步
-   * 防止 nextRunAt 停留在过期时间
-   */
-  private async updateNextRunAtInDatabase(scheduleId: string, nextRunAt: Date): Promise<void> {
-    try {
-      await withRetryOnNetworkError(
-        async () => {
-          await useEntityManager(async (manager) => {
-            // 使用 update() 直接更新 nextRunAt 字段
-            const updateResult = await manager.update(
-              WorkflowScheduleEntity,
-              { id: scheduleId },
-              { nextRunAt }
-            )
-
-            logger.debug('[CronSchedulerService] 更新数据库 nextRunAt', {
-              scheduleId,
-              nextRunAt: formatBeijingTime(nextRunAt),
-              affectedRows: updateResult.affected
-            })
-          })
-        },
-        3,
-        1000,
-        `更新 nextRunAt [${scheduleId}]`
-      )
-    } catch (error) {
-      logger.error('[CronSchedulerService] 更新 nextRunAt 失败', {
-        scheduleId,
-        nextRunAt: formatBeijingTime(nextRunAt),
-        error: (error as Error).message
-      })
     }
   }
 }
