@@ -1,10 +1,14 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
+import { useEntityManager } from '@sker/entities';
+import { queryUserPosts, queryUserNLPResults } from './user-profile.queries';
 import {
-  WeiboPostEntity,
-  PostNLPResultEntity,
-  useEntityManager,
-} from '@sker/entities';
+  analyzeTimeBehavior,
+  analyzeContentFeatures,
+  analyzeInteractionFeatures,
+  analyzeDeviceSources,
+} from './user-profile.analysis';
+import { detectAbnormalSignals } from './user-profile.signals';
 
 /**
  * 分析用户的行为模式特征
@@ -13,116 +17,15 @@ export const createAnalyzeUserBehaviorTool = () =>
   tool(
     async ({ userId, limit }) => {
       return useEntityManager(async (m) => {
-        const result = await m
-          .getRepository(WeiboPostEntity)
-          .createQueryBuilder('post')
-          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
-          .select('post.*')
-          .addSelect('u.screen_name', 'user_screen_name')
-          .addSelect('u.verified', 'user_verified')
-          .addSelect('u.verified_type', 'user_verified_type')
-          .addSelect('u.status_total_counter', 'user_status_total_counter')
-          .where("post.user_id = :userId", { userId: String(userId) })
-          .orderBy('post.created_at', 'DESC')
-          .limit(limit)
-          .getRawMany();
+        const { posts, userInfo } = await queryUserPosts(m, userId, limit);
 
-        if (result.length === 0) {
+        if (!userInfo) {
           return JSON.stringify({
             userId,
             message: '未找到该用户的帖子数据',
             behavior: null,
           });
         }
-
-        const userInfo = {
-          screen_name: result[0]!.user_screen_name,
-          verified: result[0]!.user_verified,
-          verified_type: result[0]!.user_verified_type,
-          status_total_counter: result[0]!.user_status_total_counter,
-        };
-
-        const posts = result.map(r => ({
-          ...r,
-          created_at: r.created_at,
-          text: r.text,
-          reposts_count: r.reposts_count,
-          comments_count: r.comments_count,
-          attitudes_count: r.attitudes_count,
-          source: r.source,
-        }));
-
-        // 时间行为分析
-        const postTimes = posts.map((p) => new Date(p.created_at));
-        const hourDistribution = new Array(24).fill(0);
-        const intervals: number[] = [];
-
-        postTimes.forEach((time) => {
-          hourDistribution[time.getHours()]++;
-        });
-
-        for (let i = 1; i < postTimes.length; i++) {
-          const interval =
-            (postTimes[i - 1]!.getTime() - postTimes[i]!.getTime()) / 1000 / 60;
-          intervals.push(interval);
-        }
-
-        const avgInterval =
-          intervals.length > 0
-            ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-            : 0;
-        const intervalStdDev = calculateStdDev(intervals);
-
-        // 内容特征分析
-        const texts = posts.map((p) => p.text);
-        const avgTextLength =
-          texts.reduce((sum, t) => sum + t.length, 0) / texts.length;
-
-        const textSimilarity = calculateTextSimilarity(texts);
-
-        // 互动特征分析
-        const totalReposts = posts.reduce((sum, p) => sum + p.reposts_count, 0);
-        const totalComments = posts.reduce(
-          (sum, p) => sum + p.comments_count,
-          0
-        );
-        const totalLikes = posts.reduce(
-          (sum, p) => sum + p.attitudes_count,
-          0
-        );
-
-        const avgReposts = totalReposts / posts.length;
-        const avgComments = totalComments / posts.length;
-        const avgLikes = totalLikes / posts.length;
-
-        // 设备来源分析
-        const sourceCounts = new Map<string, number>();
-        posts.forEach((p) => {
-          const source = extractSource(p.source);
-          sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1);
-        });
-
-        const topSources = Array.from(sourceCounts.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([source, count]) => ({
-            source,
-            count,
-            percentage: ((count / posts.length) * 100).toFixed(1),
-          }));
-
-        // 时间规律性评分（0-1，越高越规律，越可能是机器人）
-        const timeRegularityScore = calculateTimeRegularity(
-          hourDistribution,
-          intervalStdDev,
-          avgInterval
-        );
-
-        // 内容机械性评分（0-1，越高越机械）
-        const contentMechanicalScore = calculateContentMechanical(
-          textSimilarity,
-          avgTextLength
-        );
 
         return JSON.stringify({
           userId,
@@ -134,29 +37,10 @@ export const createAnalyzeUserBehaviorTool = () =>
             verified: userInfo.verified,
             verifiedType: userInfo.verified_type,
           },
-          timeBehavior: {
-            hourDistribution,
-            mostActiveHours: hourDistribution
-              .map((count, hour) => ({ hour, count }))
-              .sort((a, b) => b.count - a.count)
-              .slice(0, 3)
-              .map((h) => h.hour),
-            avgPostInterval: Math.round(avgInterval),
-            intervalStdDev: Math.round(intervalStdDev),
-            regularityScore: timeRegularityScore,
-          },
-          contentFeatures: {
-            avgTextLength: Math.round(avgTextLength),
-            textSimilarity: textSimilarity,
-            mechanicalScore: contentMechanicalScore,
-          },
-          interactionFeatures: {
-            avgReposts: Math.round(avgReposts),
-            avgComments: Math.round(avgComments),
-            avgLikes: Math.round(avgLikes),
-            totalInteractions: totalReposts + totalComments + totalLikes,
-          },
-          deviceSources: topSources,
+          timeBehavior: analyzeTimeBehavior(posts),
+          contentFeatures: analyzeContentFeatures(posts),
+          interactionFeatures: analyzeInteractionFeatures(posts),
+          deviceSources: analyzeDeviceSources(posts),
         });
       });
     },
@@ -189,21 +73,9 @@ export const createDetectAbnormalUserTool = () =>
   tool(
     async ({ userId, limit, sensitivity }) => {
       return useEntityManager(async (m) => {
-        const result = await m
-          .getRepository(WeiboPostEntity)
-          .createQueryBuilder('post')
-          .leftJoin('weibo_users', 'u', 'u.id = post.user_id')
-          .select('post.*')
-          .addSelect('u.screen_name', 'user_screen_name')
-          .addSelect('u.verified', 'user_verified')
-          .addSelect('u.verified_type', 'user_verified_type')
-          .addSelect('u.status_total_counter', 'user_status_total_counter')
-          .where("post.user_id = :userId", { userId: String(userId) })
-          .orderBy('post.created_at', 'DESC')
-          .limit(limit)
-          .getRawMany();
+        const { posts, userInfo } = await queryUserPosts(m, userId, limit);
 
-        if (result.length === 0) {
+        if (!userInfo) {
           return JSON.stringify({
             userId,
             isAbnormal: false,
@@ -212,162 +84,10 @@ export const createDetectAbnormalUserTool = () =>
           });
         }
 
-        const userInfo = {
-          screen_name: result[0]!.user_screen_name,
-          verified: result[0]!.user_verified,
-          verified_type: result[0]!.user_verified_type,
-          status_total_counter: result[0]!.user_status_total_counter,
-        };
-
-        const posts = result.map(r => ({
-          ...r,
-          created_at: r.created_at,
-          text: r.text,
-          reposts_count: r.reposts_count,
-          comments_count: r.comments_count,
-          attitudes_count: r.attitudes_count,
-          source: r.source,
-        }));
-
         // 获取该用户的NLP分析结果
-        const nlpResults = await m
-          .getRepository(PostNLPResultEntity)
-          .createQueryBuilder('nlp')
-          .leftJoin('nlp.post', 'post')
-          .where("post.user_id = :userId", { userId: String(userId) })
-          .limit(limit)
-          .getMany();
+        const nlpResults = await queryUserNLPResults(m, userId, limit);
 
-        const abnormalSignals: Array<{
-          type: string;
-          severity: 'low' | 'medium' | 'high';
-          description: string;
-          value: any;
-        }> = [];
-
-        // 信号1: 时间行为异常
-        const postTimes = posts.map((p) => new Date(p.created_at));
-        const hourDistribution = new Array(24).fill(0);
-        postTimes.forEach((time) => {
-          hourDistribution[time.getHours()]++;
-        });
-
-        const nightPosts = hourDistribution.slice(0, 6).reduce((a, b) => a + b, 0);
-        const nightPostRatio = nightPosts / posts.length;
-
-        if (nightPostRatio > 0.3) {
-          abnormalSignals.push({
-            type: 'night_activity',
-            severity: 'medium',
-            description: `凌晨(0-6点)活跃度异常：${(nightPostRatio * 100).toFixed(1)}% 的帖子发布于凌晨`,
-            value: nightPostRatio,
-          });
-        }
-
-        // 计算发帖间隔
-        const intervals: number[] = [];
-        for (let i = 1; i < postTimes.length; i++) {
-          const interval =
-            (postTimes[i - 1]!.getTime() - postTimes[i]!.getTime()) / 1000 / 60;
-          intervals.push(interval);
-        }
-
-        const intervalStdDev = calculateStdDev(intervals);
-        const avgInterval =
-          intervals.length > 0
-            ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-            : 0;
-
-        if (intervalStdDev < avgInterval * 0.3 && intervals.length > 10) {
-          abnormalSignals.push({
-            type: 'regular_interval',
-            severity: 'high',
-            description: `发帖间隔高度规律（标准差 ${intervalStdDev.toFixed(1)}分钟，平均间隔 ${avgInterval.toFixed(1)}分钟），疑似定时任务`,
-            value: { stdDev: intervalStdDev, avg: avgInterval },
-          });
-        }
-
-        // 信号2: 短时间爆发式发帖
-        const recentHourPosts = posts.filter(
-          (p) =>
-            new Date(p.created_at).getTime() >
-            Date.now() - 60 * 60 * 1000
-        ).length;
-
-        if (recentHourPosts > 20) {
-          abnormalSignals.push({
-            type: 'burst_posting',
-            severity: 'high',
-            description: `1小时内发帖 ${recentHourPosts} 条，疑似爆发式刷屏`,
-            value: recentHourPosts,
-          });
-        }
-
-        // 信号3: 文本高度相似
-        const texts = posts.slice(0, 50).map((p) => p.text);
-        const textSimilarity = calculateTextSimilarity(texts);
-
-        if (textSimilarity > 0.7) {
-          abnormalSignals.push({
-            type: 'high_similarity',
-            severity: 'high',
-            description: `文本相似度 ${(textSimilarity * 100).toFixed(1)}%，疑似复制粘贴或模板化`,
-            value: textSimilarity,
-          });
-        }
-
-        // 信号4: 情感极端化
-        if (nlpResults.length > 10) {
-          const sentiments = nlpResults.map((r) => r.sentiment.overall);
-          const positiveCount = sentiments.filter((s) => s === 'positive').length;
-          const negativeCount = sentiments.filter((s) => s === 'negative').length;
-          const extremeRatio = Math.max(positiveCount, negativeCount) / sentiments.length;
-
-          if (extremeRatio > 0.85) {
-            abnormalSignals.push({
-              type: 'extreme_sentiment',
-              severity: 'medium',
-              description: `情感极端化：${(extremeRatio * 100).toFixed(1)}% 的帖子为${positiveCount > negativeCount ? '正面' : '负面'}情感，缺乏中性表达`,
-              value: { extremeRatio, dominant: positiveCount > negativeCount ? 'positive' : 'negative' },
-            });
-          }
-        }
-
-        // 信号5: 互动异常（互动量极低或极高）
-        const avgInteractions =
-          posts.reduce(
-            (sum, p) =>
-              sum + p.reposts_count + p.comments_count + p.attitudes_count,
-            0
-          ) / posts.length;
-
-        if (avgInteractions < 1 && posts.length > 20) {
-          abnormalSignals.push({
-            type: 'low_interaction',
-            severity: 'low',
-            description: `平均互动量极低（${avgInteractions.toFixed(2)}），疑似僵尸账号或被屏蔽`,
-            value: avgInteractions,
-          });
-        }
-
-        // 信号6: 单一设备来源
-        const sourceCounts = new Map<string, number>();
-        posts.forEach((p) => {
-          const source = extractSource(p.source);
-          sourceCounts.set(source, (sourceCounts.get(source) || 0) + 1);
-        });
-
-        const maxSourceCount = Math.max(...Array.from(sourceCounts.values()));
-        const singleSourceRatio = maxSourceCount / posts.length;
-
-        if (singleSourceRatio > 0.95 && posts.length > 50) {
-          abnormalSignals.push({
-            type: 'single_device',
-            severity: 'low',
-            description: `${(singleSourceRatio * 100).toFixed(1)}% 的帖子来自同一设备，缺乏设备多样性`,
-            value: singleSourceRatio,
-          });
-        }
+        const abnormalSignals = detectAbnormalSignals(posts, nlpResults);
 
         // 综合评分
         const severityWeights = { low: 1, medium: 2, high: 3 };
@@ -381,9 +101,9 @@ export const createDetectAbnormalUserTool = () =>
 
         // 根据敏感度阈值判断
         const thresholds = {
-          low: 0.2,    // 宽松
+          low: 0.2, // 宽松
           medium: 0.35, // 中等
-          high: 0.5,    // 严格
+          high: 0.5, // 严格
         };
 
         const isAbnormal = abnormalityScore >= thresholds[sensitivity];
@@ -466,75 +186,3 @@ export const createDetectAbnormalUserTool = () =>
       }),
     }
   );
-
-// 辅助函数
-function calculateStdDev(values: number[]): number {
-  if (values.length === 0) return 0;
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const squareDiffs = values.map((value) => Math.pow(value - avg, 2));
-  const avgSquareDiff =
-    squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length;
-  return Math.sqrt(avgSquareDiff);
-}
-
-function calculateTextSimilarity(texts: string[]): number {
-  if (texts.length < 2) return 0;
-
-  let totalSimilarity = 0;
-  let comparisons = 0;
-
-  for (let i = 0; i < Math.min(texts.length, 20); i++) {
-    for (let j = i + 1; j < Math.min(texts.length, 20); j++) {
-      const sim = simpleSimilarity(texts[i]!, texts[j]!);
-      totalSimilarity += sim;
-      comparisons++;
-    }
-  }
-
-  return comparisons > 0 ? totalSimilarity / comparisons : 0;
-}
-
-function simpleSimilarity(str1: string, str2: string): number {
-  const tokens1 = new Set(str1.split(''));
-  const tokens2 = new Set(str2.split(''));
-
-  const intersection = new Set(
-    [...tokens1].filter((x) => tokens2.has(x))
-  );
-  const union = new Set([...tokens1, ...tokens2]);
-
-  return intersection.size / union.size;
-}
-
-function extractSource(sourceHtml: string): string {
-  const match = sourceHtml.match(/>([^<]+)</);
-  return match ? match[1]! : 'unknown';
-}
-
-function calculateTimeRegularity(
-  hourDist: number[],
-  stdDev: number,
-  avgInterval: number
-): number {
-  const maxCount = Math.max(...hourDist);
-  const variance = hourDist.reduce(
-    (sum, count) => sum + Math.pow(count - maxCount / 24, 2),
-    0
-  );
-  const evenness = 1 - Math.sqrt(variance) / (maxCount || 1);
-
-  const intervalRegularity =
-    avgInterval > 0 ? 1 - Math.min(stdDev / avgInterval, 1) : 0;
-
-  return (evenness * 0.4 + intervalRegularity * 0.6);
-}
-
-function calculateContentMechanical(
-  similarity: number,
-  avgLength: number
-): number {
-  const similarityScore = similarity;
-  const lengthVariance = avgLength < 50 || avgLength > 200 ? 0.3 : 0;
-
-  return Math.min(similarityScore + lengthVariance, 1);
-}

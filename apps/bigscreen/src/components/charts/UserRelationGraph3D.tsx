@@ -1,53 +1,19 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { Info } from 'lucide-react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import * as THREE from 'three';
-import type {
-  UserRelationNetwork,
-  UserRelationNode,
-} from '@sker/sdk';
+import type { UserRelationNetwork, UserRelationNode } from '@sker/sdk';
 
-import {
-  ForceGraph3D,
-  type ForceGraph3DHandle
-} from '@sker/ui/components/ui/force-graph-3d';
+import { ForceGraph3D, type ForceGraph3DHandle } from '@sker/ui/components/ui/force-graph-3d';
 import { useInstancedNodeRenderer } from '@sker/ui/components/ui/use-instanced-node-renderer';
 import { usePointsRenderer } from '@sker/ui/components/ui/use-points-renderer';
-import { getUserTypeColor, getEdgeColor, getEdgeOpacity } from './UserRelationGraph3D.utils';
-import {
-  GraphControlPanel,
-  ControlGroup,
-  SliderControl,
-  SwitchControl,
-} from '@sker/ui/components/ui/graph-control-panel';
-import {
-  InfoGrid,
-  InfoItem,
-  InfoList,
-} from '@sker/ui/components/ui/graph-info-panel';
-import { GraphFloatingButton } from '@sker/ui/components/ui/graph-floating-button';
-import { Popover, PopoverTrigger, PopoverContent } from '@sker/ui/components/ui/popover';
-import {
-  calculateCompositeScore,
-  calculateNodeSize,
-  calculateConnectionCounts,
-  DEFAULT_WEIGHTS,
-  type NodeSizeWeights
-} from './NodeSizeCalculator';
-import {
-  DEFAULT_LINK_CONFIG,
-  type LinkDistanceConfig
-} from './LinkDistanceCalculator';
-import {
-  DEFAULT_PERFORMANCE_CONFIG,
-  type PerformanceConfig,
-  createSamplingStrategy,
-  FrameRateMonitor,
-  MemoryMonitor,
-  getAdaptivePerformanceConfig
-} from '@sker/ui/lib/graph-performance-optimizer';
-import { LouvainCommunityDetector, analyzeInterCommunityRelations } from '@sker/ui/lib/graph-community-detector';
-import { getRenderData, LAYER_THRESHOLDS } from './LayeredRenderer';
-import type { CommunityMapping } from './NodeShapeUtils';
+import { DEFAULT_LINK_CONFIG, type LinkDistanceConfig } from './LinkDistanceCalculator';
+import { DEFAULT_PERFORMANCE_CONFIG, type PerformanceConfig } from '@sker/ui/lib/graph-performance-optimizer';
+import { DEFAULT_WEIGHTS, type NodeSizeWeights } from './NodeSizeCalculator';
+import { getUserTypeColor, getNodeLabel } from './UserRelationGraph3D.utils';
+import { buildGraphData, createLinkMaterial, createLinkWidth } from './UserRelationGraph3D.data';
+import { useCommunityDetection } from './useCommunityDetection';
+import { usePerformanceMonitor } from './usePerformanceMonitor';
+import { UserRelationGraph3DControls, type VisualizationState } from './UserRelationGraph3DControls';
+import { CommunityInfoPopover } from './CommunityInfoPopover';
 
 interface UserRelationGraph3DProps {
   network: UserRelationNetwork;
@@ -81,119 +47,38 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
 
   // 交互增强状态
   const [currentWeights, setCurrentWeights] = useState<NodeSizeWeights>(nodeSizeWeights);
-  const [currentVisualization, setCurrentVisualization] = useState({
+  const [currentVisualization, setCurrentVisualization] = useState<VisualizationState>({
     enableNodeShapes,
     enableNodeOpacity,
     enableNodePulse,
-    enableCommunities
+    enableCommunities,
   });
 
   // 性能优化状态
   const [performanceConfig, setPerformanceConfig] = useState<PerformanceConfig>(DEFAULT_PERFORMANCE_CONFIG);
   const performanceConfigRef = useRef<PerformanceConfig>(performanceConfig);
-  const frameRateMonitorRef = useRef(new FrameRateMonitor());
-  const memoryMonitorRef = useRef(new MemoryMonitor());
 
   // 同步 performanceConfig 到 ref（避免在 useMemo 中使用 state）
   useEffect(() => {
     performanceConfigRef.current = performanceConfig;
   }, [performanceConfig]);
 
-  // 社群检测状态
-  const [communityMapping, setCommunityMapping] = useState<CommunityMapping | null>(null);
-  const [interCommunityRelations, setInterCommunityRelations] = useState<any[]>([]);
+  // 社群检测
+  const { communityMapping, interCommunityRelations } = useCommunityDetection(
+    network,
+    currentVisualization.enableCommunities
+  );
 
-  const linkMaterial = useCallback((link: any) => {
-    const weight = link.value || 1;
-    const opacity = getEdgeOpacity(weight);
-    const color = getEdgeColor(link.type);
-    return new THREE.MeshBasicMaterial({
-      color,
-      transparent: true,
-      opacity,
-    });
-  }, []);
+  // 性能监控和自适应优化
+  usePerformanceMonitor(showDebugHud, performanceConfigRef, setPerformanceConfig);
 
-  const linkWidth = useCallback((link: any) => {
-    const weight = link.value || 1;
-    const normalizedWeight = Math.min(weight / 100, 1);
-    return 0.5 + normalizedWeight * 3;
-  }, []);
+  const linkMaterial = useCallback(createLinkMaterial, []);
+  const linkWidth = useCallback(createLinkWidth, []);
 
-  const graphData = useMemo(() => {
-    const startTime = performance.now();
-
-    const processedNodes = network.nodes;
-    const processedEdges = network.edges;
-
-    // 性能监控：记录原始数据量
-    if (showDebugHud) {
-      console.log(`📊 图数据处理开始: ${processedNodes.length} 节点, ${processedEdges.length} 边`);
-    }
-
-    // 计算连接数和综合得分
-    const connectionCountMap = calculateConnectionCounts(processedEdges);
-    const nodesWithScores = processedNodes.map(node => {
-      const connectionCount = connectionCountMap.get(node.id.toString()) || 0;
-      const compositeScore = calculateCompositeScore(node, connectionCount, currentWeights);
-      const nodeSize = calculateNodeSize(compositeScore);
-
-      return {
-        ...node,
-        connectionCount,
-        compositeScore,
-        val: nodeSize,
-      };
-    });
-
-    // 应用分层渲染策略
-    const renderData = getRenderData(nodesWithScores, processedEdges, 'compositeScore');
-
-    // 应用性能优化采样（仅在分层后仍然节点过多时）
-    // 使用 ref 避免依赖 performanceConfig state
-    const currentPerfConfig = performanceConfigRef.current;
-    let finalData;
-    if (currentPerfConfig.enableSampling && renderData.nodes.length > LAYER_THRESHOLDS.CORE) {
-      const sampled = createSamplingStrategy(
-        renderData.nodes,
-        renderData.edges,
-        currentPerfConfig,
-        (a, b) => (b.compositeScore || 0) - (a.compositeScore || 0)
-      );
-      finalData = {
-        nodes: sampled.nodes,
-        links: sampled.edges.map(edge => ({
-          source: edge.source,
-          target: edge.target,
-          value: edge.weight,
-          type: edge.type,
-        })),
-        backgroundNodes: renderData.backgroundNodes || [],
-      };
-    } else {
-      finalData = {
-        nodes: renderData.nodes,
-        links: renderData.edges.map(edge => ({
-          source: edge.source,
-          target: edge.target,
-          value: edge.weight,
-          type: edge.type,
-        })),
-        backgroundNodes: renderData.backgroundNodes || [],
-      };
-    }
-
-    // 性能监控：记录处理时间
-    const duration = performance.now() - startTime;
-    if (showDebugHud) {
-      console.log(`✅ 图数据处理完成: ${finalData.nodes.length} 节点 (耗时 ${duration.toFixed(1)}ms)`);
-    }
-    if (duration > 500) {
-      console.warn(`⚠️ 图数据处理耗时过长: ${duration.toFixed(0)}ms`);
-    }
-
-    return finalData;
-  }, [network, currentWeights, showDebugHud]); // 移除 performanceConfig 依赖，使用 ref
+  const graphData = useMemo(
+    () => buildGraphData(network, currentWeights, performanceConfigRef.current, showDebugHud),
+    [network, currentWeights, showDebugHud] // 移除 performanceConfig 依赖，使用 ref
+  );
 
   const { instancedMesh } = useInstancedNodeRenderer(graphData.nodes, {
     getNodeColor: (node: any) => {
@@ -253,87 +138,6 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     }
   }, [instancedMesh]);
 
-  // 性能监控和自适应优化
-  useEffect(() => {
-    if (!showDebugHud) return;
-
-    const monitorInterval = setInterval(() => {
-      frameRateMonitorRef.current.recordFrame();
-      memoryMonitorRef.current.recordMemoryUsage();
-
-      const currentFPS = frameRateMonitorRef.current.getFPS();
-      const memoryStats = memoryMonitorRef.current.getMemoryStats();
-      const memoryUsageMB = memoryStats ? memoryStats.current / (1024 * 1024) : 0;
-
-      if (currentFPS < 25 || memoryUsageMB > 400) {
-        // 使用 ref 获取最新的性能配置，避免循环依赖
-        const newConfig = getAdaptivePerformanceConfig(performanceConfigRef.current, currentFPS, memoryUsageMB);
-        setPerformanceConfig(newConfig);
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(monitorInterval);
-    };
-  }, [showDebugHud]); // 移除 performanceConfig 依赖
-
-  // 社群检测（优化：添加节点数量限制和性能警告）
-  useEffect(() => {
-    if (currentVisualization.enableCommunities && network.nodes.length > 0 && network.edges.length > 0) {
-      // 性能保护：节点数超过 3000 时警告用户
-      if (network.nodes.length > 3000) {
-        console.warn(`⚠️ 社群检测：节点数量 ${network.nodes.length} 较大，可能影响性能`);
-      }
-
-      // 使用 requestIdleCallback 在浏览器空闲时执行（降低优先级）
-      const callback = window.requestIdleCallback || ((cb: any) => setTimeout(cb, 0));
-
-      const handle = callback(() => {
-        try {
-          const startTime = performance.now();
-          const detector = new LouvainCommunityDetector(network.nodes, network.edges);
-          const communities = detector.detectCommunities();
-          const duration = performance.now() - startTime;
-
-          if (duration > 1000) {
-            console.warn(`⚠️ 社群检测耗时 ${duration.toFixed(0)}ms，建议减少节点数量`);
-          }
-
-          const nodeToCommunity = new Map<string, number>();
-          for (const community of communities) {
-            for (const nodeId of community.nodes) {
-              nodeToCommunity.set(nodeId, community.id);
-            }
-          }
-
-          const mapping: CommunityMapping = {
-            nodeToCommunity,
-            communities
-          };
-
-          setCommunityMapping(mapping);
-
-          const relations = analyzeInterCommunityRelations(communities, network.edges);
-          setInterCommunityRelations(relations);
-
-        } catch (error) {
-          console.warn('❌ 社群检测失败:', error);
-          setCommunityMapping(null);
-          setInterCommunityRelations([]);
-        }
-      });
-
-      return () => {
-        if ('cancelIdleCallback' in window && typeof handle === 'number') {
-          window.cancelIdleCallback(handle);
-        }
-      };
-    } else {
-      setCommunityMapping(null);
-      setInterCommunityRelations([]);
-    }
-  }, [network.nodes, network.edges, currentVisualization.enableCommunities]);
-
   // 性能优化：简化点击效果，禁用相机动画和复杂聚焦计算
   const handleNodeClick = useCallback((node: any) => {
     if (onNodeClick) {
@@ -353,39 +157,13 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
     // 只保留点击高亮功能
   }, [onNodeHover]);
 
-
   return (
     <div className={`relative ${className}`}>
       <ForceGraph3D
         ref={fgRef}
         graphData={graphData}
         nodeThreeObject={() => new THREE.Object3D()}
-        nodeLabel={(node: any) => {
-          const formatNumber = (num: number): string => {
-            if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-            if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-            return num.toString();
-          };
-          const getUserTypeLabel = (userType: string): string => {
-            const labels: Record<string, string> = {
-              'official': '官方账号',
-              'media': '媒体账号',
-              'kol': 'KOL账号',
-              'normal': '普通用户'
-            };
-            return labels[userType] || '未知';
-          };
-          return `
-            <div style="background: rgba(0,0,0,0.9); color: white; padding: 12px; border-radius: 8px; font-size: 14px;">
-              <div style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">${node.name}</div>
-              <div>类型: ${getUserTypeLabel(node.userType)}</div>
-              <div>粉丝: ${formatNumber(node.followers)}</div>
-              <div>发帖: ${formatNumber(node.postCount)}</div>
-              <div>影响力: ${node.influence}/100</div>
-              ${node.verified ? '<div style="color: #2196f3;">✓ 已认证</div>' : ''}
-            </div>
-          `;
-        }}
+        nodeLabel={getNodeLabel}
         linkMaterial={linkMaterial}
         linkWidth={linkWidth}
         linkDirectionalParticles={0}
@@ -404,119 +182,19 @@ export const UserRelationGraph3D: React.FC<UserRelationGraph3DProps> = ({
       />
 
       {/* 控制面板 */}
-      <GraphControlPanel title="可视化设置" position="bottom-right">
-        <ControlGroup
-          title="节点大小权重"
-          onReset={() => setCurrentWeights(DEFAULT_WEIGHTS)}
-        >
-          {Object.entries(currentWeights).map(([key, value]) => (
-            <SliderControl
-              key={key}
-              label={
-                key === 'followers' ? '粉丝数' :
-                  key === 'influence' ? '影响力' :
-                    key === 'postCount' ? '发帖数' : '连接数'
-              }
-              value={Math.round(value * 100)}
-              min={0}
-              max={100}
-              suffix="%"
-              onValueChange={(v) => setCurrentWeights({ ...currentWeights, [key]: v / 100 })}
-            />
-          ))}
-        </ControlGroup>
-
-        <ControlGroup title="可视化效果">
-          {[
-            { key: 'enableNodeShapes', label: '节点形状编码' },
-            { key: 'enableNodeOpacity', label: '活跃度透明度' },
-            { key: 'enableNodePulse', label: '脉动动画' },
-            { key: 'enableCommunities', label: '社群颜色' }
-          ].map(({ key, label }) => (
-            <SwitchControl
-              key={key}
-              label={label}
-              checked={currentVisualization[key as keyof typeof currentVisualization]}
-              onCheckedChange={(checked) =>
-                setCurrentVisualization({ ...currentVisualization, [key]: checked })
-              }
-            />
-          ))}
-        </ControlGroup>
-      </GraphControlPanel>
+      <UserRelationGraph3DControls
+        currentWeights={currentWeights}
+        onWeightsChange={setCurrentWeights}
+        currentVisualization={currentVisualization}
+        onVisualizationChange={setCurrentVisualization}
+      />
 
       {/* 社群信息面板 */}
       {currentVisualization.enableCommunities && communityMapping && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <GraphFloatingButton
-              position="bottom-left"
-              title="显示社群信息"
-            >
-              <Info className="size-4" />
-            </GraphFloatingButton>
-          </PopoverTrigger>
-
-          <PopoverContent className="w-96 max-h-[600px] overflow-y-auto" align="start" side="right" sideOffset={8}>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-base mb-2">社群分析</h3>
-                <p className="text-sm text-muted-foreground">
-                  共检测到 <span className="font-semibold text-primary">{communityMapping.communities.length}</span> 个社群
-                </p>
-              </div>
-
-              <InfoGrid columns={2}>
-                <InfoItem
-                  label="最大社群"
-                  value={`${communityMapping.communities[0]?.size || 0} 节点`}
-                  variant="default"
-                />
-                <InfoItem
-                  label="平均密度"
-                  value={`${((communityMapping.communities.reduce((sum, c) => sum + c.density, 0) / communityMapping.communities.length) * 100).toFixed(1)}%`}
-                  variant="default"
-                />
-              </InfoGrid>
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">社群详情</h4>
-                <InfoList
-                  items={communityMapping.communities.map(c => ({
-                    id: c.id,
-                    color: c.color,
-                    label: `社群 ${c.id}`,
-                    value: `${c.size} 节点`,
-                  }))}
-                  maxItems={10}
-                />
-              </div>
-
-              {interCommunityRelations.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium mb-2">社群间连接</h4>
-                  <div className="space-y-1 text-xs">
-                    {interCommunityRelations.slice(0, 3).map((relation, index) => (
-                      <div key={index} className="flex justify-between items-center p-1.5 bg-muted rounded">
-                        <span className="text-muted-foreground">
-                          社群 {relation.sourceCommunity} ↔ 社群 {relation.targetCommunity}
-                        </span>
-                        <span className="font-medium">
-                          {relation.edgeCount} 连接
-                        </span>
-                      </div>
-                    ))}
-                    {interCommunityRelations.length > 3 && (
-                      <div className="text-xs text-muted-foreground text-center py-1">
-                        还有 {interCommunityRelations.length - 3} 个关系...
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <CommunityInfoPopover
+          communityMapping={communityMapping}
+          interCommunityRelations={interCommunityRelations}
+        />
       )}
     </div>
   );
