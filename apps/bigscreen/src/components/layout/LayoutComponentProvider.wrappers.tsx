@@ -87,7 +87,8 @@ const MiniTrendProvider: React.FC = () => {
 };
 
 // 组件包装器 - 为每个组件提供适当的数据和配置
-export const componentWrappers = {
+// 统一 (timeRange?: string) 签名：renderComponentWithTimeRange 会按 1 参调用
+export const componentWrappers: Record<string, (timeRange?: string) => React.ReactNode> = {
   // 情感趋势图
   "sentiment-trend-chart": () => {
     return <SentimentTrendChart className="w-full h-full flex-1" />;

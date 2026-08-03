@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useIndexRealtimeSnapshot } from './useIndexRealtimeSnapshot';
 import { OverviewAPI } from '@/services/api';
 import { useAppStore } from '@/stores/useAppStore';
@@ -110,10 +110,14 @@ describe('useIndexRealtimeSnapshot 稳定性', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBe('请求超时');
+    await act(async () => {
+      await Promise.resolve();
     });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBe('请求超时');
 
     // 触发一次轮询刷新——互斥锁已复位，应能正常发起并拿到数据
     act(() => {
