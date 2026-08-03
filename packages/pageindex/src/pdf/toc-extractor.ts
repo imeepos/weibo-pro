@@ -6,7 +6,7 @@
 
 import { ChatGPT_API_with_finish_reason } from '../utils/openai.js';
 import { extractJson, getJsonContent } from '../utils/json.js';
-import type { TOCItem } from '../types/result.types.new.js';
+import type { TOCItem } from '../types/result.types.js';
 import type { ChatMessage } from '../types/openai.types.js';
 
 /**

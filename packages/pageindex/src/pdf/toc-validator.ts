@@ -5,7 +5,7 @@
  */
 
 import { ChatGPT_API_async } from '../utils/openai.js';
-import type { TOCItem } from '../types/result.types.new.js';
+import type { TOCItem } from '../types/result.types.js';
 import type { PageToken } from '../types/result.types.js';
 
 /**
