@@ -1,4 +1,5 @@
 import type { WorkflowScheduleEntity } from '@sker/entities'
+import type { SortField, SortOrder } from './schedule-list-types'
 
 /**
  * 调度列表 - 纯格式化工具函数
@@ -38,4 +39,51 @@ export function formatDateTime(date: string | Date): string {
   const hours = String(d.getHours()).padStart(2, '0')
   const minutes = String(d.getMinutes()).padStart(2, '0')
   return `${month}-${day} ${hours}:${minutes}`
+}
+
+/**
+ * 过滤并按指定字段排序调度列表。
+ * searchQuery 为空时跳过过滤；排序使用 localeCompare / 时间戳。
+ */
+export function filterAndSortSchedules(
+  schedules: WorkflowScheduleEntity[],
+  searchQuery: string,
+  sortField: SortField,
+  sortOrder: SortOrder
+): WorkflowScheduleEntity[] {
+  let result = [...schedules]
+
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase()
+    result = result.filter(schedule =>
+      schedule.name.toLowerCase().includes(query) ||
+      getScheduleDescription(schedule).toLowerCase().includes(query)
+    )
+  }
+
+  result.sort((a, b) => {
+    let comparison = 0
+
+    switch (sortField) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name)
+        break
+      case 'createdAt':
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        break
+      case 'nextRunAt': {
+        const aTime = a.nextRunAt ? new Date(a.nextRunAt).getTime() : 0
+        const bTime = b.nextRunAt ? new Date(b.nextRunAt).getTime() : 0
+        comparison = aTime - bTime
+        break
+      }
+      case 'status':
+        comparison = a.status.localeCompare(b.status)
+        break
+    }
+
+    return sortOrder === 'asc' ? comparison : -comparison
+  })
+
+  return result
 }

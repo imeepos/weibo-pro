@@ -7,7 +7,7 @@ import type { WorkflowScheduleEntity } from '@sker/entities'
 import { root } from '@sker/core'
 import { WorkflowGraphAst, fromJson } from '@sker/workflow'
 import { useDebounce } from '@sker/ui/hooks/use-debounce'
-import { getScheduleDescription } from './schedule-list-utils'
+import { filterAndSortSchedules } from './schedule-list-utils'
 import { ITEMS_PER_PAGE } from './schedule-list-types'
 import type { SortField, SortOrder } from './schedule-list-types'
 
@@ -217,43 +217,10 @@ export function useScheduleList(workflowName: string, apiBaseUrl?: string): UseS
     }
   }
 
-  const filteredAndSortedSchedules = useMemo(() => {
-    let result = [...schedules]
-
-    if (debouncedSearchQuery.trim()) {
-      const query = debouncedSearchQuery.toLowerCase()
-      result = result.filter(schedule =>
-        schedule.name.toLowerCase().includes(query) ||
-        getScheduleDescription(schedule).toLowerCase().includes(query)
-      )
-    }
-
-    result.sort((a, b) => {
-      let comparison = 0
-
-      switch (sortField) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name)
-          break
-        case 'createdAt':
-          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          break
-        case 'nextRunAt': {
-          const aTime = a.nextRunAt ? new Date(a.nextRunAt).getTime() : 0
-          const bTime = b.nextRunAt ? new Date(b.nextRunAt).getTime() : 0
-          comparison = aTime - bTime
-          break
-        }
-        case 'status':
-          comparison = a.status.localeCompare(b.status)
-          break
-      }
-
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
-
-    return result
-  }, [schedules, debouncedSearchQuery, sortField, sortOrder])
+  const filteredAndSortedSchedules = useMemo(
+    () => filterAndSortSchedules(schedules, debouncedSearchQuery, sortField, sortOrder),
+    [schedules, debouncedSearchQuery, sortField, sortOrder]
+  )
 
   const totalPages = Math.ceil(filteredAndSortedSchedules.length / ITEMS_PER_PAGE)
   const paginatedSchedules = filteredAndSortedSchedules.slice(

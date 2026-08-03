@@ -1,0 +1,65 @@
+/**
+ * IconPicker stories 的 mock 数据
+ * 与业务无关，仅用于展示图标选择器的各形态。
+ */
+
+/** 受限图标列表（LimitedIcons 示例） */
+export const limitedIcons = [
+  'Star',
+  'Heart',
+  'Trash2',
+  'Check',
+  'X',
+  'Settings',
+  'User',
+  'Mail',
+  'Bell',
+  'Search',
+  'Home',
+  'Calendar',
+  'Clock',
+  'Edit',
+  'Save',
+  'Download',
+  'Upload',
+  'FileText',
+  'Folder',
+  'Image',
+  'Video',
+  'Music',
+  'Code',
+  'Database',
+  'Server',
+  'Cloud',
+  'Lock',
+  'Unlock',
+  'Eye',
+  'EyeOff',
+  'ThumbsUp',
+  'Share',
+  'Send',
+  'MessageCircle',
+  'Phone',
+  'Wifi',
+  'Battery',
+  'Power',
+  'Zap',
+  'TrendingUp',
+  'Award',
+  'Target',
+  'Filter',
+  'Layout',
+  'Grid',
+  'List',
+  'Tag',
+  'Flag',
+  'Bookmark',
+]
+
+/** 工作流节点类型选项（WorkflowNodeConfig 示例） */
+export const nodeTypeOptions = [
+  'WeiboKeywordSearchAst',
+  'WeiboAjaxStatusesShowAst',
+  'PostNLPAnalyzerAst',
+  'EventAutoCreatorAst',
+]
