@@ -87,7 +87,7 @@ function registerControllerProxies($fetch: BetterFetch, $store: ClientStore, opt
   for (const controllerClass of controllers) {
     providers.push({
       provide: controllerClass,
-      useFactory: () => createControllerProxy(controllerClass, $fetch),
+      useFactory: () => createControllerProxy(controllerClass),
     });
   }
 
@@ -139,10 +139,12 @@ function buildBetterAuthActions(
 
 /**
  * 为单个 Controller 创建代理对象
+ *
+ * 代理方法在调用时通过 root.get(BETTER_FETCH) 读取 $fetch，
+ * 因此这里无需接收 $fetch 参数。
  */
 function createControllerProxy<T>(
   controllerClass: Type<T>,
-  $fetch: BetterFetch
 ): T {
   const controllerPrefix = Reflect.getMetadata(PATH_METADATA, controllerClass) || '';
   const methodNames = Object.getOwnPropertyNames(controllerClass.prototype).filter(
@@ -415,7 +417,7 @@ function extractParameters(args: any[], routeArgs: Record<string, any>) {
 }
 
 function replaceUrlParams(url: string, params: Record<string, any>): string {
-  return url.replace(/:([^\/]+)/g, (match, paramName) => {
+  return url.replace(/:([^/]+)/g, (match, paramName) => {
     return params[paramName] !== undefined ? String(params[paramName]) : match;
   });
 }

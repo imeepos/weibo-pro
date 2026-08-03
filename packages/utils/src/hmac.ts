@@ -4,6 +4,21 @@ import { base64, base64Url } from "./base64";
 import { getWebcryptoSubtle } from "./index";
 import { toUint8Array } from "./buffer";
 
+/**
+ * Decodes a hexadecimal string into raw bytes without going through TextDecoder,
+ * so arbitrary (non-UTF-8) binary data such as HMAC signatures is preserved.
+ */
+function decodeHexString(data: string): Uint8Array {
+	if (data.length % 2 !== 0) {
+		throw new Error("Invalid hexadecimal string");
+	}
+	const bytes = new Uint8Array(data.length / 2);
+	for (let i = 0; i < data.length; i += 2) {
+		bytes[i / 2] = parseInt(data.slice(i, i + 2), 16);
+	}
+	return bytes;
+}
+
 export const createHMAC = <E extends EncodingFormat = "none">(
 	algorithm: SHAFamily = "SHA-256",
 	encoding: E = "none" as E,
@@ -38,11 +53,10 @@ export const createHMAC = <E extends EncodingFormat = "none">(
 			if (encoding === "hex") {
 				return hex.encode(signature) as any;
 			}
-			if (
-				encoding === "base64" ||
-				encoding === "base64url" ||
-				encoding === "base64urlnopad"
-			) {
+			if (encoding === "base64") {
+				return base64.encode(signature) as any;
+			}
+			if (encoding === "base64url" || encoding === "base64urlnopad") {
 				return base64Url.encode(signature, {
 					padding: encoding !== "base64urlnopad",
 				}) as any;
@@ -58,7 +72,9 @@ export const createHMAC = <E extends EncodingFormat = "none">(
 				hmacKey = await hmac.importKey(hmacKey, "verify");
 			}
 			if (encoding === "hex") {
-				signature = hex.decode(signature);
+				if (typeof signature === "string") {
+					signature = decodeHexString(signature);
+				}
 			}
 			if (
 				encoding === "base64" ||

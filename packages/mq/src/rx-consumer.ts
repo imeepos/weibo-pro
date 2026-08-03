@@ -21,7 +21,13 @@ async function waitForConnection(
         // 超时检查
         if (elapsed > timeout) {
             const state = connectionPool.getState();
-            const hasChannel = !!connectionPool.getChannel();
+            // getChannel() 在 channel 为 null 时会抛错，这里需容错，避免掩盖超时错误
+            let hasChannel = false;
+            try {
+                hasChannel = !!connectionPool.getChannel();
+            } catch {
+                hasChannel = false;
+            }
 
             throw new Error(
                 `RabbitMQ 连接超时 (${timeout}ms)。\n` +

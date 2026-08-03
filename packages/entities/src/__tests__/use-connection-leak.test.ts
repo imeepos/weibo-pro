@@ -11,11 +11,15 @@ import type { DataSource } from 'typeorm'
  * 3. 模拟持续调度场景（快速连续调用50次）
  *
  * 前提条件：
- * - 需要 DATABASE_URL 环境变量
- * - 如果没有真实数据库，此测试会被跳过
+ * - 需要真实可用的数据库（DATABASE_URL 对应实例可达）
+ * - L1 单元测试不应依赖真实 PG；当 DB 不可达时（setup 阶段已通过
+ *   globalThis.__SKER_DB_AVAILABLE__ 快速探测），整组测试被 describe.skipIf 跳过，
+ *   而不是等待 10 秒连接超时。
  */
 
-describe('useEntityManager - 连接泄露集成测试', () => {
+const dbAvailable = !!(globalThis as any).__SKER_DB_AVAILABLE__
+
+describe.skipIf(!dbAvailable)('useEntityManager - 连接泄露集成测试', () => {
   let dataSourceInstance: DataSource | null = null
   let hasDatabase = false
 

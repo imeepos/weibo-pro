@@ -65,6 +65,11 @@ export class NLPAnalyzer {
           continue;
         }
 
+        // 可重试错误已耗尽所有重试次数
+        if (isRetriableError) {
+          throw new Error('NLP 分析失败: 达到最大重试次数');
+        }
+
         throw new Error(`NLP 分析失败: ${errorMsg}`);
       }
     }

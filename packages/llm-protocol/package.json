@@ -27,6 +27,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "test": "vitest run",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit"
   },
@@ -36,7 +37,8 @@
     "@types/node": "^26.1.2",
     "eslint": "^10.8.0",
     "tsup": "^8.4.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.0.16"
   },
   "dependencies": {
     "@sker/core": "workspace:*"

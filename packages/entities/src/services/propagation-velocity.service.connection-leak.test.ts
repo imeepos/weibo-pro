@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { DataSource, } from 'typeorm'
+import { useEntityManager } from '../utils'
 import { PropagationVelocityService } from './propagation-velocity.service'
 import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
 
@@ -11,84 +11,49 @@ import { EventHourlyStatisticsEntity } from '../event-hourly-statistics.entity'
  * 2. 验证并发调用不会导致连接泄露
  * 3. 模拟持续调度场景（快速连续调用50次）
  *
- * 问题分析：
- * - PropagationVelocityService 直接注入 DataSource 并使用 createQueryBuilder
- * - createQueryBuilder 创建的查询不会自动释放连接
- * - 每个 getPropagationVelocity 调用都可能创建新的数据库连接
- *
- * 注意：此测试使用模拟的 DataSource，可以在没有真实数据库的情况下运行
- * 测试重点是验证 QueryBuilder 的调用模式是否会导致连接泄露
+ * 说明：
+ * - PropagationVelocityService.getPropagationVelocity 内部通过 useEntityManager
+ *   获取 EntityManager，并调用 manager.getRepository(EventHourlyStatisticsEntity).find()
+ * - 本测试通过 vi.mock('../utils') 将 useEntityManager 替换为 mock 实现，
+ *   返回受控的 mock EntityManager / Repository，完全不需要真实数据库即可运行
+ * - 之前版本定义了 mockDataSource 却从未注入 Service，导致仍触发真实连接，
+ *   本版本彻底隔离，不会触发任何真实数据库连接
  */
 
+// 彻底 mock ../utils 中的 useEntityManager，保留其余导出
+vi.mock('../utils', async () => {
+  const actual = await vi.importActual<typeof import('../utils')>('../utils')
+  return {
+    ...actual,
+    useEntityManager: vi.fn(),
+  }
+})
+
+const useEntityManagerMock = useEntityManager as unknown as ReturnType<typeof vi.fn>
+
 describe('PropagationVelocityService - 连接泄露测试', () => {
-  let mockDataSource: DataSource
-  let _mockQueryBuilder: any
   let mockGetManySpy: ReturnType<typeof vi.fn>
-  let createQueryBuilderCalls: any[] = []
+  let getRepositorySpy: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     // 重置调用记录
     vi.clearAllMocks()
-    createQueryBuilderCalls = []
 
-    // 创建模拟的 QueryBuilder
     mockGetManySpy = vi.fn()
+    getRepositorySpy = vi.fn()
 
-    const createMockQueryBuilder = () => {
-      const builder: any = {
-        where: vi.fn().mockReturnThis(),
-        andWhere: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        getMany: mockGetManySpy,
-        setParameter: vi.fn().mockReturnThis(),
-        parameters: {},
-      }
-
-      // 记录每次创建的 QueryBuilder
-      createQueryBuilderCalls.push({
-        builder,
-        timestamp: Date.now(),
-        released: false,
-      })
-
-      return builder
-    }
-
-    _mockQueryBuilder = createMockQueryBuilder()
-
-    // 创建模拟的 DataSource
-    mockDataSource = {
-      createQueryBuilder: vi.fn().mockImplementation((entity, alias) => {
-        const builder = createMockQueryBuilder()
-        // 记录查询构建器的使用
-        builder.entity = entity
-        builder.alias = alias
-        return builder
-      }),
-      createQueryRunner: vi.fn().mockReturnValue({
-        connect: vi.fn().mockResolvedValue(undefined),
-        startTransaction: vi.fn().mockResolvedValue(undefined),
-        commitTransaction: vi.fn().mockResolvedValue(undefined),
-        rollbackTransaction: vi.fn().mockResolvedValue(undefined),
-        release: vi.fn().mockResolvedValue(undefined),
-        manager: {},
-      }),
-      query: vi.fn().mockResolvedValue([{ count: 5 }]),
-      isInitialized: true,
-      initialize: vi.fn().mockResolvedValue(undefined),
-      destroy: vi.fn().mockResolvedValue(undefined),
-      createEntityManager: vi.fn().mockReturnValue({
-        find: vi.fn().mockResolvedValue([]),
-        save: vi.fn().mockResolvedValue(undefined),
-      }),
-    } as any
+    // useEntityManager 返回 mock EntityManager：getRepository 返回 mock Repository
+    useEntityManagerMock.mockImplementation(async (handler: any) => {
+      const repository = { find: mockGetManySpy }
+      const manager = { getRepository: getRepositorySpy.mockReturnValue(repository) }
+      return handler(manager)
+    })
   })
 
-  describe('查询构建器创建和释放测试', () => {
-    it('应该正确创建 QueryBuilder', async () => {
+  describe('查询执行测试', () => {
+    it('应该通过 useEntityManager 查询统计数据', async () => {
       const service = new PropagationVelocityService()
 
-      // 模拟返回数据
       const mockStatistics = [
         {
           id: '1',
@@ -105,12 +70,10 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
       await service.getPropagationVelocity('test-event')
 
-      // 验证 createQueryBuilder 被调用
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(1)
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledWith(
-        EventHourlyStatisticsEntity,
-        'stats'
-      )
+      // 验证 useEntityManager 被调用，并获取了对应实体的 Repository
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(1)
+      expect(getRepositorySpy).toHaveBeenCalledWith(EventHourlyStatisticsEntity)
+      expect(mockGetManySpy).toHaveBeenCalledTimes(1)
     })
 
     it('应该正确处理查询参数', async () => {
@@ -136,13 +99,13 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       await service.getPropagationVelocity('test-event', startTime, endTime)
 
       // 验证查询构建器被正确调用
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalled()
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(1)
       expect(mockGetManySpy).toHaveBeenCalled()
     })
   })
 
   describe('连接泄露检测测试', () => {
-    it('多次调用后不应该累积未释放的 QueryBuilder', async () => {
+    it('多次调用后不应该累积未释放的连接', async () => {
       const service = new PropagationVelocityService()
 
       const mockStatistics = [
@@ -165,17 +128,9 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
         await service.getPropagationVelocity(`test-event-${i}`)
       }
 
-      // 验证 createQueryBuilder 被调用了正确的次数
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(callCount)
-
-      // 检查是否所有的 QueryBuilder 都被正确记录
-      expect(createQueryBuilderCalls).toHaveLength(callCount)
-
-      // 记录连接创建情况
-      console.log(`创建了 ${createQueryBuilderCalls.length} 个 QueryBuilder`)
-      console.log(
-        `当前实现中每个 QueryBuilder 都不会被显式释放，可能导致连接泄露`
-      )
+      // 每次调用都应经过 useEntityManager（连接由该 helper 统一管理）
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(callCount)
+      expect(mockGetManySpy).toHaveBeenCalledTimes(callCount)
     })
 
     it('快速连续调用50次不应该导致连接池耗尽', async () => {
@@ -206,11 +161,8 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       const endTime = Date.now()
       const duration = endTime - startTime
 
-      console.log(`完成 ${callCount} 次调用耗时: ${duration}ms`)
-      console.log(`平均每次调用: ${(duration / callCount).toFixed(2)}ms`)
-
       // 验证所有调用都成功完成
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(callCount)
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(callCount)
 
       // 在真实场景中，如果连接泄露，这里可能会导致连接池耗尽
       // 性能检查：50次调用应该在合理时间内完成
@@ -247,11 +199,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       await Promise.all(promises)
 
       // 验证所有并发调用都成功完成
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(concurrentCalls)
-
-      console.log(
-        `完成了 ${concurrentCalls} 个并发调用，创建了 ${concurrentCalls} 个 QueryBuilder`
-      )
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(concurrentCalls)
     })
 
     it('高并发场景下应该正确处理连接', async () => {
@@ -286,12 +234,8 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       const endTime = Date.now()
       const duration = endTime - startTime
 
-      console.log(
-        `高并发场景：${highConcurrency} 个并发调用耗时 ${duration}ms`
-      )
-
       // 验证所有调用都成功
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(highConcurrency)
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(highConcurrency)
       expect(duration).toBeLessThan(10000) // 10秒内完成
     })
   })
@@ -306,7 +250,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       const result = await service.getPropagationVelocity('non-existent-event')
 
       expect(result).toBeNull()
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(1)
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(1)
       expect(mockGetManySpy).toHaveBeenCalledTimes(1)
     })
 
@@ -320,13 +264,13 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
         service.getPropagationVelocity('test-event')
       ).rejects.toThrow('Database connection failed')
 
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(1)
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(1)
       expect(mockGetManySpy).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('资源管理测试', () => {
-    it('应该正确模拟 QueryBuilder 的生命周期', async () => {
+    it('应该正确模拟 Repository 查询的生命周期', async () => {
       const service = new PropagationVelocityService()
 
       const mockStatistics = [
@@ -346,16 +290,9 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       // 执行查询
       await service.getPropagationVelocity('test-event')
 
-      // 验证 QueryBuilder 的调用链
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalled()
+      // 验证查询调用链
+      expect(useEntityManagerMock).toHaveBeenCalled()
       expect(mockGetManySpy).toHaveBeenCalled()
-
-      console.log('QueryBuilder 生命周期分析：')
-      console.log('- 创建 QueryBuilder')
-      console.log('- 设置查询条件 (where, andWhere, orderBy)')
-      console.log('- 执行查询 (getMany)')
-      console.log('- ⚠️  问题：没有显式释放 QueryBuilder/连接')
-      console.log('- ⚠️  当前实现依赖于 TypeORM 的自动连接管理，可能不够及时')
     })
 
     it('应该检测潜在的连接累积问题', async () => {
@@ -375,26 +312,21 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       ]
       mockGetManySpy.mockResolvedValue(mockStatistics)
 
-      // 记录内存使用情况（模拟）
+      // 记录每次 useEntityManager 调用（等价于每次潜在连接获取）
       let connectionCount = 0
-
-      // 监控每次调用的连接创建
-      const originalCreateQueryBuilder = mockDataSource.createQueryBuilder
-      mockDataSource.createQueryBuilder = vi.fn().mockImplementation((...args) => {
+      const trackingMock = vi.fn(async (handler: any) => {
         connectionCount++
-        console.log(`连接创建计数: ${connectionCount}`)
-        return originalCreateQueryBuilder(...args)
+        const repository = { find: mockGetManySpy }
+        const manager = { getRepository: getRepositorySpy.mockReturnValue(repository) }
+        return handler(manager)
       })
+      useEntityManagerMock.mockImplementation(trackingMock)
 
       // 执行多次调用
       const iterations = 20
       for (let i = 0; i < iterations; i++) {
         await service.getPropagationVelocity(`test-event-${i}`)
       }
-
-      console.log(`总共创建了 ${connectionCount} 个 QueryBuilder`)
-      console.log('⚠️  警告：如果这些 QueryBuilder 没有被正确释放，会导致连接泄露')
-      console.log('⚠️  建议使用 useEntityManager 包装查询逻辑以自动释放连接')
 
       expect(connectionCount).toBe(iterations)
     })
@@ -428,15 +360,8 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
 
       const endTime = Date.now()
       const duration = endTime - startTime
-      const avgTime = duration / stressTestCount
 
-      console.log(`压力测试结果：`)
-      console.log(`- 总调用次数: ${stressTestCount}`)
-      console.log(`- 总耗时: ${duration}ms`)
-      console.log(`- 平均每次调用: ${avgTime.toFixed(2)}ms`)
-      console.log(`- 每秒处理次数: ${(1000 / avgTime).toFixed(2)}`)
-
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(stressTestCount)
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(stressTestCount)
       expect(duration).toBeLessThan(15000) // 15秒内完成
     })
 
@@ -481,9 +406,7 @@ describe('PropagationVelocityService - 连接泄露测试', () => {
       const endTime = Date.now()
       const duration = endTime - startTime
 
-      console.log(`混合场景测试耗时: ${duration}ms`)
-
-      expect(mockDataSource.createQueryBuilder).toHaveBeenCalledTimes(30) // 10 + 10 + 10
+      expect(useEntityManagerMock).toHaveBeenCalledTimes(30) // 10 + 10 + 10
       expect(duration).toBeLessThan(10000) // 10秒内完成
     })
   })

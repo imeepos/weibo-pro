@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
             globals: true,
             environment: 'node',
             include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+            setupFiles: ['./src/test-db-probe.setup.mts'],
             env,
             coverage: {
                 provider: 'v8',

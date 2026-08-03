@@ -29,6 +29,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "claude": "claude --dangerously-skip-permissions",
+    "test": "vitest run",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "stats": "tsx scripts/run-user-relation-stats.ts",
@@ -51,6 +52,7 @@
     "eslint": "^10.8.0",
     "tsup": "^8.4.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.0.16"
   }
 }

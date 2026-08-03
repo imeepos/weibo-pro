@@ -13,5 +13,5 @@ export const binary = {
 		const decoder = decoders.get(encoding)!;
 		return decoder.decode(data);
 	},
-	encode: encoder.encode,
+	encode: (input: string = "") => encoder.encode(input),
 };
