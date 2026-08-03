@@ -33,6 +33,9 @@ export class WorkerGateway {
   /** 响应回调映射: taskId → callback */
   private responseCallbacks = new Map<string, (response: ClaudeResponse) => void>();
 
+  /** Worker 待决任务集合: workerSocketId → Set<taskId>（用于断开时清理回调，防泄漏） */
+  private workerPendingTasks = new Map<string, Set<string>>();
+
   /**
    * 初始化 Worker Gateway
    */
@@ -69,6 +72,12 @@ export class WorkerGateway {
       socket.on('disconnect', () => {
         this.logger.info(`Worker 已断开: socketId=${socket.id}`);
         this.workerConnections.delete(socket.id);
+        // 清理该 worker 的待决回调，防止回调闭包永久滞留（泄漏）
+        const pending = this.workerPendingTasks.get(socket.id);
+        if (pending) {
+          pending.forEach(taskId => this.responseCallbacks.delete(taskId));
+          this.workerPendingTasks.delete(socket.id);
+        }
       });
 
       // 发送连接确认
@@ -99,6 +108,13 @@ export class WorkerGateway {
 
     // 注册响应回调
     this.responseCallbacks.set(command.taskId, onResponse);
+    // 记录该任务归属的 worker，便于断开时清理
+    let pending = this.workerPendingTasks.get(worker.socket.id);
+    if (!pending) {
+      pending = new Set();
+      this.workerPendingTasks.set(worker.socket.id, pending);
+    }
+    pending.add(command.taskId);
 
     // 发送命令
     worker.socket.emit('worker:command', command);
@@ -148,6 +164,8 @@ export class WorkerGateway {
       // 完成或错误时清理回调
       if (type === 'complete' || type === 'error') {
         this.responseCallbacks.delete(taskId);
+        // 同时从 worker 待决集合移除，避免残留
+        this.workerPendingTasks.forEach(pending => pending.delete(taskId));
       }
     } else {
       this.logger.warn(`未找到响应回调: taskId=${taskId}`);
@@ -183,6 +201,7 @@ export class WorkerGateway {
    */
   shutdown(): void {
     this.responseCallbacks.clear();
+    this.workerPendingTasks.clear();
     this.workerConnections.forEach(connection => {
       connection.socket.disconnect();
     });

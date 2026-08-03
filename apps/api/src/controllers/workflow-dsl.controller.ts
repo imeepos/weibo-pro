@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, BadRequestException } from '@sker/core';
+import { Controller, Post, Body, Get, Query, BadRequestException, root } from '@sker/core';
 import { WorkflowDSLService } from '../services/workflow-dsl.service';
 import { logger } from '@sker/core';
 import * as sdk from '@sker/sdk';
@@ -25,7 +25,8 @@ export class WorkflowDSLController implements sdk.WorkflowDSLController {
   private readonly workflowDSLService: WorkflowDSLService;
 
   constructor() {
-    this.workflowDSLService = new WorkflowDSLService();
+    // root 单例：避免每请求 new WorkflowDSLService()（其构造器新建 agent + setInterval，泄漏）
+    this.workflowDSLService = root.get(WorkflowDSLService);
   }
 
   @Post('/generate')

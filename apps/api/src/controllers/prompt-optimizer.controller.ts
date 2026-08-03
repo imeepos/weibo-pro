@@ -8,7 +8,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@sker/core';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { logger } from '@sker/core';
 import { executeAst, NodeEvent } from '@sker/workflow';
 import { PromptOptimizerAst } from '@sker/workflow-ast';
@@ -150,6 +150,10 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
   @Post({ path: '/tasks/:taskId/execute', sse: true })
   executeTask(@Param('taskId') taskId: string): Observable<NodeEvent> {
     return new Observable((observer) => {
+      // 收集内层订阅，客户端断开（外层 unsubscribe）时拆除，避免僵尸工作流泄漏
+      let inner: Subscription | null = null;
+      let disposed = false;
+
       useEntityManager(async (manager) => {
         const task = await manager.findOne(PromptOptimizationTaskEntity, { where: { id: taskId } });
 
@@ -195,12 +199,23 @@ export class PromptOptimizerController implements sdk.PromptOptimizerController 
         }
 
         // 执行优化
-        return executeAst(ast, {}).subscribe(observer);
+        const sub = executeAst(ast, {}).subscribe(observer);
+        if (disposed) {
+          sub.unsubscribe();
+        } else {
+          inner = sub;
+        }
       })
       .catch((error) => {
         logger.error('获取任务失败', { taskId, error: error.message });
         observer.error(error);
       });
+
+      // 客户端断开时拆除内层订阅，终止僵尸工作流执行
+      return () => {
+        disposed = true;
+        inner?.unsubscribe();
+      };
     });
   }
 

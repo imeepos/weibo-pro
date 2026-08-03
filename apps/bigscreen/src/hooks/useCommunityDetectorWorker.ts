@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import { useMemoizedFn } from '@sker/ui/hooks/use-memoized-fn';
 import type { UserRelationNode, UserRelationEdge } from '@sker/sdk';
 import type { GraphData } from '@sker/ui/components/ui/force-graph-3d';
@@ -64,6 +64,16 @@ export const useCommunityDetectorWorker = () => {
     setGraphData(null);
     setError(null);
     setIsDetecting(false);
+  }, []);
+
+  // 组件卸载时终止 Worker，避免线程 + 闭包（持有已卸载组件的 setState）泄漏
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
   }, []);
 
   // 清理 Worker

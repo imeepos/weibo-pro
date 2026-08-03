@@ -129,18 +129,20 @@ export function buildSankeyOption(data: SentimentTransitionAnalysis, colors: ECh
   };
 }
 
-/** 渲染桑基图 */
+/** 渲染桑基图，返回清理函数（dispose 图表 + 断开 ResizeObserver） */
 export function renderSankeyChart(
   data: SentimentTransitionAnalysis,
   container: HTMLElement,
   colors: EChartThemeColors,
-) {
+): () => void {
   const chart = echarts.init(container);
 
   // 如果没有有效的转换数据，显示空状态（与构建完整配置区分：不挂载 resize）
   if (getValidSankeyLinks(data).length === 0) {
     chart.setOption(buildSankeyEmptyOption(colors));
-    return;
+    return () => {
+      chart.dispose();
+    };
   }
 
   chart.setOption(buildSankeyOption(data, colors));
@@ -149,4 +151,9 @@ export function renderSankeyChart(
     chart.resize();
   });
   resizeObserver.observe(container);
+
+  return () => {
+    chart.dispose();
+    resizeObserver.disconnect();
+  };
 }

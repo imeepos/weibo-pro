@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException, logger, root } from '@sker/core';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import {
   fromJson,
   INode,
@@ -143,6 +143,10 @@ export class WorkflowExecuteHandler {
       const runPromise = this.workflowRunService.getRun(runId);
 
       return new Observable(observer => {
+        // 收集内层订阅，客户端断开（外层 unsubscribe）时拆除，避免僵尸工作流泄漏
+        let inner: Subscription | null = null;
+        let disposed = false;
+
         runPromise.then(run => {
           if (!run) {
             const error = new NotFoundException(`运行实例不存在: ${runId}`);
@@ -172,12 +176,22 @@ export class WorkflowExecuteHandler {
             observer.error(error);
             return;
           }
-          const fineTune$ = executeAstWithWorkflowGraph(targetNode, {}, ast);
-          return fineTune$.subscribe(observer);
+          const sub = executeAstWithWorkflowGraph(targetNode, {}, ast).subscribe(observer);
+          if (disposed) {
+            sub.unsubscribe();
+          } else {
+            inner = sub;
+          }
         }).catch(error => {
           logger.error('获取运行实例失败', { runId, error: error.message });
           observer.error(error);
         });
+
+        // 客户端断开时拆除内层订阅，终止僵尸工作流执行
+        return () => {
+          disposed = true;
+          inner?.unsubscribe();
+        };
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);

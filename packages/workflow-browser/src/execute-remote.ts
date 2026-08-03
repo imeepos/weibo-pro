@@ -54,7 +54,7 @@ export function handlerRemote(ast: Ast, $input: Observable<any>, ctx: any): Obse
     return new Observable(obs => {
         ast.state = 'running'
         obs.next({ type: 'node_runing', id: ast.id })
-        $input.pipe(
+        const subscription = $input.pipe(
             concatMap(input => executeRemote(ast, ctx, input)),
             ErrorHandlerOperators.createRetryOperator(ast, { logPrefix: '[ClaudeCodeRefactorAstVisitor]' }),
             ErrorHandlerOperators.createCatchErrorOperator(ast, { logPrefix: '[ClaudeCodeRefactorAstVisitor]' }),
@@ -76,5 +76,8 @@ export function handlerRemote(ast: Ast, $input: Observable<any>, ctx: any): Obse
                 obs.next({ type: 'node_fail', id: ast.id, error: error.message })
             }
         })
+
+        // 外层退订时拆除对 $input 的订阅，避免前端 run 被取消后内层订阅与远程执行流残留
+        return () => subscription.unsubscribe();
     })
 }

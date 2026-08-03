@@ -26,7 +26,7 @@ export class GroupChatLoopAstVisitor {
             ast.count += 1;
             obs.next({ type: 'node_runing', id: ast.id });
 
-            input$.subscribe({
+            const subscription = input$.subscribe({
                 next: () => {
                     ast.emitCount += 1;
                     if (!ast.chatHistory || ast.chatHistory.length === 0) {
@@ -51,6 +51,9 @@ export class GroupChatLoopAstVisitor {
                     obs.complete();
                 }
             });
+
+            // 外层退订时拆除对 input$ 的订阅，避免环图驱动下 input$ 不 complete 导致订阅泄漏
+            return () => subscription.unsubscribe();
         });
     }
 }

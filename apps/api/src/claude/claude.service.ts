@@ -104,6 +104,14 @@ export class ClaudeService {
   unregisterClient(socket: Socket): void {
     const clientId = this.socketToClient.get(socket.id);
     if (clientId) {
+      // 清理该客户端活动任务相关的映射，防止 taskToWorker/requestToTask 泄漏
+      const connection = this.clientConnections.get(clientId);
+      if (connection) {
+        connection.activeTasks.forEach(taskId => {
+          this.taskToWorker.delete(taskId);
+          this.removeRequestToTaskByTask(taskId);
+        });
+      }
       this.clientSockets.delete(clientId);
       this.clientConnections.delete(clientId);
     }
@@ -247,6 +255,17 @@ export class ClaudeService {
   }
 
   /**
+   * 删除指定任务的所有 requestId→taskId 映射
+   */
+  private removeRequestToTaskByTask(taskId: string): void {
+    this.requestToTask.forEach((value, requestId) => {
+      if (value === taskId) {
+        this.requestToTask.delete(requestId);
+      }
+    });
+  }
+
+  /**
    * 处理响应消息
    */
   private handleResponse(response: ClaudeResponse): void {
@@ -259,6 +278,17 @@ export class ClaudeService {
       const requestId = (data as { requestId: string }).requestId;
       this.requestToTask.set(requestId, taskId);
       this.logger.debug(`记录批准请求映射: requestId=${requestId} → taskId=${taskId}`);
+    }
+
+    // 清理映射 —— 必须在 socket 查询之前执行，
+    // 否则客户端已断开时早退会跳过清理（泄漏）
+    if (type === 'complete' || type === 'error') {
+      this.taskToWorker.delete(taskId);
+      this.removeRequestToTaskByTask(taskId);
+      const connection = this.clientConnections.get(clientId);
+      if (connection) {
+        connection.activeTasks.delete(taskId);
+      }
     }
 
     const socket = this.clientSockets.get(clientId);
@@ -275,15 +305,6 @@ export class ClaudeService {
     };
 
     socket.emit('claude:response', wsResponse);
-
-    if (type === 'complete' || type === 'error') {
-      const connection = this.clientConnections.get(clientId);
-      if (connection) {
-        connection.activeTasks.delete(taskId);
-      }
-      // 清理映射
-      this.taskToWorker.delete(taskId);
-    }
 
     this.logger.debug(`响应已转发: taskId=${taskId}, type=${type}`);
   }

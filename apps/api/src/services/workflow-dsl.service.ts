@@ -1,6 +1,6 @@
 import { WorkflowDSLGeneratorAgent } from '@sker/agent';
 import { generateRandomString } from '@sker/utils';
-import { logger } from '@sker/core';
+import { Injectable, logger } from '@sker/core';
 import {
   createSession,
   createAgentContext,
@@ -20,6 +20,7 @@ import {
  * - 维护会话状态（用于交互式优化）
  * - 提供 DSL 编译和验证功能
  */
+@Injectable()
 export class WorkflowDSLService {
   private readonly agent: WorkflowDSLGeneratorAgent;
   private readonly sessions: Map<string, ReturnType<typeof createSession>>;

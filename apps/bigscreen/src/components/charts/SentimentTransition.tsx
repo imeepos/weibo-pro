@@ -20,19 +20,19 @@ export const SentimentTransition: React.FC<SentimentTransitionProps> = ({ eventI
 
   useEffect(() => {
     if (data && sankeyRef.current) {
-      renderSankeyChart(data, sankeyRef.current, colors);
+      return renderSankeyChart(data, sankeyRef.current, colors);
     }
   }, [data, colors]);
 
   useEffect(() => {
     if (data && timelineRef.current) {
-      renderTimelineChart(data, timelineRef.current, colors);
+      return renderTimelineChart(data, timelineRef.current, colors);
     }
   }, [data, colors]);
 
   useEffect(() => {
     if (data && turningPointsRef.current && data.turningPoints.length > 0) {
-      renderTurningPointsTimeline(data, turningPointsRef.current, colors);
+      return renderTurningPointsTimeline(data, turningPointsRef.current, colors);
     }
   }, [data, colors]);
 

@@ -100,12 +100,12 @@ export function buildTimelineOption(data: SentimentTransitionAnalysis, colors: E
   };
 }
 
-/** 渲染情感时间线 */
+/** 渲染情感时间线，返回清理函数（dispose 图表 + 断开 ResizeObserver） */
 export function renderTimelineChart(
   data: SentimentTransitionAnalysis,
   container: HTMLElement,
   colors: EChartThemeColors,
-) {
+): () => void {
   const chart = echarts.init(container);
   chart.setOption(buildTimelineOption(data, colors));
 
@@ -113,4 +113,9 @@ export function renderTimelineChart(
     chart.resize();
   });
   resizeObserver.observe(container);
+
+  return () => {
+    chart.dispose();
+    resizeObserver.disconnect();
+  };
 }

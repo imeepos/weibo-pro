@@ -209,10 +209,12 @@ export class CronSchedulerService {
    */
   async startWatching(): Promise<ScheduleWatcher> {
     let stopped = false
+    let unsubscribe: (() => void) | undefined
 
     try {
       // 使用 Redis 订阅 workflow_schedule_change 通道
-      const _unsubscribe = this.redis.subscribe(
+      // 保存取消函数，stop() 时真正退订并释放连接（防止订阅连接泄漏）
+      unsubscribe = this.redis.subscribe(
         'workflow_schedule_change',
         async (_channel: string, message: string) => {
           if (stopped) return
@@ -241,6 +243,17 @@ export class CronSchedulerService {
       stop: async () => {
         if (stopped) return
         stopped = true
+        // 真正退订并释放 Redis 订阅连接
+        if (unsubscribe) {
+          try {
+            unsubscribe()
+          } catch (error) {
+            logger.error('退订 Redis 调度变更监听失败', {
+              error: (error as Error).message
+            })
+          }
+          unsubscribe = undefined
+        }
         logger.info('已停止 Redis 调度变更监听')
       },
       isStopped: () => stopped

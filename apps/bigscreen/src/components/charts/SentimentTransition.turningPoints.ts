@@ -220,12 +220,12 @@ export function buildTurningPointsOption(data: SentimentTransitionAnalysis, colo
   };
 }
 
-/** 渲染转折点时间轴 */
+/** 渲染转折点时间轴，返回清理函数（dispose 图表 + 断开 ResizeObserver） */
 export function renderTurningPointsTimeline(
   data: SentimentTransitionAnalysis,
   container: HTMLElement,
   colors: EChartThemeColors,
-) {
+): () => void {
   const chart = echarts.init(container);
   chart.setOption(buildTurningPointsOption(data, colors));
 
@@ -233,4 +233,9 @@ export function renderTurningPointsTimeline(
     chart.resize();
   });
   resizeObserver.observe(container);
+
+  return () => {
+    chart.dispose();
+    resizeObserver.disconnect();
+  };
 }

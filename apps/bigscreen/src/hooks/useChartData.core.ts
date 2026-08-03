@@ -43,6 +43,8 @@ export function useAsyncData<T>(
 
   const retryCountRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // 重试定时器引用：卸载/重新拉取时清除，防止卸载后继续重试链并对已卸载组件 setState
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchFnRef = useRef(fetchFn);
 
   // 每次更新 fetchFn ref，避免闭包陷阱
@@ -59,6 +61,12 @@ export function useAsyncData<T>(
     // 取消之前的请求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+    }
+
+    // 取消未执行的重试定时器
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
     }
 
     // 创建新的AbortController
@@ -104,7 +112,8 @@ export function useAsyncData<T>(
         logger.warn(`数据获取失败，正在重试... (${retryCountRef.current}/${retryCount})`, error);
 
         // 延迟重试
-        setTimeout(() => {
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
           fetchData(isBackgroundRefresh);
         }, Math.pow(2, retryCountRef.current) * 1000);
 
@@ -135,6 +144,10 @@ export function useAsyncData<T>(
 
     // 清理函数
     return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }

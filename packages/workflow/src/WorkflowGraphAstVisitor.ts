@@ -65,7 +65,9 @@ export class WorkflowGraphAstVisitor {
                     const nodeInput$ = nodeInputStreams.get(node.id) || EMPTY;
 
                     const eventStream$ = this.nodeExecutor.run(node, nodeInput$, ast).pipe(
-                        shareReplay({ bufferSize: Infinity, refCount: false })
+                        // refCount: true 使最后订阅者退订时拆除源订阅，避免 run 被中断/取消后整条节点执行链泄漏。
+                        // bufferSize 保持 Infinity：节点事件数本身有界，replay 语义不变。
+                        shareReplay({ bufferSize: Infinity, refCount: true })
                     );
                     nodeEventStreams.set(node.id, eventStream$);
                 });

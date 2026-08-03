@@ -34,6 +34,8 @@ export const useOverviewData = () => {
 
   const retryCountRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // 重试定时器引用：卸载/重新拉取时清除，防止卸载后继续重试链并对已卸载组件 setState
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isStale = state.lastUpdated
     ? Date.now() - state.lastUpdated > CACHE_TIME
@@ -42,6 +44,12 @@ export const useOverviewData = () => {
   const fetchData = useCallback(async (isBackgroundRefresh = false): Promise<void> => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
+    }
+
+    // 取消未执行的重试定时器
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
     }
 
     abortControllerRef.current = new AbortController();
@@ -86,7 +94,8 @@ export const useOverviewData = () => {
         retryCountRef.current++;
         logger.warn(`数据获取失败，正在重试... (${retryCountRef.current}/${RETRY_COUNT})`, error);
 
-        setTimeout(() => {
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
           fetchData(isBackgroundRefresh);
         }, INITIAL_RETRY_DELAY * Math.pow(RETRY_DELAY_MULTIPLIER, retryCountRef.current));
 
@@ -114,6 +123,10 @@ export const useOverviewData = () => {
     fetchData(hasData);
 
     return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
