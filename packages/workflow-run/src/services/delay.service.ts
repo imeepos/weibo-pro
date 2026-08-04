@@ -19,6 +19,8 @@ export class DelayService {
   }
 
   recordError(key: string): void {
+    // 惰性淘汰：顺带清理超过 1 小时的过期退避状态，防止账号增删后 Map 缓慢增长
+    this.clearOldBackoffStates();
     const state = this.backoffStates.get(key) || { errorCount: 0, lastErrorTime: 0 };
     state.errorCount++;
     state.lastErrorTime = Date.now();

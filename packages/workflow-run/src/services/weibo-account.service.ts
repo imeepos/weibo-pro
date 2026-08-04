@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@sker/core';
 import { RedisClient } from '@sker/redis';
+import { RateLimiterService } from './rate-limiter.service';
 import {
     useEntityManager,
     WeiboAccountEntity,
@@ -54,6 +55,7 @@ export class WeiboAccountService {
 
     constructor(
         @Inject(RedisClient) private readonly redis: RedisClient,
+        @Inject(RateLimiterService) private readonly rateLimiter: RateLimiterService,
     ) { }
 
     async injectCookies<T extends RequestWithHeaders>(
@@ -265,6 +267,9 @@ export class WeiboAccountService {
      */
     async markAccountAsExpired(accountId: string): Promise<void> {
         try {
+            // 清理该账号的限流桶，防止账号失效后 accountBuckets 缓慢增长
+            this.rateLimiter.clearAccountBucket(accountId);
+
             // 从 Redis 中移除该账户
             await this.redis.zrem(this.healthKey, accountId);
 

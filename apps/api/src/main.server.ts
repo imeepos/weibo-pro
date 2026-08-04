@@ -1,10 +1,11 @@
 import { createServer } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
+import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { createInjector, root, Logger, REQUEST, RESPONSE, Injector } from '@sker/core';
 import type { Hono } from 'hono';
 import { ClaudeGateway } from './claude';
 import { getRequestBody, getEventName } from './main.utils';
+import { createConnectionGuard } from './utils/connection-guard';
 
 /**
  * 创建 HTTP 服务器（含 Socket.IO、Claude Gateway 初始化、WebSocket 广播）
@@ -71,20 +72,32 @@ export function createApiServer(
   claudeGateway.initialize(io);
   logger.info('✓ Claude Gateway initialized');
 
-  let connectedClients = 0;
+  // 连接上限防护：防止异常/恶意客户端无限建立 Socket.IO 连接耗尽资源。
+  // 覆盖 /ws 与 /worker 两个命名空间（同一 io 实例）。
+  const connectionGuard = createConnectionGuard({
+    maxConnections: 200,
+    onRejected: (socket) => {
+      logger.warn('Socket.IO 连接数已达上限，拒绝新连接', {
+        clientId: socket.id,
+      });
+    },
+  });
 
-  io.on('connection', (socket) => {
-    connectedClients++;
+  io.on('connection', (socket: Socket) => {
+    if (!connectionGuard.accept(socket)) {
+      return; // 超限，守卫已断开
+    }
+
     logger.info('Client connected', {
       clientId: socket.id,
-      totalClients: connectedClients
+      totalClients: connectionGuard.count,
     });
 
     socket.on('disconnect', () => {
-      connectedClients--;
+      connectionGuard.release(socket);
       logger.info('Client disconnected', {
         clientId: socket.id,
-        totalClients: connectedClients
+        totalClients: connectionGuard.count,
       });
     });
   });
@@ -100,7 +113,7 @@ export function createApiServer(
     logger.debug('Message broadcasted', {
       event: eventName,
       messageType: message.type,
-      clientCount: connectedClients
+      clientCount: connectionGuard.count,
     });
   };
 
